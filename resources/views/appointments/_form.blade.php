@@ -3,6 +3,9 @@
     $scheduledValue = old('scheduled_at', optional($appointment->scheduled_at)->format('Y-m-d\TH:i'));
     $statusValue = old('status', $appointment->status ?? 'agendado');
     $channelValue = old('channel', $appointment->channel ?? 'presencial');
+    if ($channelValue === 'whatsapp') {
+        $channelValue = 'home_care';
+    }
     $paymentStatus = old('payment_status', $appointment->payment_status ?? 'pending');
     $paymentMethod = old('forma_pagamento', $appointment->receivable->forma_pagamento ?? '');
     $isCreate = ! $appointment->exists;
@@ -67,7 +70,7 @@
         <label class="mb-1 block text-sm font-medium text-gray-700" for="channel">Canal</label>
         <select class="{{ $input }}" id="channel" name="channel" required>
             <option value="presencial" @selected($channelValue === 'presencial')>Presencial</option>
-            <option value="whatsapp" @selected($channelValue === 'whatsapp')>WhatsApp</option>
+            <option value="home_care" @selected($channelValue === 'home_care')>Home Care</option>
         </select>
         <x-input-error class="mt-1" :messages="$errors->get('channel')" />
     </div>

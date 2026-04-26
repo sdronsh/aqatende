@@ -37,10 +37,15 @@
     </div>
     <div class="md:col-span-2">
         <label class="mb-1 block text-sm font-medium text-gray-700" for="modality">Modalidade</label>
-        @php $modality = old('modality', $service->modality ?? 'presencial'); @endphp
+        @php
+            $modality = old('modality', $service->modality ?? 'presencial');
+            if (in_array($modality, ['teleconsulta', 'whatsapp'], true)) {
+                $modality = 'home_care';
+            }
+        @endphp
         <select class="{{ $input }}" id="modality" name="modality" required>
             <option value="presencial" @selected($modality === 'presencial')>Presencial</option>
-            <option value="teleconsulta" @selected($modality === 'teleconsulta')>Teleconsulta</option>
+            <option value="home_care" @selected($modality === 'home_care')>Home Care</option>
         </select>
         <x-input-error class="mt-1" :messages="$errors->get('modality')" />
     </div>

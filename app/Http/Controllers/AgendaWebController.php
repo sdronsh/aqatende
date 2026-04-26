@@ -503,7 +503,7 @@ class AgendaWebController extends Controller
             $statusClass = 'bg-error-50 border-error-200 text-error-800';
         } elseif ($isConfirmed) {
             $statusClass = 'bg-success-50 border-success-200 text-success-800';
-        } elseif (in_array($appointment->channel, ['whatsapp', 'teleconsulta'], true)) {
+        } elseif (in_array($appointment->channel, ['home_care', 'whatsapp', 'teleconsulta'], true)) {
             $statusClass = 'bg-blue-light-50 border-blue-light-200 text-blue-light-900';
         } else {
             $statusClass = 'bg-warning-50 border-warning-200 text-warning-900';

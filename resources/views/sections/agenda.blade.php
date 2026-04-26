@@ -214,7 +214,7 @@
                                             $chipClass = 'bg-error-50 text-error-800 border-error-200';
                                         } elseif ($isConfirmed) {
                                             $chipClass = 'bg-success-50 text-success-800 border-success-200';
-                                        } elseif (in_array($appointment->channel, ['whatsapp', 'teleconsulta'], true)) {
+                                        } elseif (in_array($appointment->channel, ['home_care', 'whatsapp', 'teleconsulta'], true)) {
                                             $chipClass = 'bg-brand-50 text-brand-800 border-brand-200';
                                         } else {
                                             $chipClass = 'bg-warning-50 text-warning-900 border-warning-200';
@@ -277,7 +277,7 @@
                                 </div>
                                 <div class="flex items-center gap-2">
                                     <span class="h-2 w-2 rounded-full bg-brand-500"></span>
-                                    WhatsApp
+                                    Home Care
                                 </div>
                             </div>
                         </div>
@@ -321,7 +321,7 @@
                                             } elseif ($isConfirmed) {
                                                 $chipClass = 'bg-success-50 text-success-800 border-success-200';
                                                 $dotClass = 'bg-success-500';
-                                            } elseif (in_array($appointment->channel, ['whatsapp', 'teleconsulta'], true)) {
+                                            } elseif (in_array($appointment->channel, ['home_care', 'whatsapp', 'teleconsulta'], true)) {
                                                 $chipClass = 'bg-brand-50 text-brand-800 border-brand-200';
                                                 $dotClass = 'bg-brand-500';
                                             } else {
@@ -406,7 +406,7 @@
                     <label class="mb-1 block text-sm font-medium text-gray-700" for="channel">Canal</label>
                     <select class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" id="channel" name="channel" required>
                         <option value="presencial">Presencial</option>
-                        <option value="whatsapp">WhatsApp</option>
+                        <option value="home_care">Home Care</option>
                     </select>
                 </div>
                 <div>

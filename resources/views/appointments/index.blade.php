@@ -60,7 +60,7 @@
                     <select class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" name="channel">
                         <option value="">Todos os canais</option>
                         <option value="presencial" @selected(($filters['channel'] ?? '') === 'presencial')>Presencial</option>
-                        <option value="whatsapp" @selected(($filters['channel'] ?? '') === 'whatsapp')>WhatsApp</option>
+                        <option value="home_care" @selected(($filters['channel'] ?? '') === 'home_care')>Home Care</option>
                     </select>
                 </div>
                 <div class="md:col-span-1">
@@ -123,7 +123,9 @@
                             <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $appointment->professional?->display_name }}</td>
                             <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $appointment->patient?->full_name }}</td>
                             <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $appointment->service?->name }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ ucfirst($appointment->channel ?? 'presencial') }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600">
+                                {{ ['presencial' => 'Presencial', 'home_care' => 'Home Care', 'whatsapp' => 'Home Care', 'teleconsulta' => 'Home Care', 'walk_in' => 'Fila'][$appointment->channel ?? 'presencial'] ?? ucfirst($appointment->channel ?? 'presencial') }}
+                            </td>
                             <td class="border border-gray-200 px-4 py-3">
                                 <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs {{ $statusClass }}">
                                     {{ ucfirst($status) }}

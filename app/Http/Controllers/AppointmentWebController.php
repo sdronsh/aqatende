@@ -75,7 +75,7 @@ class AppointmentWebController extends Controller
             $query->whereIn('status', $this->statusVariants($filters['status']));
         }
         if ($filters['channel']) {
-            $query->where('channel', $filters['channel']);
+            $query->whereIn('channel', $this->channelVariants($filters['channel']));
         }
         if ($filters['search']) {
             $search = $filters['search'];
@@ -593,6 +593,17 @@ class AppointmentWebController extends Controller
         }
 
         return array_values(array_unique($variants));
+    }
+
+    private function channelVariants(string $channel): array
+    {
+        $channel = strtolower(trim($channel));
+
+        if ($channel === 'home_care') {
+            return ['home_care', 'whatsapp', 'teleconsulta'];
+        }
+
+        return [$channel];
     }
 
     private function resolvePriceCents(array $data, ?int $fallback = 0): int

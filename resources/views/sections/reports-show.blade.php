@@ -308,7 +308,7 @@
                                         <td class="border border-gray-200 px-3 py-2">{{ $row->professional?->display_name }}</td>
                                         <td class="border border-gray-200 px-3 py-2">{{ $row->service?->name }}</td>
                                         <td class="border border-gray-200 px-3 py-2">{{ $row->status }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->channel }}</td>
+                                        <td class="border border-gray-200 px-3 py-2">{{ ['presencial' => 'Presencial', 'home_care' => 'Home Care', 'whatsapp' => 'Home Care', 'teleconsulta' => 'Home Care', 'walk_in' => 'Fila'][$row->channel ?? 'presencial'] ?? $row->channel }}</td>
                                     </tr>
                                     @break
                                 @case('atendimentos')
