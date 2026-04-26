@@ -65,9 +65,12 @@
                                                 <option value="">Profissional</option>
                                                 @foreach ($professionals as $professional)
                                                     @if ($professional->services->contains('id', $appointment->service_id))
-                                                        @php $busy = in_array((int) $professional->id, $busyProfessionalIds ?? [], true); @endphp
+                                                        @php
+                                                            $sharedService = (bool) ($appointment->service?->shared_service ?? false);
+                                                            $busy = ! $sharedService && in_array((int) $professional->id, $busyProfessionalIds ?? [], true);
+                                                        @endphp
                                                         <option value="{{ $professional->id }}" @disabled($busy)>
-                                                            {{ $professional->display_name }}{{ $busy ? ' - em atendimento' : '' }}
+                                                            {{ $professional->display_name }}{{ $busy ? ' - em atendimento' : ($sharedService && in_array((int) $professional->id, $busyProfessionalIds ?? [], true) ? ' - compartilhado permitido' : '') }}
                                                         </option>
                                                     @endif
                                                 @endforeach

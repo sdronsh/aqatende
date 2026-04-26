@@ -67,4 +67,14 @@
             Servico ativo
         </label>
     </div>
+    <div class="md:col-span-4">
+        @php $sharedService = old('shared_service', $service->shared_service ?? false); @endphp
+        <label class="inline-flex items-start gap-2 text-sm text-gray-600 mt-6">
+            <input type="checkbox" name="shared_service" value="1" class="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" @checked($sharedService) />
+            <span>
+                <span class="font-medium text-gray-700">Servico compartilhado</span>
+                <span class="block text-xs text-gray-500">Permite iniciar mais de um atendimento simultaneo para o mesmo profissional.</span>
+            </span>
+        </label>
+    </div>
 </div>

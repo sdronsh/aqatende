@@ -33,6 +33,7 @@
                         <th class="border border-gray-200 px-4 py-3">Unidade</th>
                         <th class="border border-gray-200 px-4 py-3">Duracao</th>
                         <th class="border border-gray-200 px-4 py-3">Preco</th>
+                        <th class="border border-gray-200 px-4 py-3">Tipo</th>
                         <th class="border border-gray-200 px-4 py-3 text-right">Acoes</th>
                     </tr>
                 </thead>
@@ -45,6 +46,13 @@
                             <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $service->duration_minutes }} min</td>
                             <td class="border border-gray-200 px-4 py-3 text-gray-600">
                                 R$ {{ number_format(($service->price_cents ?? 0) / 100, 2, ',', '.') }}
+                            </td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600">
+                                @if ($service->shared_service)
+                                    <span class="rounded-full bg-brand-50 px-2 py-1 text-xs font-semibold text-brand-600">Compartilhado</span>
+                                @else
+                                    <span class="text-gray-400">Individual</span>
+                                @endif
                             </td>
                             <td class="border border-gray-200 px-4 py-3">
                                 <div class="flex justify-end gap-2">
@@ -59,7 +67,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="border border-gray-200 px-6 py-6 text-center text-gray-500">Nenhum servico cadastrado.</td>
+                            <td colspan="7" class="border border-gray-200 px-6 py-6 text-center text-gray-500">Nenhum servico cadastrado.</td>
                         </tr>
                     @endforelse
                 </tbody>

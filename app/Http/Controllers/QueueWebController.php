@@ -100,6 +100,7 @@ class QueueWebController extends Controller
     public function start(Request $request, Appointment $appointment): RedirectResponse
     {
         $this->authorizeAppointment($request, $appointment);
+        $appointment->loadMissing('service');
         abort_unless(in_array($appointment->status, ['waiting', 'scheduled', 'agendado', 'confirmado'], true), 403);
 
         $data = $request->validate([
@@ -113,9 +114,11 @@ class QueueWebController extends Controller
                 ->withInput();
         }
 
-        $busy = Appointment::where('professional_id', $professional->id)
-            ->where('status', 'in_progress')
-            ->exists();
+        $busy = ! $appointment->service?->shared_service
+            && Appointment::where('professional_id', $professional->id)
+                ->where('status', 'in_progress')
+                ->exists();
+
         if ($busy) {
             return back()
                 ->withErrors(['professional_id' => 'Profissional já está em atendimento. Finalize o atendimento atual antes de iniciar outro.'])

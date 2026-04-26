@@ -115,6 +115,7 @@ return new class extends Migration
             $table->string('modality', 20);
             $table->unsignedBigInteger('price_cents');
             $table->boolean('active')->default(true);
+            $table->boolean('shared_service')->default(false);
             $table->timestamps();
         });
 

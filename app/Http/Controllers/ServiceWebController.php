@@ -86,6 +86,7 @@ class ServiceWebController extends Controller
             'price' => $this->moneyRule('price_cents'),
             'price_cents' => ['required_without:price', 'nullable', 'integer', 'min:0'],
             'active' => ['nullable', 'boolean'],
+            'shared_service' => ['nullable', 'boolean'],
         ]);
 
         if (! Clinic::where('company_id', $companyId)->whereKey($data['clinic_id'])->exists()) {
@@ -104,6 +105,8 @@ class ServiceWebController extends Controller
         }
 
         $data['price_cents'] = $this->resolvePriceCents($data);
+        $data['active'] = (bool) ($data['active'] ?? false);
+        $data['shared_service'] = (bool) ($data['shared_service'] ?? false);
         unset($data['price']);
 
         Service::create($data);
@@ -148,6 +151,7 @@ class ServiceWebController extends Controller
             'price' => $this->moneyRule('price_cents'),
             'price_cents' => ['required_without:price', 'nullable', 'integer', 'min:0'],
             'active' => ['nullable', 'boolean'],
+            'shared_service' => ['nullable', 'boolean'],
         ]);
 
         if (! Clinic::where('company_id', $companyId)->whereKey($data['clinic_id'])->exists()) {
@@ -166,6 +170,8 @@ class ServiceWebController extends Controller
         }
 
         $data['price_cents'] = $this->resolvePriceCents($data);
+        $data['active'] = (bool) ($data['active'] ?? false);
+        $data['shared_service'] = (bool) ($data['shared_service'] ?? false);
         unset($data['price']);
 
         $service->update($data);

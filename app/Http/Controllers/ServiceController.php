@@ -41,6 +41,7 @@ class ServiceController extends Controller
             'price' => $this->moneyRule('price_cents'),
             'price_cents' => ['required_without:price', 'nullable', 'integer', 'min:0'],
             'active' => ['boolean'],
+            'shared_service' => ['boolean'],
         ]);
 
         $companyId = $request->session()->get('active_company_id');
@@ -49,6 +50,8 @@ class ServiceController extends Controller
         }
 
         $data['price_cents'] = $this->resolvePriceCents($data);
+        $data['active'] = (bool) ($data['active'] ?? false);
+        $data['shared_service'] = (bool) ($data['shared_service'] ?? false);
         unset($data['price']);
 
         return Service::create($data);
@@ -64,9 +67,16 @@ class ServiceController extends Controller
             'price' => $this->moneyRule('price_cents'),
             'price_cents' => ['required_without:price', 'nullable', 'integer', 'min:0'],
             'active' => ['boolean'],
+            'shared_service' => ['boolean'],
         ]);
 
         $data['price_cents'] = $this->resolvePriceCents($data);
+        if (array_key_exists('active', $data)) {
+            $data['active'] = (bool) $data['active'];
+        }
+        if (array_key_exists('shared_service', $data)) {
+            $data['shared_service'] = (bool) $data['shared_service'];
+        }
         unset($data['price']);
 
         $service->update($data);

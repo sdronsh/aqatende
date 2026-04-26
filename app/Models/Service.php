@@ -17,12 +17,14 @@ class Service extends Model
         'modality',
         'price_cents',
         'active',
+        'shared_service',
     ];
 
     protected $casts = [
         'duration_minutes' => 'int',
         'price_cents' => 'int',
         'active' => 'bool',
+        'shared_service' => 'bool',
     ];
 
     public function clinic(): BelongsTo
