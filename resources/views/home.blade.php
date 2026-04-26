@@ -205,15 +205,19 @@
                 </div>
                 <div class="mt-14 grid gap-6 md:grid-cols-3">
                     @foreach ([
-                        ['Essencial', ['Cadastro de Clientes', 'Agenda', 'Fila de Atendimento', 'Comissões de Atendimento', 'Contas a Pagar', 'Contas a Receber', 'Até 3 profissionais.']],
-                        ['Profissional', ['Comissoes, caixa, relatorios e multiplos profissionais.']],
-                        ['Multiempresa', ['Gestao SaaS com empresas, usuarios e permissoes.']],
-                    ] as [$title, $items])
+                        ['Essencial', 'R$ 99,00', 'mensal para ate 5 profissionais', ['Cadastro de Clientes', 'Agenda', 'Fila de Atendimento', 'Comissões de Atendimento', 'Contas a Pagar', 'Contas a Receber', 'Até 5 profissionais.']],
+                        ['Profissional', null, null, ['Comissoes, caixa, relatorios e multiplos profissionais.']],
+                        ['Multiempresa', null, null, ['Gestao SaaS com empresas, usuarios e permissoes.']],
+                    ] as [$title, $price, $priceNote, $items])
                         <div class="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-theme-xs">
                             <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-600">
                                 <span class="text-xl">✓</span>
                             </div>
                             <h3 class="mt-7 text-xl font-semibold text-brand-700">{{ $title }}</h3>
+                            @if ($price)
+                                <div class="mt-4 text-4xl font-semibold text-gray-900">{{ $price }}</div>
+                                <div class="mt-1 text-sm font-medium text-gray-500">{{ $priceNote }}</div>
+                            @endif
                             <ul class="mt-4 min-h-16 space-y-2 text-left text-[19px] leading-8 text-gray-500">
                                 @foreach ($items as $item)
                                     <li class="flex gap-2">
