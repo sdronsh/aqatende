@@ -25,18 +25,6 @@
         <x-input-error class="mt-1" :messages="$errors->get('unit_id')" />
     </div>
     <div class="md:col-span-6">
-        <label class="mb-1 block text-sm font-medium text-gray-700" for="professional_id">Profissional</label>
-        @php $professionalId = old('professional_id', $appointment->professional_id ?? null); @endphp
-        <select class="{{ $input }}" id="professional_id" name="professional_id" required>
-            <option value="">Selecione</option>
-            @foreach ($professionals as $professional)
-                <option value="{{ $professional->id }}" @selected((string) $professionalId === (string) $professional->id)>{{ $professional->display_name }}</option>
-            @endforeach
-        </select>
-        <x-input-error class="mt-1" :messages="$errors->get('professional_id')" />
-    </div>
-
-    <div class="md:col-span-6">
         <label class="mb-1 block text-sm font-medium text-gray-700" for="patient_id">Cliente</label>
         @php $patientId = old('patient_id', $appointment->patient_id ?? null); @endphp
         <select class="{{ $input }}" id="patient_id" name="patient_id" required>
@@ -48,22 +36,54 @@
         <x-input-error class="mt-1" :messages="$errors->get('patient_id')" />
     </div>
     <div class="md:col-span-6">
-        <label class="mb-1 block text-sm font-medium text-gray-700" for="service_id">Servico</label>
-        @php $serviceId = old('service_id', $appointment->service_id ?? null); @endphp
-        <select class="{{ $input }}" id="service_id" name="service_id" required>
-            <option value="">Selecione</option>
+        <label class="mb-1 block text-sm font-medium text-gray-700">Servicos</label>
+        @php
+            $selectedServiceIds = collect(old('service_ids', $appointment->exists ? $appointment->services()->pluck('services.id')->all() : []));
+            if ($selectedServiceIds->isEmpty() && old('service_id', $appointment->service_id ?? null)) {
+                $selectedServiceIds = collect([old('service_id', $appointment->service_id ?? null)]);
+            }
+            $serviceProfessionalIds = collect(old('service_professional_ids', $appointment->exists
+                ? $appointment->services()->get()->mapWithKeys(fn ($service) => [$service->id => $service->pivot->professional_id])->all()
+                : []));
+        @endphp
+        <div id="service_ids" class="max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-theme-xs">
             @foreach ($services as $service)
                 @php
                     $servicePrice = $service->price_cents !== null
                         ? number_format($service->price_cents / 100, 2, ',', '.')
                         : '';
                 @endphp
-                <option value="{{ $service->id }}" data-price="{{ $servicePrice }}" @selected((string) $serviceId === (string) $service->id)>
-                    {{ $service->name }}
-                </option>
+                <div class="grid gap-2 border-b border-gray-100 px-3 py-2 text-sm last:border-b-0 hover:bg-gray-50 md:grid-cols-[1fr_220px]">
+                    <label class="flex cursor-pointer items-center gap-3">
+                    <input
+                        type="checkbox"
+                        name="service_ids[]"
+                        value="{{ $service->id }}"
+                        class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                        data-service-option
+                        data-price="{{ $servicePrice }}"
+                        data-duration="{{ $service->duration_minutes }}"
+                        @checked($selectedServiceIds->contains($service->id))
+                    />
+                    <span class="flex-1 text-gray-700">{{ $service->name }}</span>
+                    <span class="text-xs text-gray-500">R$ {{ $servicePrice }}</span>
+                    </label>
+                    <select class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs" name="service_professional_ids[{{ $service->id }}]">
+                        <option value="">Selecione profissional</option>
+                        @foreach ($professionals as $professional)
+                            @if ($professional->services->contains('id', $service->id))
+                                <option value="{{ $professional->id }}" @selected((string) $serviceProfessionalIds->get($service->id) === (string) $professional->id)>
+                                    {{ $professional->display_name }}
+                                </option>
+                            @endif
+                        @endforeach
+                    </select>
+                </div>
             @endforeach
-        </select>
+        </div>
         <x-input-error class="mt-1" :messages="$errors->get('service_id')" />
+        <x-input-error class="mt-1" :messages="$errors->get('service_ids')" />
+        <x-input-error class="mt-1" :messages="$errors->get('service_professional_ids')" />
     </div>
 
     <div class="md:col-span-3">
@@ -194,27 +214,37 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {
-        const serviceSelect = document.getElementById('service_id');
+        const serviceOptions = Array.from(document.querySelectorAll('[data-service-option]'));
         const priceInput = document.getElementById('price');
-        if (!serviceSelect || !priceInput) return;
+        const durationInput = document.getElementById('duration_minutes');
+        if (!serviceOptions.length || !priceInput) return;
 
         const paymentStatusSelect = document.getElementById('payment_status');
         const paymentMethodWrapper = document.getElementById('payment_method_wrapper');
         const paymentMethodSelect = document.getElementById('forma_pagamento');
 
-        const applyServicePrice = () => {
-            const selected = serviceSelect.options[serviceSelect.selectedIndex];
-            if (!selected) return;
-            const price = selected.dataset.price || '';
-            if (price) {
-                priceInput.value = price;
+        const moneyToNumber = (value) => Number((value || '0').replace(/\./g, '').replace(',', '.')) || 0;
+        const numberToMoney = (value) => value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const applyServiceDefaults = () => {
+            const selected = serviceOptions.filter((option) => option.checked);
+            if (!selected.length) return;
+
+            const price = selected.reduce((sum, option) => sum + moneyToNumber(option.dataset.price), 0);
+            const duration = selected.reduce((sum, option) => sum + (Number(option.dataset.duration) || 0), 0);
+
+            if (price > 0) {
+                priceInput.value = numberToMoney(price);
+            }
+            if (durationInput && duration > 0) {
+                durationInput.value = duration;
             }
         };
 
-        serviceSelect.addEventListener('change', applyServicePrice);
+        serviceOptions.forEach((option) => option.addEventListener('change', applyServiceDefaults));
 
         if (!priceInput.value) {
-            applyServicePrice();
+            applyServiceDefaults();
         }
 
         const togglePaymentMethod = () => {

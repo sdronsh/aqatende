@@ -63,16 +63,6 @@
                             <img class="login-logo h-40 w-40 md:h-48 md:w-48" src="{{ asset('logo.png') }}" alt="AQAtende" />
                         </div>
 
-                        <div class="mb-3 flex gap-2 text-sm">
-                            <a class="underline {{ $mode === 'company' ? 'text-gray-900' : 'text-gray-500' }}" href="{{ route('login', ['mode' => 'company']) }}">
-                                Empresa
-                            </a>
-                            <span class="text-gray-300">|</span>
-                            <a class="underline {{ $mode === 'master' ? 'text-gray-900' : 'text-gray-500' }}" href="{{ route('login', ['mode' => 'master']) }}">
-                                Master
-                            </a>
-                        </div>
-
                         <form method="POST" action="{{ route('login') }}" class="space-y-4">
                             @csrf
                             <input type="hidden" name="mode" value="{{ $mode }}">

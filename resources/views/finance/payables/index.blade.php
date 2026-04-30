@@ -40,6 +40,14 @@
                     <option value="50" @selected($selectedPerPage === '50')>50</option>
                     <option value="all" @selected($selectedPerPage === 'all')>Todos</option>
                 </select>
+                <select class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs" name="order_by">
+                    @php $selectedOrderBy = $orderBy ?? request('order_by', 'due_desc'); @endphp
+                    <option value="due_desc" @selected($selectedOrderBy === 'due_desc')>Vencimento (mais recente)</option>
+                    <option value="due_asc" @selected($selectedOrderBy === 'due_asc')>Vencimento (mais antigo)</option>
+                    <option value="value_desc" @selected($selectedOrderBy === 'value_desc')>Valor (maior)</option>
+                    <option value="value_asc" @selected($selectedOrderBy === 'value_asc')>Valor (menor)</option>
+                    <option value="description_asc" @selected($selectedOrderBy === 'description_asc')>Descricao (A-Z)</option>
+                </select>
                 <button class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50" type="submit">Buscar</button>
             </form>
         </div>

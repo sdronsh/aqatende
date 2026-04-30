@@ -29,13 +29,42 @@
                         <option value="{{ $patient->id }}" @selected(old('patient_id') == $patient->id)>{{ $patient->full_name }}</option>
                     @endforeach
                 </select>
-                <select name="service_id" id="queue_service_id" class="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm" required>
-                    <option value="">Serviço</option>
+                <div id="queue_service_id" class="max-h-56 w-full overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-theme-xs">
                     @foreach ($services as $service)
-                        <option value="{{ $service->id }}" data-clinic-id="{{ $service->clinic_id }}" @selected(old('service_id') == $service->id)>{{ $service->name }} - R$ {{ number_format($service->price_cents / 100, 2, ',', '.') }}</option>
+                        @php $servicePrice = number_format($service->price_cents / 100, 2, ',', '.'); @endphp
+                        <div
+                            class="grid gap-2 border-b border-gray-100 px-3 py-2 text-sm last:border-b-0 hover:bg-gray-50 md:grid-cols-[1fr_220px]"
+                            data-clinic-id="{{ $service->clinic_id }}"
+                            data-queue-service-row
+                        >
+                            <label class="flex cursor-pointer items-center gap-3">
+                            <input
+                                type="checkbox"
+                                name="service_ids[]"
+                                value="{{ $service->id }}"
+                                class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                                data-queue-service-option
+                                data-clinic-id="{{ $service->clinic_id }}"
+                                data-price="{{ $servicePrice }}"
+                                @checked(collect(old('service_ids', []))->contains($service->id) || old('service_id') == $service->id)
+                            />
+                            <span class="flex-1 text-gray-700">{{ $service->name }}</span>
+                            <span class="text-xs text-gray-500">R$ {{ $servicePrice }}</span>
+                            </label>
+                            <select class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs" name="service_professional_ids[{{ $service->id }}]">
+                                <option value="">Definir ao iniciar</option>
+                                @foreach ($professionals as $professional)
+                                    @if ($professional->services->contains('id', $service->id))
+                                        <option value="{{ $professional->id }}" @selected((string) old("service_professional_ids.{$service->id}") === (string) $professional->id)>
+                                            {{ $professional->display_name }}
+                                        </option>
+                                    @endif
+                                @endforeach
+                            </select>
+                        </div>
                     @endforeach
-                </select>
-                <input name="price" class="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm" value="{{ old('price') }}" placeholder="Preço ajustado opcional">
+                </div>
+                <input name="price" id="queue_price" class="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm" value="{{ old('price') }}" placeholder="Preço ajustado opcional">
                 <textarea name="notes" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm" rows="2" placeholder="Observações">{{ old('notes') }}</textarea>
                 <button class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">Entrar na fila</button>
             </form>
@@ -56,21 +85,29 @@
                                 <tr>
                                     <td class="px-5 py-3 text-gray-600">{{ $appointment->created_at->format('H:i') }}</td>
                                     <td class="px-5 py-3 text-gray-800">{{ $appointment->patient?->full_name }}</td>
-                                    <td class="px-5 py-3 text-gray-600">{{ $appointment->service?->name }}</td>
+                                    <td class="px-5 py-3 text-gray-600">{{ $appointment->serviceNames() }}</td>
                                     <td class="px-5 py-3 text-gray-600">R$ {{ number_format(($appointment->price_cents ?? 0) / 100, 2, ',', '.') }}</td>
                                     <td class="px-5 py-3">
                                         <form method="POST" action="{{ route('queue.start', $appointment) }}" class="flex min-w-[260px] gap-2">
                                             @csrf
-                                            <select name="professional_id" class="h-10 flex-1 rounded-lg border border-gray-200 px-3 text-sm" required>
-                                                <option value="">Profissional</option>
+                                            <select name="professional_id" class="h-10 flex-1 rounded-lg border border-gray-200 px-3 text-sm">
+                                                <option value="">Usar profissionais definidos</option>
                                                 @foreach ($professionals as $professional)
-                                                    @if ($professional->services->contains('id', $appointment->service_id))
+                                                    @php
+                                                        $appointmentServiceIds = $appointment->services->isNotEmpty()
+                                                            ? $appointment->services->pluck('id')
+                                                            : collect([$appointment->service_id]);
+                                                        $canServeAll = $appointmentServiceIds->every(fn ($serviceId) => $professional->services->contains('id', $serviceId));
+                                                    @endphp
+                                                    @if ($canServeAll)
                                                         @php
-                                                            $sharedService = (bool) ($appointment->service?->shared_service ?? false);
-                                                            $busy = ! $sharedService && in_array((int) $professional->id, $busyProfessionalIds ?? [], true);
+                                                            $allShared = $appointment->services->isNotEmpty()
+                                                                ? $appointment->services->every(fn ($service) => (bool) $service->shared_service)
+                                                                : (bool) ($appointment->service?->shared_service ?? false);
+                                                            $busy = ! $allShared && in_array((int) $professional->id, $busyProfessionalIds ?? [], true);
                                                         @endphp
                                                         <option value="{{ $professional->id }}" @disabled($busy)>
-                                                            {{ $professional->display_name }}{{ $busy ? ' - em atendimento' : ($sharedService && in_array((int) $professional->id, $busyProfessionalIds ?? [], true) ? ' - compartilhado permitido' : '') }}
+                                                            {{ $professional->display_name }}{{ $busy ? ' - em atendimento' : ($allShared && in_array((int) $professional->id, $busyProfessionalIds ?? [], true) ? ' - compartilhado permitido' : '') }}
                                                         </option>
                                                     @endif
                                                 @endforeach
@@ -101,7 +138,7 @@
                                 <tr>
                                     <td class="px-5 py-3 text-gray-600">{{ $appointment->started_at?->format('H:i') }}</td>
                                     <td class="px-5 py-3 text-gray-800">{{ $appointment->patient?->full_name }}</td>
-                                    <td class="px-5 py-3 text-gray-600">{{ $appointment->service?->name }}</td>
+                                    <td class="px-5 py-3 text-gray-600">{{ $appointment->serviceNames() }}</td>
                                     <td class="px-5 py-3 text-gray-600">{{ $appointment->professional?->display_name }}</td>
                                     <td class="px-5 py-3">
                                         <form method="POST" action="{{ route('queue.finish', $appointment) }}" class="flex min-w-[320px] gap-2">
@@ -130,27 +167,47 @@
 <script>
     document.addEventListener('DOMContentLoaded', () => {
         const unitSelect = document.getElementById('queue_unit_id');
-        const serviceSelect = document.getElementById('queue_service_id');
-        if (!unitSelect || !serviceSelect) return;
+        const serviceRows = Array.from(document.querySelectorAll('[data-queue-service-row]'));
+        const serviceOptions = Array.from(document.querySelectorAll('[data-queue-service-option]'));
+        const priceInput = document.getElementById('queue_price');
+        if (!unitSelect || !serviceOptions.length) return;
+
+        const moneyToNumber = (value) => Number((value || '0').replace(/\./g, '').replace(',', '.')) || 0;
+        const numberToMoney = (value) => value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+        const syncPrice = () => {
+            if (!priceInput) return;
+            const selected = serviceOptions.filter((option) => option.checked);
+            const price = selected.reduce((sum, option) => sum + moneyToNumber(option.dataset.price), 0);
+            if (price > 0) {
+                priceInput.value = numberToMoney(price);
+            }
+        };
 
         const syncServices = () => {
             const selectedUnit = unitSelect.options[unitSelect.selectedIndex];
             const clinicId = selectedUnit?.dataset?.clinicId || '';
 
-            Array.from(serviceSelect.options).forEach((option) => {
-                if (!option.value) return;
-                const matches = !clinicId || option.dataset.clinicId === clinicId;
-                option.hidden = !matches;
-                option.disabled = !matches;
+            serviceRows.forEach((row) => {
+                const matches = !clinicId || row.dataset.clinicId === clinicId;
+                row.classList.toggle('hidden', !matches);
             });
 
-            const current = serviceSelect.options[serviceSelect.selectedIndex];
-            if (current?.disabled) {
-                serviceSelect.value = '';
-            }
+            serviceOptions.forEach((option) => {
+                const matches = !clinicId || option.dataset.clinicId === clinicId;
+                option.disabled = !matches;
+                if (!matches) {
+                    option.checked = false;
+                }
+            });
+            syncPrice();
         };
 
         unitSelect.addEventListener('change', syncServices);
+        serviceOptions.forEach((option) => option.addEventListener('change', syncPrice));
         syncServices();
+        if (!priceInput?.value) {
+            syncPrice();
+        }
     });
 </script>

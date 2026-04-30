@@ -16,6 +16,8 @@ use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ServiceWebController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\SpecialtyWebController;
+use App\Http\Controllers\SubscriptionController;
+use App\Http\Controllers\SupportRequestController;
 use App\Http\Controllers\Security\CompanyUserController;
 use App\Http\Controllers\Security\RoleController;
 use App\Http\Controllers\UnitWebController;
@@ -32,14 +34,28 @@ Route::get('/', function () {
 
 Route::get('/company-lookup', CompanyLookupController::class)
     ->name('company.lookup');
+Route::get('/contratar/{plan}', [SubscriptionController::class, 'create'])
+    ->name('subscriptions.create');
+Route::post('/contratar/{plan}', [SubscriptionController::class, 'store'])
+    ->name('subscriptions.store');
+Route::get('/contratar/{plan}/assinatura', [SubscriptionController::class, 'billing'])
+    ->name('subscriptions.billing');
+Route::post('/contratar/{plan}/assinatura', [SubscriptionController::class, 'storeBilling'])
+    ->name('subscriptions.billing.store');
+Route::get('/contratar/{plan}/usuario', [SubscriptionController::class, 'adminUser'])
+    ->name('subscriptions.admin');
+Route::post('/contratar/{plan}/usuario', [SubscriptionController::class, 'storeAdminUser'])
+    ->name('subscriptions.admin.store');
 Route::get('/buscar', SearchController::class)->name('search');
 Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 Route::get('/dashboard', [\App\Http\Controllers\DashboardController::class, 'index'])
-    ->middleware(['auth', 'verified'])
+    ->middleware(['auth', 'verified', 'terms-accepted'])
     ->name('dashboard');
 
 Route::middleware('auth')->group(function () {
+    Route::post('/support/request', SupportRequestController::class)->name('support.request');
+
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
@@ -235,6 +251,9 @@ Route::middleware('auth')->group(function () {
         Route::get('/licenca', [\App\Http\Controllers\SettingsController::class, 'license'])
             ->middleware('permission:configuracoes.logo.view')
             ->name('license');
+        Route::post('/licenca/pagamento', [\App\Http\Controllers\SettingsController::class, 'generateLicensePayment'])
+            ->middleware('permission:configuracoes.logo.view')
+            ->name('license.payment');
 
         Route::get('/logo', [\App\Http\Controllers\SettingsController::class, 'logo'])
             ->middleware('permission:configuracoes.logo.view')

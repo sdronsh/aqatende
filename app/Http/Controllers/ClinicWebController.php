@@ -207,7 +207,7 @@ class ClinicWebController extends Controller
             'responsible_legal.cpf' => ['nullable', 'string', 'max:20'],
             'responsible_legal.email' => ['nullable', 'email', 'max:255'],
             'responsible_legal.phone' => ['nullable', 'string', 'max:30'],
-            'terms_accept' => ['nullable', 'accepted'],
+            'terms_accept' => $this->termsAcceptRules(),
         ]);
 
         $data['company_id'] = $company->id;
@@ -235,6 +235,7 @@ class ClinicWebController extends Controller
             $clinicData = collect($data)->except([
                 'contact', 'certificate', 'tax', 'health', 'bank',
                 'insurance_contracts', 'partners', 'responsible_technical', 'responsible_legal',
+                'terms_accept',
             ])->toArray();
 
             if (! isset($clinicData['email'])) {
@@ -461,7 +462,7 @@ class ClinicWebController extends Controller
             'responsible_legal.cpf' => ['nullable', 'string', 'max:20'],
             'responsible_legal.email' => ['nullable', 'email', 'max:255'],
             'responsible_legal.phone' => ['nullable', 'string', 'max:30'],
-            'terms_accept' => ['nullable', 'accepted'],
+            'terms_accept' => $this->termsAcceptRules($clinic),
         ]);
 
         $data['code'] = $company->code;
@@ -488,6 +489,7 @@ class ClinicWebController extends Controller
             $clinicData = collect($data)->except([
                 'contact', 'certificate', 'tax', 'health', 'bank',
                 'insurance_contracts', 'partners', 'responsible_technical', 'responsible_legal',
+                'terms_accept',
             ])->toArray();
 
             $clinicData['email'] = $contact['email'] ?? $clinicData['email'] ?? $clinic->email;
@@ -593,6 +595,16 @@ class ClinicWebController extends Controller
             'terms_accepted_ip' => $request->ip(),
             'terms_accepted_user_id' => $request->user()?->id,
         ])->save();
+    }
+
+    private function termsAcceptRules(?Clinic $clinic = null): array
+    {
+        $version = Term::currentUsageVersion();
+        if ($clinic && $version && $clinic->hasAcceptedTerms($version)) {
+            return ['nullable'];
+        }
+
+        return ['nullable', 'accepted'];
     }
 
     private function normalizeCnaeFields(Request $request): void

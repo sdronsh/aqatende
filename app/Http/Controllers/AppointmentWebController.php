@@ -19,6 +19,7 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Illuminate\View\View;
 
 class AppointmentWebController extends Controller
@@ -31,7 +32,7 @@ class AppointmentWebController extends Controller
         }
 
         $user = $request->user();
-        $query = Appointment::with(['clinic', 'unit', 'professional', 'patient', 'service']);
+        $query = Appointment::with(['clinic', 'unit', 'professional', 'patient', 'service', 'services']);
 
         $clinicIds = Clinic::where('company_id', $companyId)->pluck('id');
         $query->whereIn('clinic_id', $clinicIds);
@@ -123,6 +124,7 @@ class AppointmentWebController extends Controller
             'clinics' => Clinic::whereIn('id', $clinicIds)->orderBy('name')->get(),
             'units' => Unit::whereIn('clinic_id', $clinicIds)->orderBy('name')->get(),
             'professionals' => Professional::query()
+                ->with('services')
                 ->whereHas('user.companies', fn ($q) => $q->where('companies.id', $companyId))
                 ->orderBy('display_name')
                 ->get(),
@@ -150,6 +152,7 @@ class AppointmentWebController extends Controller
             'clinics' => Clinic::whereIn('id', $clinicIds)->orderBy('name')->get(),
             'units' => Unit::whereIn('clinic_id', $clinicIds)->orderBy('name')->get(),
             'professionals' => Professional::query()
+                ->with('services')
                 ->whereHas('user.companies', fn ($q) => $q->where('companies.id', $companyId))
                 ->orderBy('display_name')
                 ->get(),
@@ -170,13 +173,17 @@ class AppointmentWebController extends Controller
 
         $data = $this->validateAppointment($request, true);
         $data['clinic_id'] = $this->resolveClinicIdFromUnit((int) $data['unit_id'], $companyId);
+        $selectedServices = $this->resolveSelectedServices($data, (int) $data['clinic_id']);
+        $primaryService = $selectedServices->first();
+        $data['service_id'] = $primaryService->id;
+        $data['professional_id'] = $this->resolvePrimaryProfessionalId($data, $selectedServices);
 
         $this->validateClinicRelations($data, $companyId);
+        $this->validateServiceProfessionals($data, $selectedServices, $companyId);
 
-        $service = Service::whereKey($data['service_id'])->first();
         $scheduledAt = Carbon::parse($data['scheduled_at']);
-        $durationMinutes = (int) ($data['duration_minutes'] ?? $service->duration_minutes);
-        $priceCents = $this->resolvePriceCents($data, $service->price_cents);
+        $durationMinutes = (int) ($data['duration_minutes'] ?? $selectedServices->sum('duration_minutes'));
+        $priceCents = $this->resolvePriceCents($data, (int) $selectedServices->sum('price_cents'));
         $status = $this->normalizeStatus($data['status']);
         $occurrenceDates = $this->buildRecurringDates($scheduledAt, $data);
         $schedulesByWeekday = Schedule::query()
@@ -195,7 +202,7 @@ class AppointmentWebController extends Controller
             }
         }
 
-        DB::transaction(function () use ($data, $occurrenceDates, $durationMinutes, $priceCents, $status) {
+        DB::transaction(function () use ($data, $occurrenceDates, $durationMinutes, $priceCents, $status, $selectedServices) {
             $recurrenceGroupId = count($occurrenceDates) > 1 ? (string) Str::uuid() : null;
 
             foreach ($occurrenceDates as $index => $occurrenceDate) {
@@ -221,6 +228,7 @@ class AppointmentWebController extends Controller
                     'cancelled_at' => $status === 'cancelado' ? now() : null,
                     'cancellation_reason' => $data['cancellation_reason'] ?? null,
                 ]);
+                $this->syncAppointmentServices($appointment, $selectedServices, $data, $occurrenceDate, $status);
 
                 $receivable = AccountReceivable::firstOrCreate(
                     ['appointment_id' => $appointment->id],
@@ -230,7 +238,7 @@ class AppointmentWebController extends Controller
                         'professional_id' => $appointment->professional_id,
                         'patient_id' => $appointment->patient_id,
                         'categoria_financeira_id' => $this->resolveReceivableCategoryId($appointment->clinic_id),
-                        'descricao' => 'Atendimento ' . ($appointment->service?->name ?? ''),
+                        'descricao' => 'Atendimento ' . $appointment->serviceNames(),
                         'valor_total_cents' => $priceCents,
                         'numero_parcelas' => 1,
                         'numero_parcela' => 1,
@@ -263,10 +271,11 @@ class AppointmentWebController extends Controller
         $clinicIds = Clinic::where('company_id', $companyId)->pluck('id');
 
         return view('appointments.edit', [
-            'appointment' => $appointment->load(['clinic', 'unit', 'professional', 'patient', 'service', 'receivable']),
+            'appointment' => $appointment->load(['clinic', 'unit', 'professional', 'patient', 'service', 'services', 'receivable']),
             'clinics' => Clinic::whereIn('id', $clinicIds)->orderBy('name')->get(),
             'units' => Unit::whereIn('clinic_id', $clinicIds)->orderBy('name')->get(),
             'professionals' => Professional::query()
+                ->with('services')
                 ->whereHas('user.companies', fn ($q) => $q->where('companies.id', $companyId))
                 ->orderBy('display_name')
                 ->get(),
@@ -287,15 +296,19 @@ class AppointmentWebController extends Controller
 
         $data = $this->validateAppointment($request, false);
         $data['clinic_id'] = $this->resolveClinicIdFromUnit((int) $data['unit_id'], $companyId);
+        $selectedServices = $this->resolveSelectedServices($data, (int) $data['clinic_id']);
+        $primaryService = $selectedServices->first();
+        $data['service_id'] = $primaryService->id;
+        $data['professional_id'] = $this->resolvePrimaryProfessionalId($data, $selectedServices);
 
         $this->validateClinicRelations($data, $companyId);
+        $this->validateServiceProfessionals($data, $selectedServices, $companyId);
 
-        $service = Service::whereKey($data['service_id'])->first();
         $scheduledAt = Carbon::parse($data['scheduled_at']);
-        $duration = (int) ($data['duration_minutes'] ?? $service->duration_minutes);
+        $duration = (int) ($data['duration_minutes'] ?? $selectedServices->sum('duration_minutes'));
         $endsAt = $scheduledAt->copy()->addMinutes($duration);
         $status = $this->normalizeStatus($data['status']);
-        $priceCents = $this->resolvePriceCents($data, $service->price_cents);
+        $priceCents = $this->resolvePriceCents($data, (int) $selectedServices->sum('price_cents'));
 
         if (! $this->scheduleAllows($data['professional_id'], $data['unit_id'], $scheduledAt, $endsAt)) {
             return back()->withErrors([
@@ -303,7 +316,7 @@ class AppointmentWebController extends Controller
             ])->withInput();
         }
 
-        DB::transaction(function () use ($appointment, $data, $status, $scheduledAt, $endsAt, $service, $priceCents) {
+        DB::transaction(function () use ($appointment, $data, $status, $scheduledAt, $endsAt, $selectedServices, $duration, $priceCents) {
             $appointment->update([
                 'clinic_id' => $data['clinic_id'],
                 'unit_id' => $data['unit_id'],
@@ -314,7 +327,7 @@ class AppointmentWebController extends Controller
                 'channel' => $data['channel'],
                 'scheduled_at' => $scheduledAt,
                 'ends_at' => $endsAt,
-                'duration_minutes' => (int) ($data['duration_minutes'] ?? $service->duration_minutes),
+                'duration_minutes' => $duration,
                 'is_first_visit' => (bool) ($data['is_first_visit'] ?? false),
                 'notes' => $data['notes'] ?? null,
                 'price_cents' => $priceCents,
@@ -322,6 +335,7 @@ class AppointmentWebController extends Controller
                 'cancelled_at' => $status === 'cancelado' ? ($appointment->cancelled_at ?? now()) : null,
                 'cancellation_reason' => $data['cancellation_reason'] ?? null,
             ]);
+            $this->syncAppointmentServices($appointment, $selectedServices, $data, $scheduledAt, $status);
 
             $receivable = AccountReceivable::firstOrCreate(
                 ['appointment_id' => $appointment->id],
@@ -331,7 +345,7 @@ class AppointmentWebController extends Controller
                     'professional_id' => $appointment->professional_id,
                     'patient_id' => $appointment->patient_id,
                     'categoria_financeira_id' => $this->resolveReceivableCategoryId($appointment->clinic_id),
-                    'descricao' => 'Atendimento ' . ($appointment->service?->name ?? ''),
+                    'descricao' => 'Atendimento ' . $appointment->serviceNames(),
                     'valor_total_cents' => $priceCents,
                     'numero_parcelas' => 1,
                     'numero_parcela' => 1,
@@ -341,10 +355,20 @@ class AppointmentWebController extends Controller
                     'status' => 'aberto',
                 ]
             );
+            $receivable->fill([
+                'clinic_id' => $appointment->clinic_id,
+                'unit_id' => $appointment->unit_id,
+                'professional_id' => $appointment->professional_id,
+                'patient_id' => $appointment->patient_id,
+                'descricao' => 'Atendimento ' . $appointment->serviceNames(),
+                'valor_total_cents' => $priceCents,
+                'valor_parcela_cents' => $priceCents,
+                'data_vencimento' => $appointment->scheduled_at->toDateString(),
+            ])->save();
 
             $this->syncReceivablePayment($appointment, $receivable, $data['payment_status'] ?? null, $data['forma_pagamento'] ?? null);
 
-            $appointment->refresh()->load(['professional', 'service']);
+            $appointment->refresh()->load(['professional', 'service', 'services']);
             $paid = ($data['payment_status'] ?? $appointment->payment_status) === 'paid';
             if ($paid && $this->isCompletedStatus($status)) {
                 $commission = $appointment->calculateCommissionCents();
@@ -408,9 +432,13 @@ class AppointmentWebController extends Controller
     {
         $rules = [
             'unit_id' => ['required', 'integer', 'exists:units,id'],
-            'professional_id' => ['required', 'integer', 'exists:professionals,id'],
+            'professional_id' => ['nullable', 'integer', 'exists:professionals,id'],
             'patient_id' => ['required', 'integer', 'exists:patients,id'],
-            'service_id' => ['required', 'integer', 'exists:services,id'],
+            'service_id' => ['nullable', 'integer', 'exists:services,id', 'required_without:service_ids'],
+            'service_ids' => ['nullable', 'array', 'min:1', 'required_without:service_id'],
+            'service_ids.*' => ['integer', 'exists:services,id'],
+            'service_professional_ids' => ['nullable', 'array'],
+            'service_professional_ids.*' => ['nullable', 'integer', 'exists:professionals,id'],
             'status' => ['required', 'string', 'in:agendado,confirmado,atendido,concluido,cancelado,scheduled,confirmed,attended,done,cancelled'],
             'channel' => ['required', 'string', 'max:20'],
             'scheduled_at' => ['required', 'date'],
@@ -619,6 +647,110 @@ class AppointmentWebController extends Controller
         return (int) $fallback;
     }
 
+    private function resolveSelectedServices(array $data, int $clinicId): Collection
+    {
+        $serviceIds = collect($data['service_ids'] ?? [])
+            ->filter()
+            ->map(fn ($id) => (int) $id);
+
+        if ($serviceIds->isEmpty() && ! empty($data['service_id'])) {
+            $serviceIds = collect([(int) $data['service_id']]);
+        }
+
+        $serviceIds = $serviceIds->unique()->values();
+        if ($serviceIds->isEmpty()) {
+            abort(422, 'Selecione pelo menos um servico.');
+        }
+
+        $services = Service::where('clinic_id', $clinicId)
+            ->whereIn('id', $serviceIds)
+            ->get()
+            ->sortBy(fn (Service $service) => $serviceIds->search((int) $service->id))
+            ->values();
+
+        if ($services->count() !== $serviceIds->count()) {
+            abort(403);
+        }
+
+        return $services;
+    }
+
+    private function resolvePrimaryProfessionalId(array $data, Collection $services): int
+    {
+        $professionalMap = $data['service_professional_ids'] ?? [];
+        foreach ($services as $service) {
+            $professionalId = (int) ($professionalMap[$service->id] ?? 0);
+            if ($professionalId > 0) {
+                return $professionalId;
+            }
+        }
+
+        $legacyProfessionalId = (int) ($data['professional_id'] ?? 0);
+        if ($legacyProfessionalId > 0) {
+            return $legacyProfessionalId;
+        }
+
+        throw ValidationException::withMessages([
+            'service_professional_ids' => 'Selecione um profissional para cada servico marcado.',
+        ]);
+    }
+
+    private function validateServiceProfessionals(array $data, Collection $services, int $companyId): void
+    {
+        $professionalMap = $data['service_professional_ids'] ?? [];
+
+        foreach ($services as $service) {
+            $professionalId = (int) ($professionalMap[$service->id] ?? $data['professional_id'] ?? 0);
+            if ($professionalId <= 0) {
+                throw ValidationException::withMessages([
+                    'service_professional_ids' => 'Selecione um profissional para cada servico marcado.',
+                ]);
+            }
+
+            $professional = Professional::whereKey($professionalId)
+                ->whereHas('user.companies', fn ($q) => $q->where('companies.id', $companyId))
+                ->first();
+
+            if (! $professional) {
+                throw ValidationException::withMessages([
+                    'service_professional_ids' => 'O profissional selecionado e invalido para esta empresa.',
+                ]);
+            }
+
+            $canServe = $professional->services()
+                ->where('services.id', $service->id)
+                ->wherePivot('active', true)
+                ->exists();
+
+            if (! $canServe) {
+                throw ValidationException::withMessages([
+                    'service_professional_ids' => 'Um profissional selecionado nao atende o servico informado.',
+                ]);
+            }
+        }
+    }
+
+    private function syncAppointmentServices(Appointment $appointment, Collection $services, array $data, Carbon $scheduledAt, string $status): void
+    {
+        $sync = [];
+        $professionalMap = $data['service_professional_ids'] ?? [];
+        foreach ($services->values() as $index => $service) {
+            $duration = (int) $service->duration_minutes;
+            $sync[$service->id] = [
+                'professional_id' => (int) ($professionalMap[$service->id] ?? $appointment->professional_id),
+                'duration_minutes' => $service->duration_minutes,
+                'price_cents' => $service->price_cents,
+                'scheduled_at' => $scheduledAt,
+                'ends_at' => $scheduledAt->copy()->addMinutes($duration),
+                'status' => $status,
+                'commission_amount_cents' => 0,
+                'position' => $index,
+            ];
+        }
+
+        $appointment->services()->sync($sync);
+    }
+
     private function parsePriceToCents(string $value): int
     {
         $raw = str_replace(['R$', 'r$', ' '], '', trim($value));
@@ -710,7 +842,7 @@ class AppointmentWebController extends Controller
         }
 
         $methodLabel = $this->paymentMethodLabel($paymentMethod);
-        $baseDescription = 'Atendimento ' . ($appointment->service?->name ?? '');
+        $baseDescription = 'Atendimento ' . $appointment->serviceNames();
         $descricao = $baseDescription;
         if ($methodLabel) {
             $descricao = $baseDescription . ' (Pago via ' . $methodLabel . ')';
@@ -773,9 +905,7 @@ class AppointmentWebController extends Controller
             ?? $appointment->finished_at?->toDateString()
             ?? now()->toDateString();
         $description = 'Comissão profissional - Atendimento #' . $appointment->id;
-        if ($appointment->service?->name) {
-            $description .= ' - ' . $appointment->service->name;
-        }
+        $description .= ' - ' . $appointment->serviceNames();
 
         AccountPayable::updateOrCreate(
             [

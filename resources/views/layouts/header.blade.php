@@ -26,10 +26,112 @@
         <div class="flex items-center gap-4">
             <span class="text-sm text-gray-600">{{ Auth::user()->name }}</span>
             <a href="{{ route('profile.edit') }}" class="text-sm text-gray-500 hover:text-gray-700">Perfil</a>
+            <button
+                type="button"
+                class="flex h-8 w-8 items-center justify-center rounded-full border border-gray-200 text-sm font-semibold text-gray-500 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-600"
+                title="Enviar duvida/problema ao suporte"
+                aria-label="Enviar duvida/problema ao suporte"
+                data-open-support-confirm
+            >
+                ?
+            </button>
             <form method="POST" action="{{ route('logout') }}">
                 @csrf
                 <button type="submit" class="text-sm text-red-500 hover:text-red-600">Sair</button>
             </form>
         </div>
     </div>
+
+    <dialog id="support-confirm-dialog" class="m-auto w-full max-w-md rounded-xl border border-gray-200 p-0 shadow-theme-lg">
+        <div class="flex flex-col gap-4 p-5">
+            <div class="text-lg font-semibold text-gray-800">Enviar duvida/problema ao suporte</div>
+            <p class="text-sm text-gray-600">
+                Deseja enviar uma duvida ou problema para o suporte?
+            </p>
+            <div class="flex items-center justify-end gap-2 border-t border-gray-100 pt-4">
+                <button type="button" id="support-confirm-no" class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50">
+                    Nao
+                </button>
+                <button type="button" id="support-confirm-yes" class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600">
+                    Sim
+                </button>
+            </div>
+        </div>
+    </dialog>
+
+    <dialog id="support-message-dialog" class="m-auto w-full max-w-lg rounded-xl border border-gray-200 p-0 shadow-theme-lg">
+        <form method="POST" action="{{ route('support.request') }}" class="flex flex-col gap-4 p-5">
+            @csrf
+            <div class="flex items-center justify-between">
+                <h3 class="text-lg font-semibold text-gray-800">Informacoes para o suporte</h3>
+                <button type="button" class="text-gray-500 hover:text-gray-700" data-close-support-message>&times;</button>
+            </div>
+            <div>
+                <label class="mb-1 block text-sm font-medium text-gray-700" for="support-message">Mensagem</label>
+                <textarea
+                    id="support-message"
+                    name="message"
+                    rows="6"
+                    maxlength="5000"
+                    required
+                    class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10"
+                    placeholder="Descreva o que precisa de suporte..."
+                >{{ old('message') }}</textarea>
+            </div>
+            <div class="flex items-center justify-end gap-2 border-t border-gray-100 pt-4">
+                <button type="button" class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50" data-close-support-message>
+                    Cancelar
+                </button>
+                <button type="submit" class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600">
+                    Enviar
+                </button>
+            </div>
+        </form>
+    </dialog>
 </header>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const confirmDialog = document.getElementById('support-confirm-dialog');
+        const messageDialog = document.getElementById('support-message-dialog');
+        const messageInput = document.getElementById('support-message');
+        const confirmNo = document.getElementById('support-confirm-no');
+        const confirmYes = document.getElementById('support-confirm-yes');
+
+        const closeSupportDialogs = () => {
+            if (confirmDialog?.open) confirmDialog.close();
+            if (messageDialog?.open) messageDialog.close();
+        };
+
+        document.querySelectorAll('[data-open-support-confirm]').forEach((button) => {
+            button.addEventListener('click', () => {
+                confirmDialog?.showModal();
+                confirmNo?.focus();
+            });
+        });
+
+        confirmNo?.addEventListener('click', closeSupportDialogs);
+
+        confirmYes?.addEventListener('click', () => {
+            if (confirmDialog?.open) confirmDialog.close();
+            messageDialog?.showModal();
+            messageInput?.focus();
+        });
+
+        messageDialog?.querySelectorAll('[data-close-support-message]').forEach((button) => {
+            button.addEventListener('click', closeSupportDialogs);
+        });
+
+        confirmDialog?.addEventListener('click', (event) => {
+            if (event.target === confirmDialog) {
+                closeSupportDialogs();
+            }
+        });
+
+        messageDialog?.addEventListener('click', (event) => {
+            if (event.target === messageDialog) {
+                closeSupportDialogs();
+            }
+        });
+    });
+</script>

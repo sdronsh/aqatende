@@ -227,7 +227,7 @@
                                         <div class="font-semibold">{{ $appointment->scheduled_at->format('H:i') }}</div>
                                         <div class="truncate">{{ $appointment->patient?->full_name ?? 'Cliente' }}</div>
                                         <div class="truncate text-[11px] text-gray-500">{{ $appointment->professional?->display_name ?? 'Profissional' }}</div>
-                                        <div class="truncate text-[11px] text-gray-500">{{ $appointment->service?->name ?? 'Atendimento' }}</div>
+                                        <div class="truncate text-[11px] text-gray-500">{{ $appointment->serviceNames() }}</div>
                                     </a>
                                 @empty
                                     <div class="text-xs text-gray-400">Sem agendamentos</div>
@@ -353,7 +353,7 @@
     </div>
 
     <dialog id="appointment-modal" class="m-auto w-full max-w-2xl rounded-xl border border-gray-200 p-0 shadow-theme-lg">
-        <form method="POST" action="{{ route('agenda.store') }}" class="flex flex-col gap-4 p-5">
+        <form method="POST" action="{{ route('appointments.store') }}" class="flex flex-col gap-4 p-5">
             @csrf
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-800">Novo agendamento</h3>
@@ -371,15 +371,6 @@
                     </select>
                 </div>
                 <div>
-                    <label class="mb-1 block text-sm font-medium text-gray-700" for="professional_id">Profissional</label>
-                    <select class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" id="professional_id" name="professional_id" required>
-                        <option value="">Selecione</option>
-                        @foreach ($professionals as $professional)
-                            <option value="{{ $professional->id }}">{{ $professional->display_name }}</option>
-                        @endforeach
-                    </select>
-                </div>
-                <div>
                     <label class="mb-1 block text-sm font-medium text-gray-700" for="patient_id">Cliente</label>
                     <select class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" id="patient_id" name="patient_id" required>
                         <option value="">Selecione</option>
@@ -389,18 +380,39 @@
                     </select>
                 </div>
                 <div>
-                    <label class="mb-1 block text-sm font-medium text-gray-700" for="service_id">Servico</label>
-                    <select class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" id="service_id" name="service_id" required>
-                        <option value="">Selecione</option>
+                    <label class="mb-1 block text-sm font-medium text-gray-700">Servicos</label>
+                    <div class="max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-theme-xs">
                         @foreach ($services as $service)
                             @php
                                 $servicePrice = $service->price_cents !== null
                                     ? number_format($service->price_cents / 100, 2, ',', '.')
                                     : '';
                             @endphp
-                            <option value="{{ $service->id }}" data-price="{{ $servicePrice }}">{{ $service->name }}</option>
+                            <div class="grid gap-2 border-b border-gray-100 px-3 py-2 text-sm last:border-b-0 hover:bg-gray-50 md:grid-cols-[1fr_220px]">
+                            <label class="flex cursor-pointer items-center gap-3">
+                                <input
+                                    type="checkbox"
+                                    name="service_ids[]"
+                                    value="{{ $service->id }}"
+                                    class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                                    data-agenda-service-option
+                                    data-price="{{ $servicePrice }}"
+                                    data-duration="{{ $service->duration_minutes }}"
+                                />
+                                <span class="flex-1 text-gray-700">{{ $service->name }}</span>
+                                <span class="text-xs text-gray-500">R$ {{ $servicePrice }}</span>
+                            </label>
+                            <select class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs" name="service_professional_ids[{{ $service->id }}]">
+                                <option value="">Selecione profissional</option>
+                                @foreach ($professionals as $professional)
+                                    @if ($professional->services->contains('id', $service->id))
+                                        <option value="{{ $professional->id }}">{{ $professional->display_name }}</option>
+                                    @endif
+                                @endforeach
+                            </select>
+                            </div>
                         @endforeach
-                    </select>
+                    </div>
                 </div>
                 <div>
                     <label class="mb-1 block text-sm font-medium text-gray-700" for="channel">Canal</label>
@@ -478,20 +490,25 @@
                 }
             });
 
-            const serviceSelect = dialog.querySelector('#service_id');
+            const serviceOptions = Array.from(dialog.querySelectorAll('[data-agenda-service-option]'));
             const priceInput = dialog.querySelector('#price');
+            const durationInput = dialog.querySelector('#duration_minutes');
+            const moneyToNumber = (value) => Number((value || '0').replace(/\./g, '').replace(',', '.')) || 0;
+            const numberToMoney = (value) => value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
             const applyServicePrice = () => {
-                if (!serviceSelect || !priceInput) return;
-                const selected = serviceSelect.options[serviceSelect.selectedIndex];
-                if (!selected) return;
-                const price = selected.dataset.price || '';
-                if (price) {
-                    priceInput.value = price;
+                if (!serviceOptions.length || !priceInput) return;
+                const selected = serviceOptions.filter((option) => option.checked);
+                if (!selected.length) return;
+                const price = selected.reduce((sum, option) => sum + moneyToNumber(option.dataset.price), 0);
+                const duration = selected.reduce((sum, option) => sum + (Number(option.dataset.duration) || 0), 0);
+                if (price > 0) {
+                    priceInput.value = numberToMoney(price);
+                }
+                if (durationInput && duration > 0) {
+                    durationInput.value = duration;
                 }
             };
-            if (serviceSelect && priceInput) {
-                serviceSelect.addEventListener('change', applyServicePrice);
-            }
+            serviceOptions.forEach((option) => option.addEventListener('change', applyServicePrice));
 
             const recurrenceType = dialog.querySelector('#recurrence_type');
             const recurrenceIntervalWrapper = dialog.querySelector('#recurrence-interval-days-wrapper');

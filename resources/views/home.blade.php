@@ -55,7 +55,6 @@
                 <a class="hover:text-white" href="#contato">Contato</a>
             </nav>
             <div class="flex items-center gap-2 text-sm">
-                <a class="rounded-full border border-white/35 px-4 py-2 font-semibold text-white hover:bg-white/10" href="{{ route('login', ['mode' => 'master']) }}">Master</a>
                 <a class="rounded-full bg-white px-4 py-2 font-semibold text-brand-800 shadow-theme-xs hover:bg-brand-50" href="{{ route('login', ['mode' => 'company']) }}">Entrar</a>
             </div>
         </div>
@@ -203,12 +202,26 @@
                     <p class="text-xs font-bold uppercase tracking-[0.3em] text-brand-600">Planos</p>
                     <h2 class="mt-5 text-3xl font-semibold md:text-4xl">Preparado para crescer com os seus atendimentos.</h2>
                 </div>
+                <div class="mx-auto mt-8 grid max-w-5xl gap-3 md:grid-cols-3">
+                    <div class="rounded-2xl border border-brand-100 bg-brand-50 px-5 py-4 text-center">
+                        <div class="text-sm font-semibold text-brand-800">Implantação gratuita</div>
+                        <p class="mt-1 text-xs leading-5 text-brand-700">Comece sem custo de ativação.</p>
+                    </div>
+                    <div class="rounded-2xl border border-brand-100 bg-brand-50 px-5 py-4 text-center">
+                        <div class="text-sm font-semibold text-brand-800">7 dias grátis</div>
+                        <p class="mt-1 text-xs leading-5 text-brand-700">Teste o fluxo antes de contratar.</p>
+                    </div>
+                    <div class="rounded-2xl border border-brand-100 bg-brand-50 px-5 py-4 text-center">
+                        <div class="text-sm font-semibold text-brand-800">Treinamento e configuração grátis</div>
+                        <p class="mt-1 text-xs leading-5 text-brand-700">Apoiamos sua equipe nos primeiros passos.</p>
+                    </div>
+                </div>
                 <div class="mt-14 grid gap-6 md:grid-cols-3">
                     @foreach ([
-                        ['Essencial', 'R$ 99,00', 'mensal para ate 5 profissionais', ['Cadastro de Clientes', 'Agenda', 'Fila de Atendimento', 'Comissões de Atendimento', 'Contas a Pagar', 'Contas a Receber', 'Até 5 profissionais.']],
-                        ['Profissional', null, null, ['Comissoes, caixa, relatorios e multiplos profissionais.']],
-                        ['Multiempresa', null, null, ['Gestao SaaS com empresas, usuarios e permissoes.']],
-                    ] as [$title, $price, $priceNote, $items])
+                        ['essencial', 'Essencial', 'R$ 19,90', 'mensal para ate 5 profissionais', ['Cadastro de Clientes', 'Agenda', 'Fila de Atendimento', 'Comissões de Atendimento', 'Contas a Pagar', 'Contas a Receber', 'Até 5 profissionais.']],
+                        ['anual', 'Anual', 'R$ 199,90', 'anual para ate 10 profissionais', ['Todos os benefícios do pacote Essencial', 'Para uma maior quantidade de profissionais', 'Até 10 profissionais.']],
+                        ['plus', 'Plano Plus', 'R$ 59,90', 'mensal sem limite de profissionais', ['Todos os benefícios do pacote Essencial', 'Sem limites de profissionais.']],
+                    ] as [$slug, $title, $price, $priceNote, $items])
                         <div class="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-theme-xs">
                             <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-brand-50 text-brand-600">
                                 <span class="text-xl">✓</span>
@@ -226,9 +239,57 @@
                                     </li>
                                 @endforeach
                             </ul>
-                            <a class="mt-8 inline-flex rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-600" href="{{ route('login', ['mode' => 'company']) }}">Contratar</a>
+                            <a class="mt-8 inline-flex rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-600" href="{{ route('subscriptions.create', $slug) }}">Contratar</a>
                         </div>
                     @endforeach
+                </div>
+            </div>
+        </section>
+
+        <section class="bg-gray-50 px-5 py-16 md:py-20">
+            <div class="mx-auto max-w-7xl">
+                <div class="grid items-center gap-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-xs md:p-8 lg:grid-cols-[1.2fr_.8fr]">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-[0.3em] text-brand-600">Integração WhatsApp</p>
+                        <h2 class="mt-4 text-2xl font-semibold leading-tight text-gray-900 md:text-3xl">
+                            Atendimento automático, agendamento por mensagem e IA para interagir com seus clientes.
+                        </h2>
+                        <p class="mt-4 max-w-3xl text-base leading-7 text-gray-600">
+                            Contrate a integração com WhatsApp para receber dúvidas, automatizar respostas, facilitar agendamentos e manter o relacionamento com seus clientes dentro do fluxo do AQAtende.
+                        </p>
+                        <div class="mt-6 grid gap-3 text-sm text-gray-600 sm:grid-cols-2">
+                            <div class="flex gap-2">
+                                <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand-500"></span>
+                                <span>Respostas automáticas para perguntas frequentes</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand-500"></span>
+                                <span>Agendamento por mensagem</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand-500"></span>
+                                <span>IA de interação com o cliente</span>
+                            </div>
+                            <div class="flex gap-2">
+                                <span class="mt-1 h-2 w-2 shrink-0 rounded-full bg-brand-500"></span>
+                                <span>Mais agilidade no atendimento da recepção</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="rounded-2xl border border-brand-100 bg-brand-50 p-6 text-center">
+                        <div class="text-sm font-semibold uppercase tracking-[0.2em] text-brand-700">Adicional ao plano</div>
+                        <div class="mt-4 text-4xl font-semibold text-brand-900">R$ 19,90</div>
+                        <div class="mt-1 text-sm font-medium text-brand-700">por mês</div>
+                        <a
+                            class="mt-6 inline-flex rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-600"
+                            href="https://wa.me/5531993723008"
+                            target="_blank"
+                            rel="noopener"
+                        >
+                            Entre em contato
+                        </a>
+                        <div class="mt-3 text-sm font-medium text-brand-800">(31) 99372-3008</div>
+                    </div>
                 </div>
             </div>
         </section>
@@ -240,7 +301,6 @@
                 <p class="mt-5 text-lg leading-8 text-white/75">Use o login de empresa para operar agenda, fila, profissionais, servicos e financeiro.</p>
                 <div class="mt-9 flex justify-center gap-3">
                     <a class="rounded-full bg-white px-7 py-3 text-sm font-bold text-brand-800 hover:bg-brand-50" href="{{ route('login', ['mode' => 'company']) }}">Entrar como empresa</a>
-                    <a class="rounded-full border border-white/35 px-7 py-3 text-sm font-bold text-white hover:bg-white/10" href="{{ route('login', ['mode' => 'master']) }}">Acesso master</a>
                 </div>
             </div>
         </section>

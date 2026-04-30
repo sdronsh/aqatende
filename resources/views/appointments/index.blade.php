@@ -122,7 +122,7 @@
                             </td>
                             <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $appointment->professional?->display_name }}</td>
                             <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $appointment->patient?->full_name }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $appointment->service?->name }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $appointment->serviceNames() }}</td>
                             <td class="border border-gray-200 px-4 py-3 text-gray-600">
                                 {{ ['presencial' => 'Presencial', 'home_care' => 'Home Care', 'whatsapp' => 'Home Care', 'teleconsulta' => 'Home Care', 'walk_in' => 'Fila'][$appointment->channel ?? 'presencial'] ?? ucfirst($appointment->channel ?? 'presencial') }}
                             </td>

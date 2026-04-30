@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 
@@ -73,6 +74,34 @@ class Appointment extends Model
         return $this->belongsTo(Service::class);
     }
 
+    public function services(): BelongsToMany
+    {
+        return $this->belongsToMany(Service::class)
+            ->withPivot([
+                'professional_id',
+                'duration_minutes',
+                'price_cents',
+                'scheduled_at',
+                'ends_at',
+                'status',
+                'commission_amount_cents',
+                'position',
+            ])
+            ->withTimestamps()
+            ->orderByPivot('position');
+    }
+
+    public function serviceNames(): string
+    {
+        $services = $this->relationLoaded('services') ? $this->services : $this->services()->get();
+
+        if ($services->isNotEmpty()) {
+            return $services->pluck('name')->join(' + ');
+        }
+
+        return $this->service?->name ?? 'Atendimento';
+    }
+
     public function medicalRecord(): HasOne
     {
         return $this->hasOne(MedicalRecord::class);
@@ -97,6 +126,42 @@ class Appointment extends Model
         $professional = $this->professional ?? Professional::find($this->professional_id);
         if (! $professional) {
             return 0;
+        }
+
+        $appointmentServices = $this->services()->get();
+        if ($appointmentServices->isNotEmpty()) {
+            return $appointmentServices->sum(function (Service $service) use ($professional) {
+                $priceCents = (int) ($service->pivot->price_cents ?? $service->price_cents ?? 0);
+                if ($priceCents <= 0) {
+                    return 0;
+                }
+
+                $itemProfessional = $service->pivot->professional_id
+                    ? Professional::find($service->pivot->professional_id)
+                    : $professional;
+
+                if (! $itemProfessional) {
+                    return 0;
+                }
+
+                $pivot = $itemProfessional->services()
+                    ->where('services.id', $service->id)
+                    ->wherePivot('active', true)
+                    ->first()?->pivot;
+
+                $type = $pivot?->commission_type ?: $itemProfessional->commission_type;
+                $value = $pivot?->commission_value ?? $itemProfessional->commission_value;
+
+                if (! $type || $value === null) {
+                    return 0;
+                }
+
+                if ($type === 'percentage') {
+                    return (int) round($priceCents * ((float) $value / 100));
+                }
+
+                return min((int) round(((float) $value) * 100), $priceCents);
+            });
         }
 
         $pivot = $professional->services()

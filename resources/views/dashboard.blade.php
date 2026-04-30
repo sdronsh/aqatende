@@ -32,7 +32,7 @@
                 <form method="GET" class="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="period" value="{{ $period }}" />
                     <select class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" name="clinic_id">
-                        <option value="">Todas as clinicas</option>
+                        <option value="">Todas as empresas</option>
                         @foreach ($clinics as $clinic)
                             <option value="{{ $clinic->id }}" @selected($selectedClinicId === $clinic->id)>{{ $clinic->name }}</option>
                         @endforeach
@@ -62,7 +62,7 @@
         <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             <div class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-sm">
                 <div class="flex items-center justify-between">
-                    <h3 class="text-sm font-semibold text-gray-700">Consultas {{ $periodText }}</h3>
+                    <h3 class="text-sm font-semibold text-gray-700">Atendimentos {{ $periodText }}</h3>
                     <span class="rounded-full px-2 py-0.5 text-xs font-semibold {{ $appointmentsDeltaClass }}">{{ $appointmentsDeltaLabel }}</span>
                 </div>
                 <div class="mt-3 text-2xl font-semibold text-gray-900">{{ $appointmentsPeriodCount }}</div>

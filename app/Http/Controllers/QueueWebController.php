@@ -32,11 +32,13 @@ class QueueWebController extends Controller
 
         return view('queue.index', [
             'waiting' => Appointment::with(['patient', 'service'])
+                ->with('services')
                 ->whereIn('clinic_id', $clinicIds)
                 ->where('status', 'waiting')
                 ->orderBy('created_at')
                 ->get(),
             'inProgress' => Appointment::with(['patient', 'service', 'professional'])
+                ->with('services')
                 ->whereIn('clinic_id', $clinicIds)
                 ->where('status', 'in_progress')
                 ->orderBy('started_at')
@@ -67,7 +69,11 @@ class QueueWebController extends Controller
         $data = $request->validate([
             'unit_id' => ['required', 'integer', 'exists:units,id'],
             'patient_id' => ['required', 'integer', 'exists:patients,id'],
-            'service_id' => ['required', 'integer', 'exists:services,id'],
+            'service_id' => ['nullable', 'integer', 'exists:services,id', 'required_without:service_ids'],
+            'service_ids' => ['nullable', 'array', 'min:1', 'required_without:service_id'],
+            'service_ids.*' => ['integer', 'exists:services,id'],
+            'service_professional_ids' => ['nullable', 'array'],
+            'service_professional_ids.*' => ['nullable', 'integer', 'exists:professionals,id'],
             'price' => ['nullable'],
             'notes' => ['nullable', 'string'],
         ]);
@@ -77,22 +83,28 @@ class QueueWebController extends Controller
             ->whereHas('clinic', fn ($query) => $query->where('company_id', $companyId))
             ->firstOrFail();
 
-        $service = Service::where('clinic_id', $unit->clinic_id)->whereKey($data['service_id'])->firstOrFail();
+        $services = $this->resolveSelectedServices($data, (int) $unit->clinic_id);
+        $primaryService = $services->first();
+        $primaryProfessionalId = $this->resolvePrimaryProfessionalId($data, $services);
+        if ($primaryProfessionalId) {
+            $this->validateServiceProfessionals($data, $services, $companyId);
+        }
 
-        Appointment::create([
+        $appointment = Appointment::create([
             'clinic_id' => $unit->clinic_id,
             'unit_id' => $unit->id,
             'patient_id' => $data['patient_id'],
-            'service_id' => $service->id,
-            'professional_id' => null,
+            'service_id' => $primaryService->id,
+            'professional_id' => $primaryProfessionalId ?: null,
             'status' => 'waiting',
             'channel' => 'walk_in',
             'scheduled_at' => null,
-            'duration_minutes' => $service->duration_minutes,
-            'price_cents' => $request->filled('price') ? $this->moneyToCents($request->input('price')) : $service->price_cents,
+            'duration_minutes' => (int) $services->sum('duration_minutes'),
+            'price_cents' => $request->filled('price') ? $this->moneyToCents($request->input('price')) : (int) $services->sum('price_cents'),
             'payment_status' => 'pending',
             'notes' => $data['notes'] ?? null,
         ]);
+        $this->syncAppointmentServices($appointment, $services, $data);
 
         return back()->with('status', 'Cliente adicionado à fila.');
     }
@@ -104,18 +116,42 @@ class QueueWebController extends Controller
         abort_unless(in_array($appointment->status, ['waiting', 'scheduled', 'agendado', 'confirmado'], true), 403);
 
         $data = $request->validate([
-            'professional_id' => ['required', 'integer', 'exists:professionals,id'],
+            'professional_id' => ['nullable', 'integer', 'exists:professionals,id'],
         ]);
 
-        $professional = Professional::whereKey($data['professional_id'])->where('active', true)->firstOrFail();
-        if (! $this->professionalCanServe($professional, $appointment->service_id)) {
+        $serviceIds = $appointment->services()->pluck('services.id')->map(fn ($id) => (int) $id)->all();
+        if (! $serviceIds) {
+            $serviceIds = [(int) $appointment->service_id];
+        }
+
+        $distributedProfessionalIds = $appointment->services()
+            ->pluck('appointment_service.professional_id')
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
+
+        if (! empty($data['professional_id'])) {
+            $professional = Professional::whereKey($data['professional_id'])->where('active', true)->firstOrFail();
+
+            if (! $this->professionalCanServeAll($professional, $serviceIds)) {
+                return back()
+                    ->withErrors(['professional_id' => 'Profissional não atende todos os serviços deste atendimento.'])
+                    ->withInput();
+            }
+
+            $professionalId = $professional->id;
+        } elseif ($distributedProfessionalIds->isNotEmpty()) {
+            $professionalId = (int) $distributedProfessionalIds->first();
+        } else {
             return back()
-                ->withErrors(['professional_id' => 'Profissional não atende esse serviço.'])
+                ->withErrors(['professional_id' => 'Selecione um profissional para iniciar o atendimento.'])
                 ->withInput();
         }
 
-        $busy = ! $appointment->service?->shared_service
-            && Appointment::where('professional_id', $professional->id)
+        $allShared = Service::whereIn('id', $serviceIds)->where('shared_service', false)->doesntExist();
+        $busy = ! $allShared
+            && Appointment::where('professional_id', $professionalId)
                 ->where('status', 'in_progress')
                 ->exists();
 
@@ -126,7 +162,7 @@ class QueueWebController extends Controller
         }
 
         $appointment->update([
-            'professional_id' => $professional->id,
+            'professional_id' => $professionalId,
             'status' => 'in_progress',
             'started_at' => now(),
         ]);
@@ -146,7 +182,7 @@ class QueueWebController extends Controller
 
         DB::transaction(function () use ($appointment, $request, $data) {
             $appointment = Appointment::query()
-                ->with(['professional', 'service'])
+                ->with(['professional', 'service', 'services'])
                 ->whereKey($appointment->id)
                 ->lockForUpdate()
                 ->firstOrFail();
@@ -174,7 +210,7 @@ class QueueWebController extends Controller
                 'type' => 'income',
                 'amount_cents' => $appointment->price_cents ?? 0,
                 'payment_method' => $data['payment_method'],
-                'description' => 'Atendimento #' . $appointment->id,
+                'description' => 'Atendimento #' . $appointment->id . ' - ' . $appointment->serviceNames(),
                 'paid_at' => now(),
             ]);
 
@@ -184,12 +220,14 @@ class QueueWebController extends Controller
         return back()->with('status', 'Atendimento finalizado.');
     }
 
-    private function professionalCanServe(Professional $professional, int $serviceId): bool
+    private function professionalCanServeAll(Professional $professional, array $serviceIds): bool
     {
-        return $professional->services()
-            ->where('services.id', $serviceId)
+        $allowedIds = $professional->services()
             ->wherePivot('active', true)
-            ->exists();
+            ->pluck('services.id')
+            ->map(fn ($id) => (int) $id);
+
+        return collect($serviceIds)->every(fn ($serviceId) => $allowedIds->contains((int) $serviceId));
     }
 
     private function syncCommissionPayable(Appointment $appointment, int $commissionCents): void
@@ -212,9 +250,7 @@ class QueueWebController extends Controller
             ?? $appointment->finished_at?->toDateString()
             ?? now()->toDateString();
         $description = 'Comissão profissional - Atendimento #' . $appointment->id;
-        if ($appointment->service?->name) {
-            $description .= ' - ' . $appointment->service->name;
-        }
+        $description .= ' - ' . $appointment->serviceNames();
 
         AccountPayable::updateOrCreate(
             [
@@ -261,6 +297,88 @@ class QueueWebController extends Controller
     private function companyId(Request $request): int
     {
         return (int) $request->session()->get('active_company_id') ?: abort(403);
+    }
+
+    private function resolveSelectedServices(array $data, int $clinicId): \Illuminate\Support\Collection
+    {
+        $serviceIds = collect($data['service_ids'] ?? [])
+            ->filter()
+            ->map(fn ($id) => (int) $id);
+
+        if ($serviceIds->isEmpty() && ! empty($data['service_id'])) {
+            $serviceIds = collect([(int) $data['service_id']]);
+        }
+
+        $serviceIds = $serviceIds->unique()->values();
+
+        $services = Service::where('clinic_id', $clinicId)
+            ->whereIn('id', $serviceIds)
+            ->where('active', true)
+            ->get()
+            ->sortBy(fn (Service $service) => $serviceIds->search((int) $service->id))
+            ->values();
+
+        if ($services->count() !== $serviceIds->count()) {
+            abort(403);
+        }
+
+        return $services;
+    }
+
+    private function resolvePrimaryProfessionalId(array $data, \Illuminate\Support\Collection $services): ?int
+    {
+        $professionalMap = $data['service_professional_ids'] ?? [];
+        foreach ($services as $service) {
+            $professionalId = (int) ($professionalMap[$service->id] ?? 0);
+            if ($professionalId > 0) {
+                return $professionalId;
+            }
+        }
+
+        return null;
+    }
+
+    private function validateServiceProfessionals(array $data, \Illuminate\Support\Collection $services, int $companyId): void
+    {
+        $professionalMap = $data['service_professional_ids'] ?? [];
+
+        foreach ($services as $service) {
+            $professionalId = (int) ($professionalMap[$service->id] ?? 0);
+            if ($professionalId <= 0) {
+                continue;
+            }
+
+            $professional = Professional::whereKey($professionalId)
+                ->where(function ($query) use ($companyId) {
+                    $query->where('company_id', $companyId)
+                        ->orWhereHas('user.companies', fn ($companyQuery) => $companyQuery->whereKey($companyId));
+                })
+                ->first();
+
+            if (! $professional || ! $professional->services()->where('services.id', $service->id)->wherePivot('active', true)->exists()) {
+                abort(422, 'Um profissional selecionado nao atende o servico informado.');
+            }
+        }
+    }
+
+    private function syncAppointmentServices(Appointment $appointment, \Illuminate\Support\Collection $services, array $data): void
+    {
+        $sync = [];
+        $professionalMap = $data['service_professional_ids'] ?? [];
+        foreach ($services->values() as $index => $service) {
+            $sync[$service->id] = [
+                'professional_id' => (int) ($professionalMap[$service->id] ?? 0) ?: null,
+                'duration_minutes' => $service->duration_minutes,
+                'price_cents' => $service->price_cents,
+                'scheduled_at' => null,
+                'ends_at' => null,
+                'status' => 'waiting',
+                'commission_amount_cents' => 0,
+                'position' => $index,
+            ];
+        }
+
+        $appointment->services()->sync($sync);
     }
 
     private function moneyToCents(mixed $value): int

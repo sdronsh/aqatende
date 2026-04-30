@@ -26,6 +26,7 @@
                     'verification-link-sent' => 'Um novo link de verificacao foi enviado.',
                     'profile-updated' => 'Perfil atualizado.',
                     'password-updated' => 'Senha atualizada.',
+                    'support-request-sent' => 'Duvida/problema enviado ao suporte.',
                     default => $statusKey,
                 };
             }

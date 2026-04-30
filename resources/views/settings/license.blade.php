@@ -20,6 +20,45 @@
         $billingStatus = strtolower((string) ($billing['status'] ?? 'indisponivel'));
         $billingStatusLabel = (string) ($billing['status_label'] ?? ucfirst(str_replace('_', ' ', $billingStatus)));
         $billingHasAccess = $billing['has_access'] ?? null;
+        $monthlyDueRaw = $billing['oldest_unpaid_due_date'] ?? $billing['due_date'] ?? $billing['next_due_date'] ?? $billing['expires_at'] ?? $billing['valid_until'] ?? null;
+        $monthlyReference = $billing['oldest_unpaid_reference'] ?? $billing['reference'] ?? null;
+        $monthlyDueDate = null;
+        if ($monthlyDueRaw) {
+            try {
+                $monthlyDueDate = \Illuminate\Support\Carbon::parse($monthlyDueRaw)->startOfDay();
+            } catch (\Throwable $e) {
+                $monthlyDueDate = null;
+            }
+        }
+        $amountCents = $billing['oldest_unpaid_amount_cents'] ?? $billing['monthly_amount_cents'] ?? $billing['amount_cents'] ?? $billing['value_cents'] ?? null;
+        $amountValue = $billing['oldest_unpaid_amount'] ?? $billing['monthly_amount'] ?? $billing['amount'] ?? $billing['value'] ?? null;
+        $monthlyAmount = is_numeric($amountCents)
+            ? 'R$ '.number_format(((int) $amountCents) / 100, 2, ',', '.')
+            : (is_numeric($amountValue) ? 'R$ '.number_format((float) $amountValue, 2, ',', '.') : ($billing['amount_label'] ?? '-'));
+        $hasOpenMonthlyCharge = ! empty($billing['oldest_unpaid_due_date']) || ! empty($billing['oldest_unpaid_reference']);
+        $isMonthlyOverdue = $monthlyDueDate && $monthlyDueDate->lt(now()->startOfDay()) && $hasOpenMonthlyCharge;
+        $isMonthlyDueToday = $monthlyDueDate && $monthlyDueDate->isSameDay(now());
+        $monthlyStatusText = $monthlyDueDate
+            ? ($isMonthlyOverdue ? 'Mensalidade vencida' : ($isMonthlyDueToday ? 'Mensalidade vence hoje' : ($hasOpenMonthlyCharge ? 'Mensalidade a vencer' : 'Proximo vencimento')))
+            : 'Mensalidade indisponivel';
+        $monthlyChip = $isMonthlyOverdue
+            ? 'bg-error-100 text-error-700'
+            : ($isMonthlyDueToday ? 'bg-warning-100 text-warning-800' : 'bg-emerald-100 text-emerald-800');
+        $billingPaymentLinks = [
+            $billing['oldest_unpaid_payment_url'] ?? null,
+            $billing['payment_url'] ?? null,
+            $billing['payment_link'] ?? null,
+            $billing['checkout_url'] ?? null,
+            $billing['invoice_url'] ?? null,
+            $billing['mercado_pago_url'] ?? null,
+            $billing['init_point'] ?? null,
+            $license['payment_url'] ?? null,
+            $license['payment_link'] ?? null,
+            $license['checkout_url'] ?? null,
+            $license['invoice_url'] ?? null,
+        ];
+        $hasPaymentLink = collect($billingPaymentLinks)->contains(fn ($link) => is_string($link) && filter_var($link, FILTER_VALIDATE_URL));
+        $hasPaymentTemplate = filled(config('aqamed.license.payment_url_template'));
 
         $licenseChip = $status === 'active' ? 'bg-emerald-100 text-emerald-800' : 'bg-error-100 text-error-700';
         $accessChip = $hasAccess === null
@@ -68,6 +107,45 @@
                 </div>
 
                 <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm md:col-span-12">
+                    <div class="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <div class="text-xs uppercase text-gray-400">Mensalidade</div>
+                            <div class="mt-2 inline-flex rounded-full px-2 py-1 text-xs font-semibold {{ $monthlyChip }}">{{ $monthlyStatusText }}</div>
+                            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                                <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                    <div class="text-xs text-gray-500">Vencimento</div>
+                                    <div class="mt-1 text-lg font-semibold text-gray-800">
+                                        {{ $monthlyDueDate ? $monthlyDueDate->format('d/m/Y') : '-' }}
+                                    </div>
+                                    @if ($monthlyReference)
+                                        <div class="mt-1 text-xs text-gray-500">Referencia {{ $monthlyReference }}</div>
+                                    @endif
+                                </div>
+                                <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                    <div class="text-xs text-gray-500">Valor</div>
+                                    <div class="mt-1 text-lg font-semibold text-gray-800">{{ $monthlyAmount }}</div>
+                                </div>
+                            </div>
+                            <div class="mt-3 text-xs text-gray-500">
+                                @if ($hasPaymentLink)
+                                    Link de pagamento recebido da API de licencas.
+                                @elseif ($hasPaymentTemplate)
+                                    Link de pagamento sera montado pelo template configurado.
+                                @else
+                                    Integração pronta para receber link do Mercado Pago ou outro provedor.
+                                @endif
+                            </div>
+                        </div>
+                        <form method="POST" action="{{ route('settings.license.payment') }}">
+                            @csrf
+                            <button class="inline-flex rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600" type="submit">
+                                Gerar pagamento
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm md:col-span-12">
                     <div class="text-xs uppercase text-gray-400">Limites</div>
                     <div class="mt-3 grid gap-3 md:grid-cols-3">
                         <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
@@ -75,7 +153,7 @@
                             <div class="mt-1 text-lg font-semibold text-gray-800">{{ $license['user_limit'] ?? '-' }}</div>
                         </div>
                         <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                            <div class="text-xs text-gray-500">Clinicas</div>
+                            <div class="text-xs text-gray-500">Empresas</div>
                             <div class="mt-1 text-lg font-semibold text-gray-800">{{ $license['clinic_limit'] ?? '-' }}</div>
                         </div>
                         <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
@@ -85,10 +163,12 @@
                     </div>
                 </div>
 
-                <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm md:col-span-12">
-                    <div class="text-xs uppercase text-gray-400">Dados recebidos da API</div>
-                    <pre class="mt-3 max-h-80 overflow-auto rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">{{ json_encode($license, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</pre>
-                </div>
+                @if (auth()->user()?->is_platform_admin)
+                    <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm md:col-span-12">
+                        <div class="text-xs uppercase text-gray-400">Dados recebidos da API</div>
+                        <pre class="mt-3 max-h-80 overflow-auto rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">{{ json_encode($license, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</pre>
+                    </div>
+                @endif
             </div>
         @endif
     </div>

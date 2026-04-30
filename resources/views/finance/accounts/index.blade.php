@@ -37,6 +37,13 @@
                     <option value="50" @selected($selectedPerPage === '50')>50</option>
                     <option value="all" @selected($selectedPerPage === 'all')>Todos</option>
                 </select>
+                <select class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs" name="order_by">
+                    @php $selectedOrderBy = $orderBy ?? request('order_by', 'name_asc'); @endphp
+                    <option value="name_asc" @selected($selectedOrderBy === 'name_asc')>Nome (A-Z)</option>
+                    <option value="name_desc" @selected($selectedOrderBy === 'name_desc')>Nome (Z-A)</option>
+                    <option value="balance_desc" @selected($selectedOrderBy === 'balance_desc')>Saldo inicial (maior)</option>
+                    <option value="balance_asc" @selected($selectedOrderBy === 'balance_asc')>Saldo inicial (menor)</option>
+                </select>
                 <button class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50" type="submit">Buscar</button>
             </form>
         </div>

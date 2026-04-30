@@ -26,8 +26,7 @@ class FinanceAccountController extends Controller
 
         $query = FinancialAccount::query()
             ->whereIn('clinic_id', $clinicIds)
-            ->with(['clinic', 'unit'])
-            ->orderBy('name');
+            ->with(['clinic', 'unit']);
 
         if ($selectedClinicId && in_array($selectedClinicId, $clinicIds, true)) {
             $query->where('clinic_id', $selectedClinicId);
@@ -41,6 +40,18 @@ class FinanceAccountController extends Controller
             $search = $request->string('search')->trim()->toString();
             $query->where('name', 'like', "%{$search}%");
         }
+
+        $orderBy = $request->string('order_by', 'name_asc')->toString();
+        if (! in_array($orderBy, ['name_asc', 'name_desc', 'balance_desc', 'balance_asc'], true)) {
+            $orderBy = 'name_asc';
+        }
+
+        match ($orderBy) {
+            'name_desc' => $query->orderByDesc('name'),
+            'balance_desc' => $query->orderByDesc('initial_balance_cents'),
+            'balance_asc' => $query->orderBy('initial_balance_cents'),
+            default => $query->orderBy('name'),
+        };
 
         $perPage = $request->string('per_page', '10')->toString();
         if (! in_array($perPage, ['10', '20', '50', 'all'], true)) {
@@ -59,6 +70,7 @@ class FinanceAccountController extends Controller
             'clinics' => $clinics,
             'units' => $units,
             'perPage' => $perPage,
+            'orderBy' => $orderBy,
             'selectedClinicId' => $selectedClinicId,
             'selectedUnitId' => $selectedUnitId,
         ]);

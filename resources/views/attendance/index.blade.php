@@ -81,7 +81,7 @@
                                 <td class="px-4 py-3 text-gray-700">{{ $appointment->scheduled_at->format('H:i') }}</td>
                                 <td class="px-4 py-3 text-gray-700">{{ $appointment->patient?->full_name ?? 'Cliente' }}</td>
                                 <td class="px-4 py-3 text-gray-700">{{ $appointment->professional?->display_name ?? '-' }}</td>
-                                <td class="px-4 py-3 text-gray-700">{{ $appointment->service?->name ?? 'Consulta' }}</td>
+                                <td class="px-4 py-3 text-gray-700">{{ $appointment->serviceNames() }}</td>
                                 <td class="px-4 py-3 text-gray-700">{{ $appointment->clinic?->name ?? '-' }}</td>
                                 <td class="px-4 py-3 text-gray-700">{{ $appointment->unit?->name ?? '-' }}</td>
                                 <td class="px-4 py-3 text-gray-700">{{ ucfirst($status) }}</td>

@@ -62,7 +62,7 @@ class AgendaWebController extends Controller
             $end = $date->copy()->endOfDay();
         }
 
-        $appointmentsQuery = Appointment::with(['patient', 'professional', 'service', 'unit', 'clinic'])
+        $appointmentsQuery = Appointment::with(['patient', 'professional', 'service', 'services', 'unit', 'clinic'])
             ->whereBetween('scheduled_at', [$start, $end]);
 
         if ($companyId) {
@@ -72,7 +72,10 @@ class AgendaWebController extends Controller
         }
 
         if ($selectedProfessionalId) {
-            $appointmentsQuery->where('professional_id', $selectedProfessionalId);
+            $appointmentsQuery->where(function ($query) use ($selectedProfessionalId) {
+                $query->where('professional_id', $selectedProfessionalId)
+                    ->orWhereHas('services', fn ($serviceQuery) => $serviceQuery->where('appointment_service.professional_id', $selectedProfessionalId));
+            });
         }
         if ($selectedUnitId) {
             $appointmentsQuery->where('unit_id', $selectedUnitId);
@@ -103,6 +106,7 @@ class AgendaWebController extends Controller
         $blocks = $blocksQuery->get();
 
         $professionals = Professional::query()
+            ->with('services')
             ->when($companyId, function ($query) use ($companyId) {
                 $query->where(function ($companyScoped) use ($companyId) {
                     $companyScoped
@@ -202,6 +206,17 @@ class AgendaWebController extends Controller
         $minWidthPercent = $totalMinutes > 0 ? ($slotMinutes / $totalMinutes) * 100 : 0;
         if ($view === 'day') {
             foreach ($appointments as $appointment) {
+                $distributedServices = $appointment->services->filter(fn ($service) => $service->pivot->professional_id);
+                if ($distributedServices->isNotEmpty()) {
+                    foreach ($distributedServices as $service) {
+                        $event = $this->mapAppointmentServiceToEvent($appointment, $service, $dayStart, $dayEnd, $totalMinutes, $minWidthPercent);
+                        if ($event) {
+                            $eventsByProfessional[$service->pivot->professional_id][] = $event;
+                        }
+                    }
+                    continue;
+                }
+
                 $event = $this->mapAppointmentToEvent($appointment, $dayStart, $dayEnd, $totalMinutes, $minWidthPercent);
                 if (! $event) {
                     continue;
@@ -528,6 +543,64 @@ class AgendaWebController extends Controller
             'width' => $widthPercent,
             'start_minute' => $startMinute,
             'end_minute' => $endMinute,
+            'status_class' => $statusClass,
+            'edit_url' => route('appointments.edit', $appointment),
+        ];
+    }
+
+    protected function mapAppointmentServiceToEvent(
+        Appointment $appointment,
+        Service $service,
+        Carbon $dayStart,
+        Carbon $dayEnd,
+        int $totalMinutes,
+        float $minWidthPercent
+    ): ?array {
+        $start = $service->pivot->scheduled_at
+            ? Carbon::parse($service->pivot->scheduled_at)
+            : $appointment->scheduled_at?->copy();
+        if (! $start) {
+            return null;
+        }
+
+        $end = $service->pivot->ends_at
+            ? Carbon::parse($service->pivot->ends_at)
+            : $start->copy()->addMinutes((int) ($service->pivot->duration_minutes ?? $service->duration_minutes ?? 30));
+
+        if ($end <= $dayStart || $start >= $dayEnd) {
+            return null;
+        }
+
+        $start = $start->lessThan($dayStart) ? $dayStart->copy() : $start;
+        $end = $end->greaterThan($dayEnd) ? $dayEnd->copy() : $end;
+
+        $offsetMinutes = max(0, $dayStart->diffInMinutes($start, false));
+        $durationMinutes = max(15, $start->diffInMinutes($end));
+        $leftPercent = ($offsetMinutes / $totalMinutes) * 100;
+        $widthPercent = max(($durationMinutes / $totalMinutes) * 100, $minWidthPercent);
+        if ($leftPercent + $widthPercent > 100) {
+            $widthPercent = max(0, 100 - $leftPercent);
+        }
+
+        $status = $this->normalizeStatus($service->pivot->status ?? $appointment->status ?? 'agendado');
+        $statusClass = match (true) {
+            $status === 'cancelado' => 'bg-error-50 border-error-200 text-error-800',
+            in_array($status, ['confirmado', 'atendido', 'concluido'], true) => 'bg-success-50 border-success-200 text-success-800',
+            default => 'bg-warning-50 border-warning-200 text-warning-900',
+        };
+
+        return [
+            'type' => 'appointment',
+            'id' => $appointment->id.'-'.$service->id,
+            'channel' => $appointment->channel,
+            'title' => $appointment->patient?->full_name ?? 'Cliente',
+            'subtitle' => $service->name,
+            'professional' => Professional::find($service->pivot->professional_id)?->display_name,
+            'time' => $start->format('H:i').' - '.$end->format('H:i'),
+            'left' => $leftPercent,
+            'width' => $widthPercent,
+            'start_minute' => $offsetMinutes,
+            'end_minute' => $offsetMinutes + $durationMinutes,
             'status_class' => $statusClass,
             'edit_url' => route('appointments.edit', $appointment),
         ];

@@ -18,7 +18,6 @@
                 </div>
             </a>
             <div class="flex flex-wrap items-center gap-2 text-sm">
-                <a class="rounded-full border border-white/35 px-4 py-2 font-semibold text-white hover:bg-white/10" href="{{ route('login', ['mode' => 'master']) }}">Master</a>
                 <a class="rounded-full bg-white px-4 py-2 font-semibold text-brand-800 hover:bg-brand-50" href="{{ route('login', ['mode' => 'company']) }}">Entrar como empresa</a>
             </div>
         </div>

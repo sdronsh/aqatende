@@ -21,6 +21,12 @@
                     </a>
                     <ul class="dropdown-menu dropdown-menu-end">
                         <li><a class="dropdown-item" href="{{ route('profile.edit') }}">Perfil</a></li>
+                        <li>
+                            <form method="POST" action="{{ route('support.request') }}" onsubmit="return confirm('Enviar uma duvida/problema ao suporte?');">
+                                @csrf
+                                <button class="dropdown-item" type="submit">? Enviar duvida/problema ao suporte</button>
+                            </form>
+                        </li>
                         <li><hr class="dropdown-divider"></li>
                         <li>
                             <form method="POST" action="{{ route('logout') }}">

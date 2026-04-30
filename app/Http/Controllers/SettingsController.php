@@ -28,6 +28,26 @@ class SettingsController extends Controller
         ]);
     }
 
+    public function generateLicensePayment(Request $request): RedirectResponse
+    {
+        $company = $this->getCompany($request);
+        $license = null;
+
+        if (! empty($company->cnpj)) {
+            $license = app(LicenseClient::class)->getLicenseByCnpj((string) $company->cnpj, false);
+        }
+
+        $paymentUrl = $this->resolveLicensePaymentUrl($company, is_array($license) ? $license : null);
+        if ($paymentUrl) {
+            return redirect()->away($paymentUrl);
+        }
+
+        return back()->with(
+            'status',
+            'Geracao de pagamento preparada. Configure o link vindo da API de licencas ou LICENSES_PAYMENT_URL_TEMPLATE para direcionar o cliente.'
+        );
+    }
+
     public function logo(Request $request): View
     {
         $company = $this->getCompany($request);
@@ -121,5 +141,42 @@ class SettingsController extends Controller
             ['company_id' => $companyId, 'key' => $key],
             ['value' => $value]
         );
+    }
+
+    private function resolveLicensePaymentUrl(Company $company, ?array $license): ?string
+    {
+        $billing = is_array($license['billing'] ?? null) ? $license['billing'] : [];
+        $candidates = [
+            $billing['oldest_unpaid_payment_url'] ?? null,
+            $billing['payment_url'] ?? null,
+            $billing['payment_link'] ?? null,
+            $billing['checkout_url'] ?? null,
+            $billing['invoice_url'] ?? null,
+            $billing['mercado_pago_url'] ?? null,
+            $billing['init_point'] ?? null,
+            $license['payment_url'] ?? null,
+            $license['payment_link'] ?? null,
+            $license['checkout_url'] ?? null,
+            $license['invoice_url'] ?? null,
+        ];
+
+        foreach ($candidates as $candidate) {
+            if (is_string($candidate) && filter_var($candidate, FILTER_VALIDATE_URL)) {
+                return $candidate;
+            }
+        }
+
+        $template = (string) config('aqamed.license.payment_url_template', '');
+        if ($template === '') {
+            return null;
+        }
+
+        $url = str_replace(
+            ['{company_id}', '{cnpj}', '{license_code}'],
+            [(string) $company->id, preg_replace('/\D/', '', (string) $company->cnpj), (string) $company->license_code],
+            $template
+        );
+
+        return filter_var($url, FILTER_VALIDATE_URL) ? $url : null;
     }
 }

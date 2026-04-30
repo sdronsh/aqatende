@@ -22,8 +22,7 @@ class FinanceCashflowController extends Controller
 
         $query = CashFlowEntry::query()
             ->whereIn('clinic_id', $clinicIds)
-            ->with(['clinic', 'unit', 'professional', 'category', 'account', 'user'])
-            ->orderByDesc('data_movimento');
+            ->with(['clinic', 'unit', 'professional', 'category', 'account', 'user']);
 
         if ($selectedClinicId && in_array($selectedClinicId, $clinicIds, true)) {
             $query->where('clinic_id', $selectedClinicId);
@@ -50,6 +49,19 @@ class FinanceCashflowController extends Controller
             $query->whereDate('data_movimento', '<=', $request->date('date_to'));
         }
 
+        $orderBy = $request->string('order_by', 'date_desc')->toString();
+        if (! in_array($orderBy, ['date_desc', 'date_asc', 'value_desc', 'value_asc', 'description_asc'], true)) {
+            $orderBy = 'date_desc';
+        }
+
+        match ($orderBy) {
+            'date_asc' => $query->orderBy('data_movimento'),
+            'value_desc' => $query->orderByDesc('valor_cents'),
+            'value_asc' => $query->orderBy('valor_cents'),
+            'description_asc' => $query->orderBy('descricao'),
+            default => $query->orderByDesc('data_movimento'),
+        };
+
         $perPage = $request->string('per_page', '10')->toString();
         if (! in_array($perPage, ['10', '20', '50', 'all'], true)) {
             $perPage = '10';
@@ -70,6 +82,7 @@ class FinanceCashflowController extends Controller
             'clinics' => $clinics,
             'professionals' => $professionals,
             'perPage' => $perPage,
+            'orderBy' => $orderBy,
             'selectedClinicId' => $selectedClinicId,
         ]);
     }

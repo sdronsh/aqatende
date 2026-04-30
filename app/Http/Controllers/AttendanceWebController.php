@@ -60,7 +60,7 @@ class AttendanceWebController extends AgendaWebController
             $end = $date->copy()->endOfDay();
         }
 
-        $appointmentsQuery = Appointment::with(['patient', 'professional', 'service', 'unit', 'clinic'])
+        $appointmentsQuery = Appointment::with(['patient', 'professional', 'service', 'services', 'unit', 'clinic'])
             ->whereBetween('scheduled_at', [$start, $end]);
 
         if ($companyId) {
@@ -297,7 +297,7 @@ class AttendanceWebController extends AgendaWebController
         $dateInput = $request->string('date', now()->toDateString())->toString();
         $date = Carbon::parse($dateInput);
 
-        $query = Appointment::with(['clinic', 'unit', 'patient', 'professional', 'service'])
+        $query = Appointment::with(['clinic', 'unit', 'patient', 'professional', 'service', 'services'])
             ->whereDate('scheduled_at', $date->toDateString())
             ->orderBy('scheduled_at');
 

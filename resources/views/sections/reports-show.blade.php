@@ -1,20 +1,116 @@
 @php
     $money = static fn (?int $cents) => 'R$ ' . number_format(((int) $cents) / 100, 2, ',', '.');
+    $sumColumn = static fn ($rows, string $column) => $rows->sum(fn ($row) => (int) ($row->{$column} ?? 0));
+    $sumArrayColumn = static fn ($rows, string $column) => $rows->sum(fn ($row) => (int) ($row[$column] ?? 0));
+    $reportTitles = [
+        'agenda' => 'Agenda',
+        'atendimentos' => 'Atendimentos realizados',
+        'cancelamentos' => 'Cancelamentos',
+        'faltas' => 'Faltas',
+        'receita' => 'Receita',
+        'contas_receber' => 'Contas a receber',
+        'contas_pagar' => 'Contas a pagar',
+        'fluxo_caixa' => 'Fluxo de caixa',
+        'receita_profissional' => 'Receita por profissional',
+        'receita_servico' => 'Receita por servico',
+        'pacientes_novos' => 'Clientes novos',
+        'ocupacao_agenda' => 'Ocupacao da agenda',
+        'atendimentos_profissional' => 'Atendimentos por profissional',
+        'pacientes_lista' => 'Lista de clientes',
+        'pacientes_frequentes' => 'Clientes frequentes',
+        'pacientes_sem_retorno' => 'Clientes sem retorno',
+        'taxa_cancelamento' => 'Taxa de cancelamento',
+        'ticket_medio' => 'Ticket medio',
+        'tempo_medio' => 'Tempo medio de consulta',
+    ];
+    $reportTitle = $reportTitles[$report] ?? 'Relatorio';
 @endphp
 
 <x-app-layout>
     <x-slot name="header">
         <div class="flex flex-wrap items-center justify-between gap-3">
             <div>
-                <h2 class="text-lg font-semibold text-gray-800">Relatorio</h2>
+                <h2 class="text-lg font-semibold text-gray-800">{{ $reportTitle }}</h2>
                 <p class="text-sm text-gray-600">Filtros e resultados.</p>
             </div>
-            <a class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-theme-xs transition hover:bg-gray-50" href="{{ route('finance.reports') }}">Voltar</a>
+            <div class="no-print flex flex-wrap items-center gap-2">
+                <button type="button" class="inline-flex items-center justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-theme-xs transition hover:bg-brand-600" data-print-report>
+                    Gerar PDF
+                </button>
+                <a class="inline-flex items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-theme-xs transition hover:bg-gray-50" href="{{ route('finance.reports') }}">Voltar</a>
+            </div>
         </div>
     </x-slot>
 
+    <style>
+        .print-only {
+            display: none;
+        }
+
+        @media print {
+            @page {
+                margin: 12mm;
+            }
+
+            body {
+                background: #fff !important;
+            }
+
+            aside,
+            header,
+            .no-print,
+            .report-filter-card {
+                display: none !important;
+            }
+
+            #main-content {
+                margin: 0 !important;
+                width: 100% !important;
+            }
+
+            #main-content > div {
+                max-width: none !important;
+                padding: 0 !important;
+            }
+
+            .print-only {
+                display: block !important;
+            }
+
+            .report-print-card {
+                border: 0 !important;
+                box-shadow: none !important;
+            }
+
+            .report-print-card .overflow-x-auto {
+                overflow: visible !important;
+            }
+
+            .report-print-card table {
+                width: 100% !important;
+                border-collapse: collapse !important;
+                border-spacing: 0 !important;
+                font-size: 11px !important;
+            }
+
+            .report-print-card th,
+            .report-print-card td {
+                border: 1px solid #d0d5dd !important;
+                padding: 4px 6px !important;
+            }
+        }
+    </style>
+
     <div class="space-y-4">
-        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm md:p-6">
+        <div class="print-only">
+            <h1 class="text-xl font-semibold text-gray-900">{{ $reportTitle }}</h1>
+            <p class="mt-1 text-sm text-gray-600">
+                Periodo: {{ \Carbon\Carbon::parse($filters['from'])->format('d/m/Y') }} a {{ \Carbon\Carbon::parse($filters['to'])->format('d/m/Y') }}
+            </p>
+            <p class="mt-1 text-xs text-gray-500">Gerado em {{ now()->format('d/m/Y H:i') }}</p>
+        </div>
+
+        <div class="report-filter-card rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm md:p-6">
             <form class="grid gap-3 md:grid-cols-12" method="GET">
                 <div class="md:col-span-3">
                     <label class="mb-1 block text-xs font-semibold text-gray-600">De</label>
@@ -137,7 +233,7 @@
             </form>
         </div>
 
-        <div class="rounded-xl border border-gray-200 bg-white shadow-theme-sm">
+        <div class="report-print-card rounded-xl border border-gray-200 bg-white shadow-theme-sm">
             <div class="overflow-x-auto">
                 <table class="min-w-full border-separate border border-gray-200 [border-spacing:0] text-sm">
                     <thead class="bg-gray-50">
@@ -466,6 +562,46 @@
                                 </td>
                             </tr>
                         @endforelse
+                        @if ($report === 'receita')
+                            <tr class="bg-gray-50 font-semibold text-gray-800">
+                                <td colspan="5" class="border border-gray-200 px-3 py-2 text-right">Total</td>
+                                <td class="border border-gray-200 px-3 py-2">{{ $money($summary['total_cents'] ?? 0) }}</td>
+                            </tr>
+                        @elseif ($report === 'atendimentos')
+                            <tr class="bg-gray-50 font-semibold text-gray-800">
+                                <td colspan="5" class="border border-gray-200 px-3 py-2 text-right">Total</td>
+                                <td class="border border-gray-200 px-3 py-2">{{ $money($sumColumn($rows, 'price_cents')) }}</td>
+                            </tr>
+                        @elseif ($report === 'contas_receber')
+                            <tr class="bg-gray-50 font-semibold text-gray-800">
+                                <td colspan="2" class="border border-gray-200 px-3 py-2 text-right">Total</td>
+                                <td class="border border-gray-200 px-3 py-2">{{ $money($sumColumn($rows, 'valor_total_cents')) }}</td>
+                                <td colspan="3" class="border border-gray-200 px-3 py-2"></td>
+                            </tr>
+                        @elseif ($report === 'contas_pagar')
+                            <tr class="bg-gray-50 font-semibold text-gray-800">
+                                <td colspan="2" class="border border-gray-200 px-3 py-2 text-right">Total</td>
+                                <td class="border border-gray-200 px-3 py-2">{{ $money($sumColumn($rows, 'valor_cents')) }}</td>
+                                <td colspan="2" class="border border-gray-200 px-3 py-2"></td>
+                            </tr>
+                        @elseif ($report === 'fluxo_caixa')
+                            <tr class="bg-gray-50 font-semibold text-gray-800">
+                                <td class="border border-gray-200 px-3 py-2 text-right">Total</td>
+                                <td class="border border-gray-200 px-3 py-2">{{ $money($sumArrayColumn($rows, 'entrada_cents')) }}</td>
+                                <td class="border border-gray-200 px-3 py-2">{{ $money($sumArrayColumn($rows, 'saida_cents')) }}</td>
+                                <td class="border border-gray-200 px-3 py-2">{{ $money($sumArrayColumn($rows, 'saldo_cents')) }}</td>
+                            </tr>
+                        @elseif ($report === 'receita_profissional')
+                            <tr class="bg-gray-50 font-semibold text-gray-800">
+                                <td colspan="2" class="border border-gray-200 px-3 py-2 text-right">Total</td>
+                                <td class="border border-gray-200 px-3 py-2">{{ $money($sumColumn($rows, 'total_cents')) }}</td>
+                            </tr>
+                        @elseif ($report === 'receita_servico')
+                            <tr class="bg-gray-50 font-semibold text-gray-800">
+                                <td colspan="2" class="border border-gray-200 px-3 py-2 text-right">Total</td>
+                                <td class="border border-gray-200 px-3 py-2">{{ $money($sumColumn($rows, 'total_cents')) }}</td>
+                            </tr>
+                        @endif
                     </tbody>
                 </table>
             </div>
@@ -477,4 +613,12 @@
             </div>
         @endif
     </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelector('[data-print-report]')?.addEventListener('click', () => {
+                window.print();
+            });
+        });
+    </script>
 </x-app-layout>
