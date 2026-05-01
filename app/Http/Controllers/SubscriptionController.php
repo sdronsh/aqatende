@@ -60,7 +60,6 @@ class SubscriptionController extends Controller
 
         $payload = array_merge($data, [
             'system_id' => (int) $systemId,
-            'module_ids' => $planData['module_ids'],
             'user_limit' => $planData['professional_limit'],
             'professional_limit' => $planData['professional_limit'],
             'clinic_limit' => $planData['company_limit'],
@@ -316,7 +315,6 @@ class SubscriptionController extends Controller
                 'professional_limit' => 5,
                 'company_limit' => 1,
                 'unit_limit' => 1,
-                'module_ids' => [1, 2],
             ],
             'anual' => [
                 'slug' => 'anual',
@@ -326,7 +324,6 @@ class SubscriptionController extends Controller
                 'professional_limit' => 10,
                 'company_limit' => 1,
                 'unit_limit' => 1,
-                'module_ids' => [1, 2],
             ],
             'plus' => [
                 'slug' => 'plus',
@@ -336,7 +333,6 @@ class SubscriptionController extends Controller
                 'professional_limit' => null,
                 'company_limit' => 1,
                 'unit_limit' => 1,
-                'module_ids' => [1, 2],
             ],
         ];
 
@@ -381,7 +377,7 @@ class SubscriptionController extends Controller
 
         if ($this->containsValidationRule($normalized, 'exists')) {
             if ($field === 'plan' || $field === 'subscription') {
-                return 'A API de licencas recusou dados de configuracao da contratacao. Confira se o APP_ID e os modulos do plano existem no core de licencas.';
+                return 'A API de licencas recusou dados de configuracao da contratacao. Confira se o APP_ID existe no core de licencas.';
             }
 
             if ($field === 'system_id') {
