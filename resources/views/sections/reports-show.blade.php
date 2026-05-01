@@ -569,7 +569,8 @@
                             </tr>
                         @elseif ($report === 'atendimentos')
                             <tr class="bg-gray-50 font-semibold text-gray-800">
-                                <td colspan="5" class="border border-gray-200 px-3 py-2 text-right">Total</td>
+                                <td colspan="4" class="border border-gray-200 px-3 py-2 text-right">Total</td>
+                                <td class="border border-gray-200 px-3 py-2">{{ $sumColumn($rows, 'duration_minutes') }}</td>
                                 <td class="border border-gray-200 px-3 py-2">{{ $money($sumColumn($rows, 'price_cents')) }}</td>
                             </tr>
                         @elseif ($report === 'contas_receber')
@@ -593,13 +594,26 @@
                             </tr>
                         @elseif ($report === 'receita_profissional')
                             <tr class="bg-gray-50 font-semibold text-gray-800">
-                                <td colspan="2" class="border border-gray-200 px-3 py-2 text-right">Total</td>
+                                <td class="border border-gray-200 px-3 py-2 text-right">Total</td>
+                                <td class="border border-gray-200 px-3 py-2">{{ $sumColumn($rows, 'total') }}</td>
                                 <td class="border border-gray-200 px-3 py-2">{{ $money($sumColumn($rows, 'total_cents')) }}</td>
                             </tr>
                         @elseif ($report === 'receita_servico')
                             <tr class="bg-gray-50 font-semibold text-gray-800">
-                                <td colspan="2" class="border border-gray-200 px-3 py-2 text-right">Total</td>
+                                <td class="border border-gray-200 px-3 py-2 text-right">Total</td>
+                                <td class="border border-gray-200 px-3 py-2">{{ $sumColumn($rows, 'total') }}</td>
                                 <td class="border border-gray-200 px-3 py-2">{{ $money($sumColumn($rows, 'total_cents')) }}</td>
+                            </tr>
+                        @elseif ($report === 'ticket_medio')
+                            @php
+                                $ticketTotal = $sumArrayColumn($rows, 'total');
+                                $ticketTotalCents = $sumArrayColumn($rows, 'total_cents');
+                                $ticketAverageCents = $ticketTotal > 0 ? (int) round($ticketTotalCents / $ticketTotal) : 0;
+                            @endphp
+                            <tr class="bg-gray-50 font-semibold text-gray-800">
+                                <td class="border border-gray-200 px-3 py-2">{{ $ticketTotal }}</td>
+                                <td class="border border-gray-200 px-3 py-2">{{ $money($ticketTotalCents) }}</td>
+                                <td class="border border-gray-200 px-3 py-2">{{ $money($ticketAverageCents) }}</td>
                             </tr>
                         @endif
                     </tbody>
