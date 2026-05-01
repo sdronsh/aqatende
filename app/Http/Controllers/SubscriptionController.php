@@ -77,10 +77,9 @@ class SubscriptionController extends Controller
             ->post(rtrim($baseUrl, '/').$endpoint, $payload);
 
         if (! $response->successful()) {
-            $message = $response->json('message') ?: 'Nao foi possivel criar a contratacao na API de licencas.';
             return back()
                 ->withInput()
-                ->withErrors(['plan' => $message]);
+                ->withErrors($this->licenseApiErrors($response, 'plan', 'Nao foi possivel criar a contratacao na API de licencas.'));
         }
 
         $payload = $response->json();
@@ -162,10 +161,9 @@ class SubscriptionController extends Controller
             ->post(rtrim($baseUrl, '/').$endpoint, $payload);
 
         if (! $response->successful()) {
-            $message = $response->json('message') ?: 'Nao foi possivel criar a assinatura na API de licencas.';
             return back()
                 ->withInput()
-                ->withErrors(['subscription' => $message]);
+                ->withErrors($this->licenseApiErrors($response, 'subscription', 'Nao foi possivel criar a assinatura na API de licencas.'));
         }
 
         $paymentUrl = $this->extractPaymentUrl($response->json());
@@ -355,6 +353,100 @@ class SubscriptionController extends Controller
         }
 
         return $pending;
+    }
+
+    private function licenseApiErrors(mixed $response, string $key, string $fallback): array
+    {
+        $payload = $response->json();
+        $errors = is_array($payload) && is_array($payload['errors'] ?? null) ? $payload['errors'] : [];
+        $messages = [];
+
+        foreach ($errors as $field => $fieldMessages) {
+            foreach ((array) $fieldMessages as $message) {
+                $messages[] = $this->licenseApiMessage((string) $field, (string) $message);
+            }
+        }
+
+        if ($messages === []) {
+            $message = is_array($payload) ? (string) ($payload['message'] ?? '') : '';
+            $messages[] = $this->licenseApiMessage($key, $message !== '' ? $message : $fallback);
+        }
+
+        return [$key => implode(' ', array_values(array_unique($messages)))];
+    }
+
+    private function licenseApiMessage(string $field, string $message): string
+    {
+        $normalized = strtolower($message);
+
+        if ($this->containsValidationRule($normalized, 'exists')) {
+            if ($field === 'plan' || $field === 'subscription') {
+                return 'A API de licencas recusou dados de configuracao da contratacao. Confira se o APP_ID e os modulos do plano existem no core de licencas.';
+            }
+
+            if ($field === 'system_id') {
+                return 'O APP_ID configurado no .env nao existe no core de licencas. Confira o cadastro em Sistemas e use o APP_ID exibido la.';
+            }
+
+            if ($field === 'module_ids' || str_starts_with($field, 'module_ids.')) {
+                return 'Um ou mais modulos do plano nao existem no core de licencas. Confira os modulos cadastrados para esse sistema.';
+            }
+
+            if ($field === 'license_id') {
+                return 'A licenca informada nao existe no core de licencas. Reinicie a contratacao.';
+            }
+
+            return 'O campo '.$this->licenseApiFieldLabel($field).' selecionado e invalido.';
+        }
+
+        if ($this->containsValidationRule($normalized, 'required')) {
+            return 'O campo '.$this->licenseApiFieldLabel($field).' e obrigatorio.';
+        }
+
+        if ($this->containsValidationRule($normalized, 'email')) {
+            return 'O campo '.$this->licenseApiFieldLabel($field).' deve ser um e-mail valido.';
+        }
+
+        if ($this->containsValidationRule($normalized, 'integer')) {
+            return 'O campo '.$this->licenseApiFieldLabel($field).' deve ser um numero inteiro.';
+        }
+
+        if ($this->containsValidationRule($normalized, 'array')) {
+            return 'O campo '.$this->licenseApiFieldLabel($field).' deve ser uma lista valida.';
+        }
+
+        if (str_contains($normalized, 'validation.')) {
+            return 'O campo '.$this->licenseApiFieldLabel($field).' possui um erro de validacao.';
+        }
+
+        return $message;
+    }
+
+    private function containsValidationRule(string $message, string $rule): bool
+    {
+        return str_contains($message, 'validation.'.$rule)
+            || str_contains($message, ' '.$rule.' ')
+            || str_contains($message, ' '.$rule.'.')
+            || str_ends_with($message, ' '.$rule);
+    }
+
+    private function licenseApiFieldLabel(string $field): string
+    {
+        return match (true) {
+            $field === 'system_id' => 'sistema da aplicacao (APP_ID)',
+            $field === 'module_ids' || str_starts_with($field, 'module_ids.') => 'modulos do plano',
+            $field === 'license_id' => 'licenca',
+            $field === 'due_day' => 'dia de vencimento',
+            $field === 'monthly_amount' => 'valor do plano',
+            $field === 'plan_name' => 'nome do plano',
+            $field === 'plan_code' => 'codigo do plano',
+            $field === 'name' => 'nome da empresa',
+            $field === 'cnpj' => 'CNPJ',
+            $field === 'email' => 'e-mail da empresa',
+            $field === 'contact_name' => 'nome do responsavel',
+            $field === 'contact_email' => 'e-mail do responsavel',
+            default => str_replace('_', ' ', $field),
+        };
     }
 
     private function extractLicenseId(mixed $payload): ?int
