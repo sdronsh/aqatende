@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\AccountReceivable;
 use App\Models\AccountPayable;
+use App\Models\CashFlowEntry;
 use App\Models\Clinic;
 use App\Models\FinancialCategory;
 use App\Models\FinancialTransaction;
@@ -214,10 +216,59 @@ class QueueWebController extends Controller
                 'paid_at' => now(),
             ]);
 
+            $this->syncPaidReceivable($appointment, $data['payment_method'], $request->user()?->id);
             $this->syncCommissionPayable($appointment, $commission);
         });
 
         return back()->with('status', 'Atendimento finalizado.');
+    }
+
+    private function syncPaidReceivable(Appointment $appointment, string $paymentMethod, ?int $userId): void
+    {
+        $paidAt = $appointment->finished_at ?? now();
+        $description = 'Atendimento #' . $appointment->id . ' - ' . $appointment->serviceNames();
+
+        $receivable = AccountReceivable::updateOrCreate(
+            ['appointment_id' => $appointment->id],
+            [
+                'clinic_id' => $appointment->clinic_id,
+                'unit_id' => $appointment->unit_id,
+                'professional_id' => $appointment->professional_id,
+                'patient_id' => $appointment->patient_id,
+                'categoria_financeira_id' => $this->resolveReceivableCategoryId((int) $appointment->clinic_id),
+                'descricao' => $description,
+                'valor_total_cents' => $appointment->price_cents ?? 0,
+                'numero_parcelas' => 1,
+                'numero_parcela' => 1,
+                'valor_parcela_cents' => $appointment->price_cents ?? 0,
+                'data_emissao' => $paidAt->toDateString(),
+                'data_vencimento' => $paidAt->toDateString(),
+                'pago_em' => $paidAt,
+                'status' => 'pago',
+                'forma_pagamento' => $paymentMethod,
+                'observacoes' => 'Gerado automaticamente ao finalizar atendimento pela fila.',
+            ]
+        );
+
+        CashFlowEntry::updateOrCreate(
+            [
+                'origem' => 'conta_receber',
+                'origem_id' => $receivable->id,
+            ],
+            [
+                'clinic_id' => $receivable->clinic_id,
+                'unit_id' => $receivable->unit_id,
+                'professional_id' => $receivable->professional_id,
+                'categoria_financeira_id' => $receivable->categoria_financeira_id,
+                'user_id' => $userId,
+                'tipo' => 'entrada',
+                'descricao' => $receivable->descricao,
+                'valor_cents' => $receivable->valor_total_cents,
+                'data_movimento' => $receivable->pago_em,
+                'forma_pagamento' => $receivable->forma_pagamento,
+                'observacoes' => $receivable->observacoes,
+            ]
+        );
     }
 
     private function professionalCanServeAll(Professional $professional, array $serviceIds): bool
@@ -283,6 +334,20 @@ class QueueWebController extends Controller
             ],
             [
                 'type' => 'pagar',
+                'active' => true,
+            ]
+        )->id;
+    }
+
+    private function resolveReceivableCategoryId(int $clinicId): ?int
+    {
+        return FinancialCategory::firstOrCreate(
+            [
+                'clinic_id' => $clinicId,
+                'name' => 'Atendimentos',
+            ],
+            [
+                'type' => 'receber',
                 'active' => true,
             ]
         )->id;

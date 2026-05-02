@@ -2,6 +2,7 @@
     $input = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10';
     $select = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10';
     $textarea = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10';
+    $appointments = $appointments ?? collect();
 @endphp
 
 <div class="flex flex-wrap gap-2 border-b border-gray-200">
@@ -10,6 +11,9 @@
     <button class="rounded-t-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-500" type="button" data-tab="endereco">Endereço</button>
     <button class="rounded-t-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-500" type="button" data-tab="contato">Contato</button>
     <button class="rounded-t-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-500" type="button" data-tab="familia">Familiares</button>
+    @if ($patient->exists)
+        <button class="rounded-t-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-500" type="button" data-tab="historico">Histórico</button>
+    @endif
 </div>
 
 <div class="space-y-4 pt-4" data-tab-pane="identificacao">
@@ -189,6 +193,66 @@
         </div>
     </div>
 </div>
+
+@if ($patient->exists)
+    <div class="hidden space-y-4 pt-4" data-tab-pane="historico">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+            <div>
+                <h3 class="text-base font-semibold text-gray-800">Histórico de atendimentos</h3>
+                <p class="mt-1 text-sm text-gray-500">Consulta rápida dos atendimentos e observações do cliente.</p>
+            </div>
+            <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600">
+                {{ $appointments->count() }} atendimento{{ $appointments->count() === 1 ? '' : 's' }}
+            </span>
+        </div>
+
+        <div class="overflow-hidden rounded-lg border border-gray-200">
+            <div class="max-h-[520px] overflow-auto">
+                <table class="min-w-full divide-y divide-gray-200 text-sm">
+                    <thead class="sticky top-0 bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-600">Data</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-600">Serviços prestados</th>
+                            <th class="px-4 py-3 text-left font-semibold text-gray-600">Observações</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-100 bg-white">
+                        @forelse ($appointments as $appointment)
+                            @php
+                                $attendanceDate = $appointment->finished_at ?? $appointment->started_at ?? $appointment->scheduled_at;
+                                $observations = collect([
+                                    $appointment->notes,
+                                ])->filter()->implode("\n");
+                            @endphp
+                            <tr class="align-top">
+                                <td class="whitespace-nowrap px-4 py-3 text-gray-700">
+                                    <div class="font-medium">{{ $attendanceDate?->format('d/m/Y') ?? '-' }}</div>
+                                    <div class="text-xs text-gray-500">{{ $attendanceDate?->format('H:i') ?? '' }}</div>
+                                </td>
+                                <td class="px-4 py-3 text-gray-700">
+                                    <div class="font-medium text-gray-800">{{ $appointment->serviceNames() }}</div>
+                                </td>
+                                <td class="min-w-[260px] px-4 py-3 text-gray-700">
+                                    @if ($observations)
+                                        <div class="whitespace-pre-line leading-5">{{ $observations }}</div>
+                                    @else
+                                        <span class="text-gray-400">Sem observações</span>
+                                    @endif
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="3" class="px-4 py-8 text-center text-sm text-gray-500">
+                                    Nenhum atendimento encontrado para este cliente.
+                                </td>
+                            </tr>
+                        @endforelse
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+@endif
 
 <script>
     document.addEventListener('DOMContentLoaded', () => {

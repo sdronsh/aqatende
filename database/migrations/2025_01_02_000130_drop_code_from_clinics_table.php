@@ -9,6 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('clinics', function (Blueprint $table) {
+            $table->dropUnique(['code']);
             $table->dropColumn('code');
         });
     }
@@ -16,7 +17,7 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('clinics', function (Blueprint $table) {
-            $table->string('code', 20)->nullable()->after('trade_name');
+            $table->string('code', 20)->nullable()->unique()->after('legal_name');
         });
     }
 };

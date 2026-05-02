@@ -178,20 +178,12 @@ class PatientWebController extends Controller
         }
 
         $email = $data['email'] ?? null;
-        if (! $email) {
-            $email = 'cliente.'.Str::uuid()->toString().'@example.invalid';
-        }
-
-        $user = User::create([
-            'name' => $data['full_name'],
-            'email' => $email,
-            'password' => Hash::make(Str::random(16)),
-        ]);
+        $user = $email ? $this->createPatientUser($data['full_name'], $email) : null;
 
         $patient = Patient::create(array_merge(
             collect($data)->except('email')->toArray(),
             [
-                'user_id' => $user->id,
+                'user_id' => $user?->id,
                 'created_by_name' => $request->user()?->name,
             ]
         ));
@@ -211,7 +203,11 @@ class PatientWebController extends Controller
         $clinicIds = Clinic::where('company_id', $companyId)->pluck('id');
         $appointments = $patient->appointments()
             ->whereIn('clinic_id', $clinicIds)
-            ->with(['clinic', 'unit', 'professional', 'service', 'medicalRecord'])
+            ->where(function ($appointmentQuery) {
+                $appointmentQuery->whereIn('status', ['concluido', 'done'])
+                    ->orWhereNotNull('finished_at');
+            })
+            ->with(['service', 'services'])
             ->orderByDesc('scheduled_at')
             ->get();
 
@@ -334,11 +330,19 @@ class PatientWebController extends Controller
 
         $patient->update(collect($data)->except('email')->toArray());
 
-        if ($patient->user && ! empty($data['email'])) {
+        $email = $data['email'] ?? null;
+        if ($email && $patient->user) {
             $patient->user->update([
                 'name' => $data['full_name'],
-                'email' => $data['email'],
+                'email' => $email,
             ]);
+        } elseif ($email) {
+            $user = $this->createPatientUser($data['full_name'], $email);
+            $patient->update(['user_id' => $user->id]);
+        } elseif ($patient->user) {
+            $user = $patient->user;
+            $patient->update(['user_id' => null]);
+            $user->delete();
         }
 
         return redirect()->route('patients.index')->with('status', 'Cliente atualizado.');
@@ -359,5 +363,14 @@ class PatientWebController extends Controller
         }
 
         return redirect()->route('patients.index')->with('status', 'Cliente removido.');
+    }
+
+    private function createPatientUser(string $name, string $email): User
+    {
+        return User::create([
+            'name' => $name,
+            'email' => $email,
+            'password' => Hash::make(Str::random(16)),
+        ]);
     }
 }
