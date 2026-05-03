@@ -75,49 +75,55 @@
                 <div class="border-b border-gray-100 px-5 py-4">
                     <h3 class="text-base font-semibold text-gray-800">Aguardando</h3>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-100 text-sm">
+                <div class="responsive-table-wrapper overflow-x-auto">
+                    <table class="responsive-table min-w-full divide-y divide-gray-100 text-sm">
                         <thead class="bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
                             <tr><th class="px-5 py-3">Entrada</th><th class="px-5 py-3">Cliente</th><th class="px-5 py-3">Serviço</th><th class="px-5 py-3">Valor</th><th class="px-5 py-3">Assumir</th></tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             @forelse ($waiting as $appointment)
                                 <tr>
-                                    <td class="px-5 py-3 text-gray-600">{{ $appointment->created_at->format('H:i') }}</td>
-                                    <td class="px-5 py-3 text-gray-800">{{ $appointment->patient?->full_name }}</td>
-                                    <td class="px-5 py-3 text-gray-600">{{ $appointment->serviceNames() }}</td>
-                                    <td class="px-5 py-3 text-gray-600">R$ {{ number_format(($appointment->price_cents ?? 0) / 100, 2, ',', '.') }}</td>
-                                    <td class="px-5 py-3">
-                                        <form method="POST" action="{{ route('queue.start', $appointment) }}" class="grid min-w-[220px] gap-2 sm:flex sm:min-w-[260px]">
+                                    <td class="px-5 py-3 text-gray-600" data-label="Entrada">{{ $appointment->created_at->format('H:i') }}</td>
+                                    <td class="px-5 py-3 text-gray-800" data-label="Cliente">{{ $appointment->patient?->full_name }}</td>
+                                    <td class="px-5 py-3 text-gray-600" data-label="Serviço">{{ $appointment->serviceNames() }}</td>
+                                    <td class="px-5 py-3 text-gray-600" data-label="Valor">R$ {{ number_format(($appointment->price_cents ?? 0) / 100, 2, ',', '.') }}</td>
+                                    <td class="px-5 py-3" data-actions>
+                                        <form method="POST" action="{{ route('queue.start', $appointment) }}" class="grid gap-2 md:min-w-[280px]">
                                             @csrf
-                                            <select name="professional_id" class="h-10 flex-1 rounded-lg border border-gray-200 px-3 text-sm">
-                                                <option value="">Usar profissionais definidos</option>
-                                                @foreach ($professionals as $professional)
+                                            @php
+                                                $appointmentServices = $appointment->services->isNotEmpty()
+                                                    ? $appointment->services
+                                                    : collect([$appointment->service])->filter();
+                                            @endphp
+                                            <div class="grid gap-2">
+                                                @foreach ($appointmentServices as $service)
                                                     @php
-                                                        $appointmentServiceIds = $appointment->services->isNotEmpty()
-                                                            ? $appointment->services->pluck('id')
-                                                            : collect([$appointment->service_id]);
-                                                        $canServeAll = $appointmentServiceIds->every(fn ($serviceId) => $professional->services->contains('id', $serviceId));
+                                                        $selectedProfessionalId = old("service_professional_ids.{$service->id}", $service->pivot?->professional_id);
                                                     @endphp
-                                                    @if ($canServeAll)
-                                                        @php
-                                                            $allShared = $appointment->services->isNotEmpty()
-                                                                ? $appointment->services->every(fn ($service) => (bool) $service->shared_service)
-                                                                : (bool) ($appointment->service?->shared_service ?? false);
-                                                            $busy = ! $allShared && in_array((int) $professional->id, $busyProfessionalIds ?? [], true);
-                                                        @endphp
-                                                        <option value="{{ $professional->id }}" @disabled($busy)>
-                                                            {{ $professional->display_name }}{{ $busy ? ' - em atendimento' : ($allShared && in_array((int) $professional->id, $busyProfessionalIds ?? [], true) ? ' - compartilhado permitido' : '') }}
-                                                        </option>
-                                                    @endif
+                                                    <label class="grid gap-1 text-xs font-medium text-gray-600">
+                                                        <span>{{ $service->name }}</span>
+                                                        <select name="service_professional_ids[{{ $service->id }}]" class="h-10 rounded-lg border border-gray-200 px-3 text-sm font-normal text-gray-700">
+                                                            <option value="">Selecione profissional</option>
+                                                            @foreach ($professionals as $professional)
+                                                                @if ($professional->services->contains('id', $service->id))
+                                                                    @php
+                                                                        $busy = ! $service->shared_service && in_array((int) $professional->id, $busyProfessionalIds ?? [], true);
+                                                                    @endphp
+                                                                    <option value="{{ $professional->id }}" @selected((string) $selectedProfessionalId === (string) $professional->id) @disabled($busy)>
+                                                                        {{ $professional->display_name }}{{ $busy ? ' - em atendimento' : ($service->shared_service && in_array((int) $professional->id, $busyProfessionalIds ?? [], true) ? ' - compartilhado permitido' : '') }}
+                                                                    </option>
+                                                                @endif
+                                                            @endforeach
+                                                        </select>
+                                                    </label>
                                                 @endforeach
-                                            </select>
+                                            </div>
                                             <button class="rounded-lg bg-success-500 px-3 py-2 text-sm font-semibold text-white">Iniciar</button>
                                         </form>
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5" class="px-5 py-6 text-center text-gray-500">Fila vazia.</td></tr>
+                                <tr><td colspan="5" class="px-5 py-6 text-center text-gray-500" data-empty>Fila vazia.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -128,20 +134,43 @@
                 <div class="border-b border-gray-100 px-5 py-4">
                     <h3 class="text-base font-semibold text-gray-800">Em atendimento</h3>
                 </div>
-                <div class="overflow-x-auto">
-                    <table class="min-w-full divide-y divide-gray-100 text-sm">
+                <div class="responsive-table-wrapper overflow-x-auto">
+                    <table class="responsive-table min-w-full divide-y divide-gray-100 text-sm">
                         <thead class="bg-gray-50 text-left text-xs font-semibold uppercase text-gray-500">
                             <tr><th class="px-5 py-3">Início</th><th class="px-5 py-3">Cliente</th><th class="px-5 py-3">Serviço</th><th class="px-5 py-3">Profissional</th><th class="px-5 py-3">Finalizar</th></tr>
                         </thead>
                         <tbody class="divide-y divide-gray-100">
                             @forelse ($inProgress as $appointment)
                                 <tr>
-                                    <td class="px-5 py-3 text-gray-600">{{ $appointment->started_at?->format('H:i') }}</td>
-                                    <td class="px-5 py-3 text-gray-800">{{ $appointment->patient?->full_name }}</td>
-                                    <td class="px-5 py-3 text-gray-600">{{ $appointment->serviceNames() }}</td>
-                                    <td class="px-5 py-3 text-gray-600">{{ $appointment->professional?->display_name }}</td>
-                                    <td class="px-5 py-3">
-                                        <form method="POST" action="{{ route('queue.finish', $appointment) }}" class="grid min-w-[220px] gap-2 sm:flex sm:min-w-[320px]">
+                                    <td class="px-5 py-3 text-gray-600" data-label="Início">{{ $appointment->started_at?->format('H:i') }}</td>
+                                    <td class="px-5 py-3 text-gray-800" data-label="Cliente">{{ $appointment->patient?->full_name }}</td>
+                                    <td class="px-5 py-3 text-gray-600" data-label="Serviço">{{ $appointment->serviceNames() }}</td>
+                                    <td class="px-5 py-3 text-gray-600" data-label="Profissional">
+                                        @php
+                                            $appointmentServices = $appointment->services->isNotEmpty()
+                                                ? $appointment->services
+                                                : collect([$appointment->service])->filter();
+                                        @endphp
+                                        @if ($appointmentServices->isNotEmpty())
+                                            <div class="space-y-1">
+                                                @foreach ($appointmentServices as $service)
+                                                    @php
+                                                        $serviceProfessional = $service->pivot?->professional_id
+                                                            ? $professionals->firstWhere('id', $service->pivot->professional_id)
+                                                            : $appointment->professional;
+                                                    @endphp
+                                                    <div>
+                                                        <span class="font-medium text-gray-700">{{ $service->name }}:</span>
+                                                        {{ $serviceProfessional?->display_name ?? '-' }}
+                                                    </div>
+                                                @endforeach
+                                            </div>
+                                        @else
+                                            {{ $appointment->professional?->display_name }}
+                                        @endif
+                                    </td>
+                                    <td class="px-5 py-3" data-actions>
+                                        <form method="POST" action="{{ route('queue.finish', $appointment) }}" class="grid gap-2 sm:flex md:min-w-[320px]">
                                             @csrf
                                             <select name="payment_method" class="h-10 rounded-lg border border-gray-200 px-3 text-sm" required>
                                                 <option value="cash">Dinheiro</option>
@@ -154,7 +183,7 @@
                                     </td>
                                 </tr>
                             @empty
-                                <tr><td colspan="5" class="px-5 py-6 text-center text-gray-500">Nenhum atendimento em andamento.</td></tr>
+                                <tr><td colspan="5" class="px-5 py-6 text-center text-gray-500" data-empty>Nenhum atendimento em andamento.</td></tr>
                             @endforelse
                         </tbody>
                     </table>

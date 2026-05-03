@@ -31,6 +31,19 @@ class QueueWebController extends Controller
             ->pluck('professional_id')
             ->map(fn ($id) => (int) $id)
             ->all();
+        $busyDistributedProfessionalIds = DB::table('appointment_service')
+            ->join('appointments', 'appointments.id', '=', 'appointment_service.appointment_id')
+            ->whereIn('appointments.clinic_id', $clinicIds)
+            ->where('appointments.status', 'in_progress')
+            ->whereNotNull('appointment_service.professional_id')
+            ->pluck('appointment_service.professional_id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+        $busyProfessionalIds = collect($busyProfessionalIds)
+            ->merge($busyDistributedProfessionalIds)
+            ->unique()
+            ->values()
+            ->all();
 
         return view('queue.index', [
             'waiting' => Appointment::with(['patient', 'service'])
@@ -114,24 +127,21 @@ class QueueWebController extends Controller
     public function start(Request $request, Appointment $appointment): RedirectResponse
     {
         $this->authorizeAppointment($request, $appointment);
-        $appointment->loadMissing('service');
+        $appointment->loadMissing(['service', 'services']);
         abort_unless(in_array($appointment->status, ['waiting', 'scheduled', 'agendado', 'confirmado'], true), 403);
 
         $data = $request->validate([
             'professional_id' => ['nullable', 'integer', 'exists:professionals,id'],
+            'service_professional_ids' => ['nullable', 'array'],
+            'service_professional_ids.*' => ['nullable', 'integer', 'exists:professionals,id'],
         ]);
 
-        $serviceIds = $appointment->services()->pluck('services.id')->map(fn ($id) => (int) $id)->all();
-        if (! $serviceIds) {
-            $serviceIds = [(int) $appointment->service_id];
+        $services = $appointment->services()->get();
+        if ($services->isEmpty() && $appointment->service) {
+            $services = collect([$appointment->service]);
         }
-
-        $distributedProfessionalIds = $appointment->services()
-            ->pluck('appointment_service.professional_id')
-            ->filter()
-            ->map(fn ($id) => (int) $id)
-            ->unique()
-            ->values();
+        $serviceIds = $services->pluck('id')->map(fn ($id) => (int) $id)->all();
+        $professionalAssignments = [];
 
         if (! empty($data['professional_id'])) {
             $professional = Professional::whereKey($data['professional_id'])->where('active', true)->firstOrFail();
@@ -143,31 +153,58 @@ class QueueWebController extends Controller
             }
 
             $professionalId = $professional->id;
-        } elseif ($distributedProfessionalIds->isNotEmpty()) {
-            $professionalId = (int) $distributedProfessionalIds->first();
         } else {
-            return back()
-                ->withErrors(['professional_id' => 'Selecione um profissional para iniciar o atendimento.'])
-                ->withInput();
+            $professionalMap = $data['service_professional_ids'] ?? [];
+            foreach ($services as $service) {
+                $assignedProfessionalId = (int) ($professionalMap[$service->id] ?? $service->pivot?->professional_id ?? 0);
+                if ($assignedProfessionalId <= 0) {
+                    return back()
+                        ->withErrors(['service_professional_ids' => 'Selecione um profissional para cada serviço antes de iniciar.'])
+                        ->withInput();
+                }
+
+                $professional = Professional::whereKey($assignedProfessionalId)->where('active', true)->firstOrFail();
+                if (! $this->professionalCanServeAll($professional, [(int) $service->id])) {
+                    return back()
+                        ->withErrors(['service_professional_ids' => 'Um profissional selecionado não atende o serviço informado.'])
+                        ->withInput();
+                }
+
+                $professionalAssignments[(int) $service->id] = $assignedProfessionalId;
+            }
+
+            $professionalId = (int) collect($professionalAssignments)->first();
         }
 
-        $allShared = Service::whereIn('id', $serviceIds)->where('shared_service', false)->doesntExist();
-        $busy = ! $allShared
-            && Appointment::where('professional_id', $professionalId)
-                ->where('status', 'in_progress')
-                ->exists();
-
-        if ($busy) {
-            return back()
-                ->withErrors(['professional_id' => 'Profissional já está em atendimento. Finalize o atendimento atual antes de iniciar outro.'])
-                ->withInput();
+        if (empty($professionalAssignments)) {
+            $professionalAssignments = collect($serviceIds)
+                ->mapWithKeys(fn ($serviceId) => [(int) $serviceId => (int) $professionalId])
+                ->all();
         }
 
-        $appointment->update([
-            'professional_id' => $professionalId,
-            'status' => 'in_progress',
-            'started_at' => now(),
-        ]);
+        foreach ($services as $service) {
+            $assignedProfessionalId = (int) ($professionalAssignments[(int) $service->id] ?? 0);
+            if (! $service->shared_service && $this->professionalIsBusy($assignedProfessionalId, (int) $appointment->id)) {
+                return back()
+                    ->withErrors(['service_professional_ids' => 'Profissional já está em atendimento. Finalize o atendimento atual antes de iniciar outro.'])
+                    ->withInput();
+            }
+        }
+
+        DB::transaction(function () use ($appointment, $professionalId, $professionalAssignments): void {
+            $appointment->update([
+                'professional_id' => $professionalId,
+                'status' => 'in_progress',
+                'started_at' => now(),
+            ]);
+
+            foreach ($professionalAssignments as $serviceId => $assignedProfessionalId) {
+                $appointment->services()->updateExistingPivot($serviceId, [
+                    'professional_id' => $assignedProfessionalId,
+                    'status' => 'in_progress',
+                ]);
+            }
+        });
 
         return back()->with('status', 'Atendimento iniciado.');
     }
@@ -279,6 +316,22 @@ class QueueWebController extends Controller
             ->map(fn ($id) => (int) $id);
 
         return collect($serviceIds)->every(fn ($serviceId) => $allowedIds->contains((int) $serviceId));
+    }
+
+    private function professionalIsBusy(int $professionalId, int $ignoreAppointmentId): bool
+    {
+        if ($professionalId <= 0) {
+            return false;
+        }
+
+        return Appointment::query()
+            ->where('status', 'in_progress')
+            ->where('id', '!=', $ignoreAppointmentId)
+            ->where(function ($query) use ($professionalId) {
+                $query->where('professional_id', $professionalId)
+                    ->orWhereHas('services', fn ($serviceQuery) => $serviceQuery->where('appointment_service.professional_id', $professionalId));
+            })
+            ->exists();
     }
 
     private function syncCommissionPayable(Appointment $appointment, int $commissionCents): void
