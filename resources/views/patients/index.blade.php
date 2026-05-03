@@ -24,8 +24,8 @@
                 <button class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50" type="submit">Buscar</button>
             </form>
         </div>
-        <div class="overflow-x-auto">
-            <table class="min-w-full border-separate border border-gray-200 [border-spacing:0] text-sm">
+        <div class="responsive-table-wrapper overflow-x-auto">
+            <table class="responsive-table min-w-full border-separate border border-gray-200 [border-spacing:0] text-sm">
                 <thead class="bg-gray-50">
                     <tr class="text-left text-xs font-semibold uppercase text-gray-500">
                         <th class="border border-gray-200 px-4 py-3">Nome</th>
@@ -41,22 +41,22 @@
                 <tbody>
                     @forelse ($patients as $patient)
                         <tr class="odd:bg-gray-50">
-                            <td class="border border-gray-200 px-4 py-3 font-medium text-gray-800">{{ $patient->full_name }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $patient->cpf ?? '-' }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">
+                            <td class="border border-gray-200 px-4 py-3 font-medium text-gray-800" data-label="Nome">{{ $patient->full_name }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="CPF">{{ $patient->cpf ?? '-' }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Nascimento">
                                 {{ $patient->birthdate ? $patient->birthdate->format('d/m/Y') : '-' }}
                             </td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ ucfirst($patient->gender ?? '-') }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $patient->phone ?? '-' }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $patient->cellphone ?? '-' }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Sexo">{{ ucfirst($patient->gender ?? '-') }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Telefone">{{ $patient->phone ?? '-' }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Celular">{{ $patient->cellphone ?? '-' }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Ultimo atendimento">
                                 @if ($patient->last_appointment_at)
                                     {{ \Illuminate\Support\Carbon::parse($patient->last_appointment_at)->format('d/m/Y H:i') }}
                                 @else
                                     -
                                 @endif
                             </td>
-                            <td class="border border-gray-200 px-4 py-3">
+                            <td class="border border-gray-200 px-4 py-3" data-actions>
                                 <div class="flex justify-end gap-2">
                                     <a class="rounded-lg border border-brand-500 px-2 py-1 text-xs font-medium text-brand-500 hover:bg-brand-50" href="{{ route('patients.edit', $patient) }}">Editar</a>
                                     <form method="POST" action="{{ route('patients.destroy', $patient) }}" onsubmit="return confirm('Remover cliente?');">
@@ -69,7 +69,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="border border-gray-200 px-6 py-6 text-center text-gray-500">Nenhum cliente cadastrado.</td>
+                            <td colspan="8" class="border border-gray-200 px-6 py-6 text-center text-gray-500" data-empty>Nenhum cliente cadastrado.</td>
                         </tr>
                     @endforelse
                 </tbody>

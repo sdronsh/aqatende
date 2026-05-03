@@ -24,8 +24,8 @@
                 <button class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50" type="submit">Buscar</button>
             </form>
         </div>
-        <div class="overflow-x-auto">
-            <table class="min-w-full border-separate border border-gray-200 [border-spacing:0] text-sm">
+        <div class="responsive-table-wrapper overflow-x-auto">
+            <table class="responsive-table min-w-full border-separate border border-gray-200 [border-spacing:0] text-sm">
                 <thead class="bg-gray-50">
                     <tr class="text-left text-xs font-semibold uppercase text-gray-500">
                         <th class="border border-gray-200 px-4 py-3">Nome</th>
@@ -39,20 +39,20 @@
                 <tbody>
                     @forelse ($professionals as $professional)
                         <tr class="odd:bg-gray-50">
-                            <td class="border border-gray-200 px-4 py-3 font-medium text-gray-800">{{ $professional->display_name }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">
+                            <td class="border border-gray-200 px-4 py-3 font-medium text-gray-800" data-label="Nome">{{ $professional->display_name }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Categorias">
                                 {{ $professional->specialties->pluck('name')->take(3)->join(', ') ?: '-' }}
                             </td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Serviços">
                                 {{ $professional->services->pluck('name')->take(3)->join(', ') ?: '-' }}
                             </td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Unidades">
                                 {{ $professional->units->pluck('name')->take(2)->join(', ') ?: '-' }}
                             </td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Comissão">
                                 {{ $professional->commission_type === 'percentage' ? $professional->commission_value.'%' : ($professional->commission_value ? 'R$ '.number_format((float) $professional->commission_value, 2, ',', '.') : '-') }}
                             </td>
-                            <td class="border border-gray-200 px-4 py-3">
+                            <td class="border border-gray-200 px-4 py-3" data-actions>
                                 <div class="flex justify-end gap-2">
                                     <a class="rounded-lg border border-brand-500 px-2 py-1 text-xs font-medium text-brand-500 hover:bg-brand-50" href="{{ route('professionals.edit', $professional) }}">Editar</a>
                                     <form method="POST" action="{{ route('professionals.destroy', $professional) }}" onsubmit="return confirm('Remover profissional?');">
@@ -65,7 +65,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="border border-gray-200 px-6 py-6 text-center text-gray-500">Nenhum profissional cadastrado.</td>
+                            <td colspan="6" class="border border-gray-200 px-6 py-6 text-center text-gray-500" data-empty>Nenhum profissional cadastrado.</td>
                         </tr>
                     @endforelse
                 </tbody>

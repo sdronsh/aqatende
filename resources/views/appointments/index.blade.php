@@ -83,8 +83,8 @@
             </form>
         </div>
 
-        <div class="overflow-x-auto">
-            <table class="min-w-full border-separate border border-gray-200 [border-spacing:0] text-sm">
+        <div class="responsive-table-wrapper overflow-x-auto">
+            <table class="responsive-table min-w-full border-separate border border-gray-200 [border-spacing:0] text-sm">
                 <thead class="bg-gray-50">
                     <tr class="text-left text-xs font-semibold uppercase text-gray-500">
                         <th class="border border-gray-200 px-4 py-3">Data</th>
@@ -117,21 +117,21 @@
                             $recurrence = $recurrenceMeta[$appointment->id] ?? ['is_recurring' => false, 'has_future' => false, 'future_count' => 0];
                         @endphp
                         <tr class="odd:bg-gray-50">
-                            <td class="border border-gray-200 px-4 py-3 font-medium text-gray-800">
+                            <td class="border border-gray-200 px-4 py-3 font-medium text-gray-800" data-label="Data">
                                 {{ optional($appointment->scheduled_at)->format('d/m/Y H:i') }}
                             </td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $appointment->professional?->display_name }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $appointment->patient?->full_name }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $appointment->serviceNames() }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Profissional">{{ $appointment->professional?->display_name }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Cliente">{{ $appointment->patient?->full_name }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Servico">{{ $appointment->serviceNames() }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Canal">
                                 {{ ['presencial' => 'Presencial', 'home_care' => 'Home Care', 'whatsapp' => 'Home Care', 'teleconsulta' => 'Home Care', 'walk_in' => 'Fila'][$appointment->channel ?? 'presencial'] ?? ucfirst($appointment->channel ?? 'presencial') }}
                             </td>
-                            <td class="border border-gray-200 px-4 py-3">
+                            <td class="border border-gray-200 px-4 py-3" data-label="Status">
                                 <span class="inline-flex items-center rounded-full border px-2 py-0.5 text-xs {{ $statusClass }}">
                                     {{ ucfirst($status) }}
                                 </span>
                             </td>
-                            <td class="border border-gray-200 px-4 py-3">
+                            <td class="border border-gray-200 px-4 py-3" data-actions>
                                 <div class="flex justify-end gap-2">
                                     <a class="rounded-lg border border-brand-500 px-2 py-1 text-xs font-medium text-brand-500 hover:bg-brand-50" href="{{ route('appointments.edit', $appointment) }}">Editar</a>
                                     <form
@@ -151,7 +151,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="border border-gray-200 px-6 py-6 text-center text-gray-500">Nenhum agendamento encontrado.</td>
+                            <td colspan="7" class="border border-gray-200 px-6 py-6 text-center text-gray-500" data-empty>Nenhum agendamento encontrado.</td>
                         </tr>
                     @endforelse
                 </tbody>
@@ -164,13 +164,13 @@
         @endif
     </div>
 
-    <dialog id="delete-confirm-dialog" class="m-auto w-full max-w-md rounded-xl border border-gray-200 p-0 shadow-theme-lg">
+    <dialog id="delete-confirm-dialog" class="m-auto max-h-[90vh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-xl border border-gray-200 p-0 shadow-theme-lg">
         <div class="flex flex-col gap-4 p-5">
             <div class="text-lg font-semibold text-gray-800">Excluir agendamento</div>
             <p class="text-sm text-gray-600">
                 Confirma a exclusao deste agendamento?
             </p>
-            <div class="flex items-center justify-end gap-2 border-t border-gray-100 pt-4">
+            <div class="flex flex-col-reverse gap-2 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-end">
                 <button type="button" id="delete-confirm-no" class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50">
                     Nao
                 </button>
@@ -181,13 +181,13 @@
         </div>
     </dialog>
 
-    <dialog id="delete-recurrence-dialog" class="m-auto w-full max-w-md rounded-xl border border-gray-200 p-0 shadow-theme-lg">
+    <dialog id="delete-recurrence-dialog" class="m-auto max-h-[90vh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-xl border border-gray-200 p-0 shadow-theme-lg">
         <div class="flex flex-col gap-4 p-5">
             <div class="text-lg font-semibold text-gray-800">Excluir agendamento</div>
             <p id="delete-recurrence-message" class="text-sm text-gray-600">
                 Este agendamento possui recorrencias futuras. Deseja excluir tambem as recorrencias futuras?
             </p>
-            <div class="flex items-center justify-end gap-2 border-t border-gray-100 pt-4">
+            <div class="flex flex-col-reverse gap-2 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-end">
                 <button type="button" id="delete-recurrence-no" class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50">
                     Nao
                 </button>

@@ -287,6 +287,9 @@
 #sidebar-backdrop {
   display: none !important;
 }
+body[data-mobile-open="1"] #sidebar-backdrop {
+  display: block !important;
+}
 body[data-sidebar="collapsed"] #sidebar {
   width: 80px;
 }
@@ -312,5 +315,91 @@ body[data-sidebar="collapsed"] #sidebar .sidebar-title {
   }
   body[data-mobile-open="1"] #sidebar {
     transform: translateX(0);
+  }
+}
+
+@media (max-width: 767px) {
+  .responsive-table-wrapper {
+    overflow: visible;
+  }
+
+  .responsive-table {
+    display: block;
+    min-width: 0;
+    border: 0;
+  }
+
+  .responsive-table thead {
+    display: none;
+  }
+
+  .responsive-table tbody {
+    display: grid;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .responsive-table tr {
+    display: block;
+    overflow: hidden;
+    border: 1px solid var(--color-gray-200);
+    border-radius: 0.75rem;
+    background: var(--color-white);
+  }
+
+  .responsive-table tr.odd\:bg-gray-50 {
+    background: var(--color-white);
+  }
+
+  .responsive-table td {
+    display: grid;
+    grid-template-columns: minmax(7rem, 42%) minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: start;
+    border: 0;
+    border-bottom: 1px solid var(--color-gray-100);
+    padding: 0.75rem 1rem;
+    word-break: break-word;
+  }
+
+  .responsive-table td:last-child {
+    border-bottom: 0;
+  }
+
+  .responsive-table td::before {
+    content: attr(data-label);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-gray-500);
+  }
+
+  .responsive-table td[data-actions] {
+    display: block;
+  }
+
+  .responsive-table td[data-actions]::before {
+    display: none;
+  }
+
+  .responsive-table td[data-actions] > div {
+    justify-content: stretch;
+  }
+
+  .responsive-table td[data-actions] a,
+  .responsive-table td[data-actions] button {
+    display: inline-flex;
+    flex: 1;
+    justify-content: center;
+    padding: 0.5rem 0.75rem;
+  }
+
+  .responsive-table td[data-empty] {
+    display: block;
+    border-bottom: 0;
+    text-align: center;
+  }
+
+  .responsive-table td[data-empty]::before {
+    display: none;
   }
 }

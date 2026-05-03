@@ -5,14 +5,14 @@
     $appointments = $appointments ?? collect();
 @endphp
 
-<div class="flex flex-wrap gap-2 border-b border-gray-200">
-    <button class="rounded-t-lg border border-b-0 border-gray-200 bg-white px-4 py-2 font-medium text-gray-700" type="button" data-tab="identificacao">Identificação</button>
-    <button class="rounded-t-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-500" type="button" data-tab="documentos">Documentos</button>
-    <button class="rounded-t-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-500" type="button" data-tab="endereco">Endereço</button>
-    <button class="rounded-t-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-500" type="button" data-tab="contato">Contato</button>
-    <button class="rounded-t-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-500" type="button" data-tab="familia">Familiares</button>
+<div class="-mx-4 flex gap-2 overflow-x-auto border-b border-gray-200 px-4 pb-px md:mx-0 md:px-0">
+    <button class="shrink-0 rounded-t-lg border border-b-0 border-gray-200 bg-white px-4 py-2 font-medium text-gray-700" type="button" data-tab="identificacao">Identificação</button>
+    <button class="shrink-0 rounded-t-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-500" type="button" data-tab="documentos">Documentos</button>
+    <button class="shrink-0 rounded-t-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-500" type="button" data-tab="endereco">Endereço</button>
+    <button class="shrink-0 rounded-t-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-500" type="button" data-tab="contato">Contato</button>
+    <button class="shrink-0 rounded-t-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-500" type="button" data-tab="familia">Familiares</button>
     @if ($patient->exists)
-        <button class="rounded-t-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-500" type="button" data-tab="historico">Histórico</button>
+        <button class="shrink-0 rounded-t-lg border border-gray-200 bg-gray-50 px-4 py-2 text-gray-500" type="button" data-tab="historico">Histórico</button>
     @endif
 </div>
 

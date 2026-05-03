@@ -32,7 +32,7 @@
             }
         @endphp
         @if ($statusKey || session('error') || session('warning') || session('info') || $errors->any())
-            <div class="fixed right-4 top-4 z-999999 flex w-full max-w-sm flex-col gap-3" style="z-index: 1000000;">
+            <div class="fixed inset-x-4 top-4 z-999999 flex w-auto max-w-sm flex-col gap-3 sm:inset-x-auto sm:right-4 sm:w-full" style="z-index: 1000000;">
                 @if ($statusKey)
                     <div class="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-lg" role="alert">
                         <div class="flex items-start justify-between gap-3">

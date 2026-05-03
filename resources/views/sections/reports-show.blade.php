@@ -380,7 +380,7 @@
                                 @break
                             @case('ticket_medio')
                                 <tr class="text-left text-xs font-semibold uppercase text-gray-500">
-                                    <th class="border border-gray-200 px-3 py-2">Total consultas</th>
+                                    <th class="border border-gray-200 px-3 py-2">Total atendimentos</th>
                                     <th class="border border-gray-200 px-3 py-2">Receita total</th>
                                     <th class="border border-gray-200 px-3 py-2">Ticket medio</th>
                                 </tr>

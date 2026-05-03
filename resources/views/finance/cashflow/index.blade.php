@@ -55,8 +55,8 @@
                 <button class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50" type="submit">Buscar</button>
             </form>
         </div>
-        <div class="overflow-x-auto">
-            <table class="min-w-full border-separate border border-gray-200 [border-spacing:0] text-sm">
+        <div class="responsive-table-wrapper overflow-x-auto">
+            <table class="responsive-table min-w-full border-separate border border-gray-200 [border-spacing:0] text-sm">
                 <thead class="bg-gray-50">
                     <tr class="text-left text-xs font-semibold uppercase text-gray-500">
                         <th class="border border-gray-200 px-4 py-3">Data</th>
@@ -72,18 +72,18 @@
                 <tbody>
                     @forelse ($entries as $entry)
                         <tr class="odd:bg-gray-50">
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ optional($entry->data_movimento)->format('d/m/Y H:i') }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ ucfirst($entry->tipo) }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $entry->descricao ?? '-' }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $entry->category?->name ?? '-' }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $entry->account?->name ?? '-' }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $entry->professional?->display_name ?? '-' }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $entry->user?->name ?? '-' }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $formatMoney($entry->valor_cents) }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Data">{{ optional($entry->data_movimento)->format('d/m/Y H:i') }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Tipo">{{ ucfirst($entry->tipo) }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Descricao">{{ $entry->descricao ?? '-' }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Categoria">{{ $entry->category?->name ?? '-' }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Conta">{{ $entry->account?->name ?? '-' }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Profissional">{{ $entry->professional?->display_name ?? '-' }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Usuario">{{ $entry->user?->name ?? '-' }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Valor">{{ $formatMoney($entry->valor_cents) }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="8" class="border border-gray-200 px-6 py-6 text-center text-gray-500">Nenhuma movimentacao registrada.</td>
+                            <td colspan="8" class="border border-gray-200 px-6 py-6 text-center text-gray-500" data-empty>Nenhuma movimentacao registrada.</td>
                         </tr>
                     @endforelse
                 </tbody>

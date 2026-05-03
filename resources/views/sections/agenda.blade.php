@@ -9,15 +9,15 @@
     </x-slot>
 
     <div class="space-y-4">
-        <div class="sticky top-4 z-10 rounded-xl border border-gray-200 bg-white p-3 shadow-theme-sm">
+        <div class="rounded-xl border border-gray-200 bg-white p-3 shadow-theme-sm md:sticky md:top-4 md:z-10">
             <div class="flex flex-wrap items-center justify-between gap-3">
-                <div class="flex items-center gap-2">
+                <div class="flex min-w-0 items-center gap-2">
                     <a class="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50" href="{{ request()->fullUrlWithQuery(['date' => $prevDate->toDateString()]) }}">
                         <span class="text-lg">&lsaquo;</span>
                     </a>
-                    <div>
+                    <div class="min-w-0">
                         <div class="text-xs uppercase text-gray-400">{{ ucfirst($viewMode) }}</div>
-                        <div class="text-sm font-semibold text-gray-800">
+                        <div class="truncate text-sm font-semibold text-gray-800">
                             @if ($viewMode === 'month')
                                 {{ $date->translatedFormat('F Y') }}
                             @elseif ($viewMode === 'week')
@@ -32,7 +32,7 @@
                     </a>
                 </div>
 
-                <div class="flex flex-wrap items-center gap-2">
+                <div class="flex w-full flex-wrap items-center gap-2 lg:w-auto">
                     @php
                         $dayUrl = request()->fullUrlWithQuery(['view' => 'day']);
                         $weekUrl = request()->fullUrlWithQuery(['view' => 'week']);
@@ -43,13 +43,13 @@
                         <a class="rounded-md px-3 py-1.5 {{ $viewMode === 'week' ? 'bg-brand-50 text-brand-600' : 'text-gray-600 hover:bg-gray-50' }}" href="{{ $weekUrl }}">Semanal</a>
                         <a class="inline-flex rounded-md px-3 py-1.5 max-md:hidden {{ $viewMode === 'month' ? 'bg-brand-50 text-brand-600' : 'text-gray-600 hover:bg-gray-50' }}" href="{{ $monthUrl }}">Mensal</a>
                     </div>
-                    <form method="GET" class="flex flex-wrap items-center gap-2">
+                    <form method="GET" class="grid w-full gap-2 sm:flex sm:w-auto sm:flex-wrap sm:items-center">
                         <input type="hidden" name="view" value="{{ $viewMode }}" />
-                        <input class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" type="date" name="date" value="{{ $date->toDateString() }}" />
+                        <input class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 sm:w-auto" type="date" name="date" value="{{ $date->toDateString() }}" />
                         @if ($lockProfessionalFilter)
                             <input type="hidden" name="professional_id" value="{{ $selectedProfessionalId }}" />
                         @endif
-                        <select class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 {{ $lockProfessionalFilter ? 'bg-gray-100 text-gray-500' : '' }}" name="professional_id" @disabled($lockProfessionalFilter)>
+                        <select class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 sm:w-auto {{ $lockProfessionalFilter ? 'bg-gray-100 text-gray-500' : '' }}" name="professional_id" @disabled($lockProfessionalFilter)>
                             <option value="">Todos os profissionais</option>
                             @foreach ($professionals as $professional)
                                 <option value="{{ $professional->id }}" @selected($selectedProfessionalId === $professional->id)>
@@ -57,7 +57,7 @@
                                 </option>
                             @endforeach
                         </select>
-                        <select class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" name="unit_id">
+                        <select class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 sm:w-auto" name="unit_id">
                             <option value="">Todas as unidades</option>
                             @foreach ($units as $unit)
                                 <option value="{{ $unit->id }}" @selected($selectedUnitId === $unit->id)>
@@ -65,14 +65,14 @@
                                 </option>
                             @endforeach
                         </select>
-                        <button class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50" type="submit">Aplicar</button>
+                        <button class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50 sm:w-auto" type="submit">Aplicar</button>
                     </form>
                     @php
                         $canCreateAppointment = auth()->user()->is_platform_admin
                             || auth()->user()->hasCompanyPermission(session('active_company_id'), 'agendamento.agendamentos.create');
                     @endphp
                     @if ($canCreateAppointment)
-                        <button class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600" type="button" data-open-modal="appointment-modal">
+                        <button class="w-full rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600 sm:w-auto" type="button" data-open-modal="appointment-modal">
                             + Agendar
                         </button>
                     @endif
@@ -100,8 +100,8 @@
         </div>
 
         @if ($viewMode === 'day')
-            <div class="rounded-xl border border-gray-200 bg-white shadow-theme-sm">
-                <div class="w-full">
+            <div class="overflow-x-auto rounded-xl border border-gray-200 bg-white shadow-theme-sm">
+                <div class="min-w-[900px]">
                         <div class="flex border-b border-gray-200 bg-gray-50">
                             <div class="w-56 px-4 py-3 text-xs font-semibold uppercase text-gray-500">Profissionais</div>
                             <div class="flex-1">
@@ -242,7 +242,7 @@
                 @php
                     $isAttendanceView = ($pageTitle ?? '') === 'Atendimento';
                 @endphp
-                <div class="grid gap-4" style="grid-template-columns: 240px minmax(0, 1fr);">
+                <div class="grid gap-4 lg:grid-cols-[240px_minmax(0,1fr)]">
                     @php
                         $weekLabels = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'];
                         $selectedDay = $date->toDateString();
@@ -284,7 +284,7 @@
                     </div>
 
                     <div class="overflow-x-auto">
-                        <div class="grid min-w-[960px] gap-px overflow-hidden rounded-lg border border-gray-200 bg-gray-200 text-xs" style="grid-template-columns: repeat(7, minmax(0, 1fr));">
+                        <div class="grid min-w-[720px] gap-px overflow-hidden rounded-lg border border-gray-200 bg-gray-200 text-xs sm:min-w-[960px]" style="grid-template-columns: repeat(7, minmax(0, 1fr));">
                         @foreach ($weekLabels as $label)
                             <div class="bg-gray-50 px-3 py-2 text-[11px] font-semibold uppercase text-gray-500">{{ $label }}</div>
                         @endforeach
@@ -352,8 +352,8 @@
         @endif
     </div>
 
-    <dialog id="appointment-modal" class="m-auto w-full max-w-2xl rounded-xl border border-gray-200 p-0 shadow-theme-lg">
-        <form method="POST" action="{{ route('appointments.store') }}" class="flex flex-col gap-4 p-5">
+    <dialog id="appointment-modal" class="m-auto max-h-[90vh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-xl border border-gray-200 p-0 shadow-theme-lg">
+        <form method="POST" action="{{ route('appointments.store') }}" class="flex flex-col gap-4 p-4 sm:p-5">
             @csrf
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-800">Novo agendamento</h3>

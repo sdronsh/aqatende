@@ -24,8 +24,8 @@
                 <button class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50" type="submit">Buscar</button>
             </form>
         </div>
-        <div class="overflow-x-auto">
-            <table class="min-w-full border-separate border border-gray-200 [border-spacing:0] text-sm">
+        <div class="responsive-table-wrapper overflow-x-auto">
+            <table class="responsive-table min-w-full border-separate border border-gray-200 [border-spacing:0] text-sm">
                 <thead class="bg-gray-50">
                     <tr class="text-left text-xs font-semibold uppercase text-gray-500">
                         <th class="border border-gray-200 px-4 py-3">Nome</th>
@@ -40,21 +40,21 @@
                 <tbody>
                     @forelse ($services as $service)
                         <tr class="odd:bg-gray-50">
-                            <td class="border border-gray-200 px-4 py-3 font-medium text-gray-800">{{ $service->name }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $service->clinic?->name }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $service->unit?->name ?? '-' }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $service->duration_minutes }} min</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">
+                            <td class="border border-gray-200 px-4 py-3 font-medium text-gray-800" data-label="Nome">{{ $service->name }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Clinica">{{ $service->clinic?->name }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Unidade">{{ $service->unit?->name ?? '-' }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Duracao">{{ $service->duration_minutes }} min</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Preco">
                                 R$ {{ number_format(($service->price_cents ?? 0) / 100, 2, ',', '.') }}
                             </td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Tipo">
                                 @if ($service->shared_service)
                                     <span class="rounded-full bg-brand-50 px-2 py-1 text-xs font-semibold text-brand-600">Compartilhado</span>
                                 @else
                                     <span class="text-gray-400">Individual</span>
                                 @endif
                             </td>
-                            <td class="border border-gray-200 px-4 py-3">
+                            <td class="border border-gray-200 px-4 py-3" data-actions>
                                 <div class="flex justify-end gap-2">
                                     <a class="rounded-lg border border-brand-500 px-2 py-1 text-xs font-medium text-brand-500 hover:bg-brand-50" href="{{ route('services.edit', $service) }}">Editar</a>
                                     <form method="POST" action="{{ route('services.destroy', $service) }}" onsubmit="return confirm('Remover servico?');">
@@ -67,7 +67,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="7" class="border border-gray-200 px-6 py-6 text-center text-gray-500">Nenhum servico cadastrado.</td>
+                            <td colspan="7" class="border border-gray-200 px-6 py-6 text-center text-gray-500" data-empty>Nenhum servico cadastrado.</td>
                         </tr>
                     @endforelse
                 </tbody>

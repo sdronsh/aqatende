@@ -52,8 +52,8 @@
                 <button class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50" type="submit">Buscar</button>
             </form>
         </div>
-        <div class="overflow-x-auto">
-            <table class="min-w-full border-separate border border-gray-200 [border-spacing:0] text-sm">
+        <div class="responsive-table-wrapper overflow-x-auto">
+            <table class="responsive-table min-w-full border-separate border border-gray-200 [border-spacing:0] text-sm">
                 <thead class="bg-gray-50">
                     <tr class="text-left text-xs font-semibold uppercase text-gray-500">
                         <th class="border border-gray-200 px-4 py-3">Descricao</th>
@@ -70,15 +70,15 @@
                 <tbody>
                     @forelse ($receivables as $receivable)
                         <tr class="odd:bg-gray-50">
-                            <td class="border border-gray-200 px-4 py-3 font-medium text-gray-800">{{ $receivable->descricao }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $receivable->patient?->full_name ?? '-' }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $receivable->professional?->display_name ?? '-' }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $receivable->clinic?->name ?? '-' }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ optional($receivable->data_vencimento)->format('d/m/Y') }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $formatMoney($receivable->valor_total_cents) }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ ucfirst($receivable->status) }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600">{{ $receivable->forma_pagamento ? ucfirst($receivable->forma_pagamento) : '-' }}</td>
-                            <td class="border border-gray-200 px-4 py-3">
+                            <td class="border border-gray-200 px-4 py-3 font-medium text-gray-800" data-label="Descricao">{{ $receivable->descricao }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Cliente">{{ $receivable->patient?->full_name ?? '-' }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Profissional">{{ $receivable->professional?->display_name ?? '-' }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Clinica">{{ $receivable->clinic?->name ?? '-' }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Vencimento">{{ optional($receivable->data_vencimento)->format('d/m/Y') }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Valor">{{ $formatMoney($receivable->valor_total_cents) }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Status">{{ ucfirst($receivable->status) }}</td>
+                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Forma">{{ $receivable->forma_pagamento ? ucfirst($receivable->forma_pagamento) : '-' }}</td>
+                            <td class="border border-gray-200 px-4 py-3" data-actions>
                                 <div class="flex justify-end gap-2">
                                     <a class="rounded-lg border border-brand-500 px-2 py-1 text-xs font-medium text-brand-500 hover:bg-brand-50" href="{{ route('finance.receivables.edit', $receivable) }}">Editar</a>
                                 </div>
@@ -86,7 +86,7 @@
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="9" class="border border-gray-200 px-6 py-6 text-center text-gray-500">Nenhuma conta registrada.</td>
+                            <td colspan="9" class="border border-gray-200 px-6 py-6 text-center text-gray-500" data-empty>Nenhuma conta registrada.</td>
                         </tr>
                     @endforelse
                 </tbody>

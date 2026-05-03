@@ -88,7 +88,7 @@
                                     <td class="px-5 py-3 text-gray-600">{{ $appointment->serviceNames() }}</td>
                                     <td class="px-5 py-3 text-gray-600">R$ {{ number_format(($appointment->price_cents ?? 0) / 100, 2, ',', '.') }}</td>
                                     <td class="px-5 py-3">
-                                        <form method="POST" action="{{ route('queue.start', $appointment) }}" class="flex min-w-[260px] gap-2">
+                                        <form method="POST" action="{{ route('queue.start', $appointment) }}" class="grid min-w-[220px] gap-2 sm:flex sm:min-w-[260px]">
                                             @csrf
                                             <select name="professional_id" class="h-10 flex-1 rounded-lg border border-gray-200 px-3 text-sm">
                                                 <option value="">Usar profissionais definidos</option>
@@ -141,14 +141,14 @@
                                     <td class="px-5 py-3 text-gray-600">{{ $appointment->serviceNames() }}</td>
                                     <td class="px-5 py-3 text-gray-600">{{ $appointment->professional?->display_name }}</td>
                                     <td class="px-5 py-3">
-                                        <form method="POST" action="{{ route('queue.finish', $appointment) }}" class="flex min-w-[320px] gap-2">
+                                        <form method="POST" action="{{ route('queue.finish', $appointment) }}" class="grid min-w-[220px] gap-2 sm:flex sm:min-w-[320px]">
                                             @csrf
                                             <select name="payment_method" class="h-10 rounded-lg border border-gray-200 px-3 text-sm" required>
                                                 <option value="cash">Dinheiro</option>
                                                 <option value="pix">Pix</option>
                                                 <option value="card">Cartão</option>
                                             </select>
-                                            <input name="price" class="h-10 w-28 rounded-lg border border-gray-200 px-3 text-sm" placeholder="{{ number_format(($appointment->price_cents ?? 0) / 100, 2, ',', '.') }}">
+                                            <input name="price" class="h-10 w-full rounded-lg border border-gray-200 px-3 text-sm sm:w-28" placeholder="{{ number_format(($appointment->price_cents ?? 0) / 100, 2, ',', '.') }}">
                                             <button class="rounded-lg bg-brand-500 px-3 py-2 text-sm font-semibold text-white">Finalizar</button>
                                         </form>
                                     </td>
