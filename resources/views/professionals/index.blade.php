@@ -41,13 +41,13 @@
                         <tr class="odd:bg-gray-50">
                             <td class="border border-gray-200 px-4 py-3 font-medium text-gray-800" data-label="Nome">{{ $professional->display_name }}</td>
                             <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Categorias">
-                                {{ $professional->specialties->pluck('name')->take(3)->join(', ') ?: '-' }}
+                                {{ $professional->specialties->pluck('name')->join(', ') ?: '-' }}
                             </td>
                             <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Serviços">
-                                {{ $professional->services->pluck('name')->take(3)->join(', ') ?: '-' }}
+                                {{ $professional->services->pluck('name')->join(', ') ?: '-' }}
                             </td>
                             <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Unidades">
-                                {{ $professional->units->pluck('name')->take(2)->join(', ') ?: '-' }}
+                                {{ $professional->units->pluck('name')->join(', ') ?: '-' }}
                             </td>
                             <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Comissão">
                                 {{ $professional->commission_type === 'percentage' ? $professional->commission_value.'%' : ($professional->commission_value ? 'R$ '.number_format((float) $professional->commission_value, 2, ',', '.') : '-') }}
