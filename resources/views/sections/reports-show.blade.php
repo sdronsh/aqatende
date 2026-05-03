@@ -234,8 +234,8 @@
         </div>
 
         <div class="report-print-card rounded-xl border border-gray-200 bg-white shadow-theme-sm">
-            <div class="overflow-x-auto">
-                <table class="min-w-full border-separate border border-gray-200 [border-spacing:0] text-sm">
+            <div class="responsive-table-wrapper overflow-x-auto">
+                <table class="responsive-table min-w-full border-separate border border-gray-200 [border-spacing:0] text-sm">
                     <thead class="bg-gray-50">
                         @switch($report)
                             @case('agenda')
@@ -398,23 +398,23 @@
                             @switch($report)
                                 @case('agenda')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->scheduled_at?->format('d/m/Y') }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->scheduled_at?->format('H:i') }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->patient?->full_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->professional?->display_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->service?->name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->status }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ ['presencial' => 'Presencial', 'home_care' => 'Home Care', 'whatsapp' => 'Home Care', 'teleconsulta' => 'Home Care', 'walk_in' => 'Fila'][$row->channel ?? 'presencial'] ?? $row->channel }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Data">{{ $row->scheduled_at?->format('d/m/Y') }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Hora">{{ $row->scheduled_at?->format('H:i') }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Cliente">{{ $row->patient?->full_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Profissional">{{ $row->professional?->display_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Servico">{{ $row->service?->name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Status">{{ $row->status }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Canal">{{ ['presencial' => 'Presencial', 'home_care' => 'Home Care', 'whatsapp' => 'Home Care', 'teleconsulta' => 'Home Care', 'walk_in' => 'Fila'][$row->channel ?? 'presencial'] ?? $row->channel }}</td>
                                     </tr>
                                     @break
                                 @case('atendimentos')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->scheduled_at?->format('d/m/Y') }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->patient?->full_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->professional?->display_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->service?->name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->duration_minutes ?? '-' }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $money($row->price_cents) }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Data">{{ $row->scheduled_at?->format('d/m/Y') }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Cliente">{{ $row->patient?->full_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Profissional">{{ $row->professional?->display_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Servico">{{ $row->service?->name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Duracao">{{ $row->duration_minutes ?? '-' }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Valor">{{ $money($row->price_cents) }}</td>
                                     </tr>
                                     @break
                                 @case('cancelamentos')
@@ -422,187 +422,187 @@
                                         $hours = $row->cancelled_at ? round($row->scheduled_at?->diffInMinutes($row->cancelled_at, false) / 60, 1) : null;
                                     @endphp
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->scheduled_at?->format('d/m/Y') }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->patient?->full_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->professional?->display_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->cancellation_reason ?? '-' }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $hours !== null ? $hours : '-' }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Data">{{ $row->scheduled_at?->format('d/m/Y') }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Cliente">{{ $row->patient?->full_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Profissional">{{ $row->professional?->display_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Motivo">{{ $row->cancellation_reason ?? '-' }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Antecedencia (h)">{{ $hours !== null ? $hours : '-' }}</td>
                                     </tr>
                                     @break
                                 @case('faltas')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->patient?->full_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->professional?->display_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->scheduled_at?->format('d/m/Y') }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->service?->name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Cliente">{{ $row->patient?->full_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Profissional">{{ $row->professional?->display_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Data">{{ $row->scheduled_at?->format('d/m/Y') }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Servico">{{ $row->service?->name }}</td>
                                     </tr>
                                     @break
                                 @case('receita')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->pago_em?->format('d/m/Y') }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->patient?->full_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->professional?->display_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->appointment?->service?->name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->forma_pagamento }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $money($row->valor_total_cents) }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Data">{{ $row->pago_em?->format('d/m/Y') }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Cliente">{{ $row->patient?->full_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Profissional">{{ $row->professional?->display_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Servico">{{ $row->appointment?->service?->name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Forma">{{ $row->forma_pagamento }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Valor">{{ $money($row->valor_total_cents) }}</td>
                                     </tr>
                                     @break
                                 @case('contas_receber')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->patient?->full_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->descricao }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $money($row->valor_total_cents) }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->data_vencimento?->format('d/m/Y') }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->status }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->forma_pagamento }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Cliente">{{ $row->patient?->full_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Descricao">{{ $row->descricao }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Valor">{{ $money($row->valor_total_cents) }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Vencimento">{{ $row->data_vencimento?->format('d/m/Y') }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Status">{{ $row->status }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Forma">{{ $row->forma_pagamento }}</td>
                                     </tr>
                                     @break
                                 @case('contas_pagar')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->fornecedor }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->descricao }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $money($row->valor_cents) }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->data_vencimento?->format('d/m/Y') }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->status }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Fornecedor">{{ $row->fornecedor }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Descricao">{{ $row->descricao }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Valor">{{ $money($row->valor_cents) }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Vencimento">{{ $row->data_vencimento?->format('d/m/Y') }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Status">{{ $row->status }}</td>
                                     </tr>
                                     @break
                                 @case('fluxo_caixa')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row['periodo'] }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $money($row['entrada_cents']) }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $money($row['saida_cents']) }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $money($row['saldo_cents']) }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Periodo">{{ $row['periodo'] }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Entradas">{{ $money($row['entrada_cents']) }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Saidas">{{ $money($row['saida_cents']) }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Saldo">{{ $money($row['saldo_cents']) }}</td>
                                     </tr>
                                     @break
                                 @case('receita_profissional')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->professional?->display_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->total }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $money($row->total_cents) }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Profissional">{{ $row->professional?->display_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Atendimentos">{{ $row->total }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Faturamento">{{ $money($row->total_cents) }}</td>
                                     </tr>
                                     @break
                                 @case('receita_servico')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->service?->name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->total }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $money($row->total_cents) }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Servico">{{ $row->service?->name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Quantidade">{{ $row->total }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Faturamento">{{ $money($row->total_cents) }}</td>
                                     </tr>
                                     @break
                                 @case('pacientes_novos')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row['data'] }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row['total'] }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Data">{{ $row['data'] }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Quantidade">{{ $row['total'] }}</td>
                                     </tr>
                                     @break
                                 @case('ocupacao_agenda')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row['professional']?->display_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row['booked_minutes'] }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row['available_minutes'] }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row['occupancy'] }}%</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Profissional">{{ $row['professional']?->display_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Minutos ocupados">{{ $row['booked_minutes'] }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Minutos disponiveis">{{ $row['available_minutes'] }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Ocupacao">{{ $row['occupancy'] }}%</td>
                                     </tr>
                                     @break
                                 @case('atendimentos_profissional')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row['professional']?->display_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row['total'] }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row['confirmadas'] }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row['canceladas'] }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row['faltas'] }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Profissional">{{ $row['professional']?->display_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Total">{{ $row['total'] }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Confirmadas">{{ $row['confirmadas'] }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Canceladas">{{ $row['canceladas'] }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Faltas">{{ $row['faltas'] }}</td>
                                     </tr>
                                     @break
                                 @case('pacientes_lista')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->full_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->phone ?? $row->cellphone }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->address_city }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Nome">{{ $row->full_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Telefone">{{ $row->phone ?? $row->cellphone }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Cidade">{{ $row->address_city }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Ultimo atendimento">
                                             {{ $row->last_appointment_at ? \Carbon\Carbon::parse($row->last_appointment_at)->format('d/m/Y') : '-' }}
                                         </td>
                                     </tr>
                                     @break
                                 @case('pacientes_frequentes')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->patient?->full_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->total }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Cliente">{{ $row->patient?->full_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Atendimentos">{{ $row->total }}</td>
                                     </tr>
                                     @break
                                 @case('pacientes_sem_retorno')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->patient?->full_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ \Carbon\Carbon::parse($row->last_visit)->format('d/m/Y') }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Cliente">{{ $row->patient?->full_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Ultimo atendimento">{{ \Carbon\Carbon::parse($row->last_visit)->format('d/m/Y') }}</td>
                                     </tr>
                                     @break
                                 @case('taxa_cancelamento')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row['label'] }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row['total'] }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row['canceladas'] }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row['taxa'] }}%</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Grupo">{{ $row['label'] }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Total">{{ $row['total'] }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Canceladas">{{ $row['canceladas'] }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Taxa">{{ $row['taxa'] }}%</td>
                                     </tr>
                                     @break
                                 @case('ticket_medio')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row['total'] }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $money($row['total_cents']) }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ $money($row['ticket_cents']) }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Total atendimentos">{{ $row['total'] }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Receita total">{{ $money($row['total_cents']) }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Ticket medio">{{ $money($row['ticket_cents']) }}</td>
                                     </tr>
                                     @break
                                 @case('tempo_medio')
                                     <tr class="odd:bg-white even:bg-gray-50">
-                                        <td class="border border-gray-200 px-3 py-2">{{ $row->professional?->display_name }}</td>
-                                        <td class="border border-gray-200 px-3 py-2">{{ round($row->avg_minutes, 1) }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Profissional">{{ $row->professional?->display_name }}</td>
+                                        <td class="border border-gray-200 px-3 py-2" data-label="Tempo medio (min)">{{ round($row->avg_minutes, 1) }}</td>
                                     </tr>
                                     @break
                             @endswitch
                         @empty
                             <tr>
-                                <td colspan="7" class="border border-gray-200 px-4 py-6 text-center text-gray-500">
+                                <td colspan="7" class="border border-gray-200 px-4 py-6 text-center text-gray-500" data-empty>
                                     Nenhum registro encontrado.
                                 </td>
                             </tr>
                         @endforelse
                         @if ($report === 'receita')
                             <tr class="bg-gray-50 font-semibold text-gray-800">
-                                <td colspan="5" class="border border-gray-200 px-3 py-2 text-right">Total</td>
-                                <td class="border border-gray-200 px-3 py-2">{{ $money($summary['total_cents'] ?? 0) }}</td>
+                                <td colspan="5" class="border border-gray-200 px-3 py-2 text-right" data-label="Resumo">Total</td>
+                                <td class="border border-gray-200 px-3 py-2" data-label="Valor">{{ $money($summary['total_cents'] ?? 0) }}</td>
                             </tr>
                         @elseif ($report === 'atendimentos')
                             <tr class="bg-gray-50 font-semibold text-gray-800">
-                                <td colspan="4" class="border border-gray-200 px-3 py-2 text-right">Total</td>
-                                <td class="border border-gray-200 px-3 py-2">{{ $sumColumn($rows, 'duration_minutes') }}</td>
-                                <td class="border border-gray-200 px-3 py-2">{{ $money($sumColumn($rows, 'price_cents')) }}</td>
+                                <td colspan="4" class="border border-gray-200 px-3 py-2 text-right" data-label="Resumo">Total</td>
+                                <td class="border border-gray-200 px-3 py-2" data-label="Duracao">{{ $sumColumn($rows, 'duration_minutes') }}</td>
+                                <td class="border border-gray-200 px-3 py-2" data-label="Valor">{{ $money($sumColumn($rows, 'price_cents')) }}</td>
                             </tr>
                         @elseif ($report === 'contas_receber')
                             <tr class="bg-gray-50 font-semibold text-gray-800">
-                                <td colspan="2" class="border border-gray-200 px-3 py-2 text-right">Total</td>
-                                <td class="border border-gray-200 px-3 py-2">{{ $money($sumColumn($rows, 'valor_total_cents')) }}</td>
-                                <td colspan="3" class="border border-gray-200 px-3 py-2"></td>
+                                <td colspan="2" class="border border-gray-200 px-3 py-2 text-right" data-label="Resumo">Total</td>
+                                <td class="border border-gray-200 px-3 py-2" data-label="Valor">{{ $money($sumColumn($rows, 'valor_total_cents')) }}</td>
+                                <td colspan="3" class="border border-gray-200 px-3 py-2" data-empty></td>
                             </tr>
                         @elseif ($report === 'contas_pagar')
                             <tr class="bg-gray-50 font-semibold text-gray-800">
-                                <td colspan="2" class="border border-gray-200 px-3 py-2 text-right">Total</td>
-                                <td class="border border-gray-200 px-3 py-2">{{ $money($sumColumn($rows, 'valor_cents')) }}</td>
-                                <td colspan="2" class="border border-gray-200 px-3 py-2"></td>
+                                <td colspan="2" class="border border-gray-200 px-3 py-2 text-right" data-label="Resumo">Total</td>
+                                <td class="border border-gray-200 px-3 py-2" data-label="Valor">{{ $money($sumColumn($rows, 'valor_cents')) }}</td>
+                                <td colspan="2" class="border border-gray-200 px-3 py-2" data-empty></td>
                             </tr>
                         @elseif ($report === 'fluxo_caixa')
                             <tr class="bg-gray-50 font-semibold text-gray-800">
-                                <td class="border border-gray-200 px-3 py-2 text-right">Total</td>
-                                <td class="border border-gray-200 px-3 py-2">{{ $money($sumArrayColumn($rows, 'entrada_cents')) }}</td>
-                                <td class="border border-gray-200 px-3 py-2">{{ $money($sumArrayColumn($rows, 'saida_cents')) }}</td>
-                                <td class="border border-gray-200 px-3 py-2">{{ $money($sumArrayColumn($rows, 'saldo_cents')) }}</td>
+                                <td class="border border-gray-200 px-3 py-2 text-right" data-label="Resumo">Total</td>
+                                <td class="border border-gray-200 px-3 py-2" data-label="Entradas">{{ $money($sumArrayColumn($rows, 'entrada_cents')) }}</td>
+                                <td class="border border-gray-200 px-3 py-2" data-label="Saidas">{{ $money($sumArrayColumn($rows, 'saida_cents')) }}</td>
+                                <td class="border border-gray-200 px-3 py-2" data-label="Saldo">{{ $money($sumArrayColumn($rows, 'saldo_cents')) }}</td>
                             </tr>
                         @elseif ($report === 'receita_profissional')
                             <tr class="bg-gray-50 font-semibold text-gray-800">
-                                <td class="border border-gray-200 px-3 py-2 text-right">Total</td>
-                                <td class="border border-gray-200 px-3 py-2">{{ $sumColumn($rows, 'total') }}</td>
-                                <td class="border border-gray-200 px-3 py-2">{{ $money($sumColumn($rows, 'total_cents')) }}</td>
+                                <td class="border border-gray-200 px-3 py-2 text-right" data-label="Resumo">Total</td>
+                                <td class="border border-gray-200 px-3 py-2" data-label="Atendimentos">{{ $sumColumn($rows, 'total') }}</td>
+                                <td class="border border-gray-200 px-3 py-2" data-label="Faturamento">{{ $money($sumColumn($rows, 'total_cents')) }}</td>
                             </tr>
                         @elseif ($report === 'receita_servico')
                             <tr class="bg-gray-50 font-semibold text-gray-800">
-                                <td class="border border-gray-200 px-3 py-2 text-right">Total</td>
-                                <td class="border border-gray-200 px-3 py-2">{{ $sumColumn($rows, 'total') }}</td>
-                                <td class="border border-gray-200 px-3 py-2">{{ $money($sumColumn($rows, 'total_cents')) }}</td>
+                                <td class="border border-gray-200 px-3 py-2 text-right" data-label="Resumo">Total</td>
+                                <td class="border border-gray-200 px-3 py-2" data-label="Quantidade">{{ $sumColumn($rows, 'total') }}</td>
+                                <td class="border border-gray-200 px-3 py-2" data-label="Faturamento">{{ $money($sumColumn($rows, 'total_cents')) }}</td>
                             </tr>
                         @elseif ($report === 'ticket_medio')
                             @php
@@ -611,9 +611,9 @@
                                 $ticketAverageCents = $ticketTotal > 0 ? (int) round($ticketTotalCents / $ticketTotal) : 0;
                             @endphp
                             <tr class="bg-gray-50 font-semibold text-gray-800">
-                                <td class="border border-gray-200 px-3 py-2">{{ $ticketTotal }}</td>
-                                <td class="border border-gray-200 px-3 py-2">{{ $money($ticketTotalCents) }}</td>
-                                <td class="border border-gray-200 px-3 py-2">{{ $money($ticketAverageCents) }}</td>
+                                <td class="border border-gray-200 px-3 py-2" data-label="Total atendimentos">{{ $ticketTotal }}</td>
+                                <td class="border border-gray-200 px-3 py-2" data-label="Receita total">{{ $money($ticketTotalCents) }}</td>
+                                <td class="border border-gray-200 px-3 py-2" data-label="Ticket medio">{{ $money($ticketAverageCents) }}</td>
                             </tr>
                         @endif
                     </tbody>
