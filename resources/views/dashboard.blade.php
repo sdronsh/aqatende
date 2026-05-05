@@ -101,7 +101,7 @@
 
             <div class="px-3 py-3">
                 <div class="mb-1 text-center text-xs font-medium text-gray-400">{{ ucfirst($today->translatedFormat('F')) }}</div>
-                <div class="grid grid-cols-7 gap-1">
+                <div class="gap-1" style="display: grid; grid-template-columns: repeat(7, minmax(0, 1fr));">
                     @foreach ($weekDays as $day)
                         @php
                             $isToday = $day->isSameDay($today);
