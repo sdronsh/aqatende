@@ -182,6 +182,30 @@ class DashboardController extends Controller
             'faltas' => (clone $appointmentsBase)->whereBetween('scheduled_at', [$todayStart, $todayEnd])->whereIn('status', $noShowStatuses)->count(),
         ];
 
+        $todayAppointments = (clone $appointmentsBase)
+            ->with(['patient', 'professional', 'service', 'services', 'unit'])
+            ->whereBetween('scheduled_at', [$todayStart, $todayEnd])
+            ->orderBy('scheduled_at')
+            ->limit(40)
+            ->get();
+
+        $waitingCount = Appointment::query()
+            ->when($clinicIds->isNotEmpty(), fn ($query) => $query->whereIn('clinic_id', $clinicIds), fn ($query) => $query->whereRaw('1 = 0'))
+            ->when($selectedUnitId, fn ($query) => $query->where('unit_id', $selectedUnitId))
+            ->when($selectedProfessionalId, fn ($query) => $query->where('professional_id', $selectedProfessionalId))
+            ->where('status', 'waiting')
+            ->count();
+
+        $inProgressCount = Appointment::query()
+            ->when($clinicIds->isNotEmpty(), fn ($query) => $query->whereIn('clinic_id', $clinicIds), fn ($query) => $query->whereRaw('1 = 0'))
+            ->when($selectedUnitId, fn ($query) => $query->where('unit_id', $selectedUnitId))
+            ->when($selectedProfessionalId, fn ($query) => $query->where('professional_id', $selectedProfessionalId))
+            ->where('status', 'in_progress')
+            ->count();
+
+        $weekDays = collect(range(0, 6))
+            ->map(fn ($offset) => $now->copy()->startOfWeek(Carbon::SUNDAY)->addDays($offset));
+
         $topProfessionals = (clone $appointmentsBase)
             ->whereBetween('scheduled_at', [$start, $end])
             ->selectRaw('professional_id, count(*) as total')
@@ -279,6 +303,10 @@ class DashboardController extends Controller
             'pagarAbertasCents' => $pagarAbertasCents,
             'pagarVencidas' => $pagarVencidas,
             'statusToday' => $statusToday,
+            'todayAppointments' => $todayAppointments,
+            'waitingCount' => $waitingCount,
+            'inProgressCount' => $inProgressCount,
+            'weekDays' => $weekDays,
             'professionalStats' => $professionalStats,
             'appointmentsChart' => $appointmentsChart,
             'revenueChart' => $revenueChart,
