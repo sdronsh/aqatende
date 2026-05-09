@@ -74,6 +74,11 @@
             @endif
             <x-input-error class="mt-1" :messages="$errors->get('photo')" />
         </div>
+        <div class="md:col-span-12">
+            <label class="mb-1 block text-sm font-medium text-gray-700" for="admin_notes">Observação</label>
+            <textarea class="{{ $textarea }}" id="admin_notes" name="admin_notes" rows="3" placeholder="Observações internas sobre o cliente">{{ old('admin_notes', $patient->admin_notes ?? '') }}</textarea>
+            <x-input-error class="mt-1" :messages="$errors->get('admin_notes')" />
+        </div>
     </div>
 </div>
 

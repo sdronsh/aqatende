@@ -21,6 +21,14 @@
         </div>
     @endif
 
+    <style>
+        @media (max-width: 767px) {
+            .patients-mobile-hidden {
+                display: none !important;
+            }
+        }
+    </style>
+
     <div class="rounded-xl border border-gray-200 bg-white shadow-theme-sm">
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
             <div class="text-sm font-medium text-gray-700">Lista de Clientes</div>
@@ -41,27 +49,36 @@
                 <thead class="bg-gray-50">
                     <tr class="text-left text-xs font-semibold uppercase text-gray-500">
                         <th class="border border-gray-200 px-4 py-3">Nome</th>
-                        <th class="border border-gray-200 px-4 py-3">CPF</th>
-                        <th class="border border-gray-200 px-4 py-3">Nascimento</th>
-                        <th class="border border-gray-200 px-4 py-3">Sexo</th>
-                        <th class="border border-gray-200 px-4 py-3">Telefone</th>
-                        <th class="border border-gray-200 px-4 py-3">Celular</th>
-                        <th class="border border-gray-200 px-4 py-3">Ultimo atendimento</th>
+                        <th class="patients-mobile-hidden border border-gray-200 px-4 py-3">CPF</th>
+                        <th class="patients-mobile-hidden border border-gray-200 px-4 py-3">Nascimento</th>
+                        <th class="patients-mobile-hidden border border-gray-200 px-4 py-3">Sexo</th>
+                        <th class="patients-mobile-hidden border border-gray-200 px-4 py-3">Telefone</th>
+                        <th class="patients-mobile-hidden border border-gray-200 px-4 py-3">Celular</th>
+                        <th class="patients-mobile-hidden border border-gray-200 px-4 py-3">Ultimo atendimento</th>
                         <th class="border border-gray-200 px-4 py-3 text-right">Acoes</th>
                     </tr>
                 </thead>
                 <tbody>
                     @forelse ($patients as $patient)
+                        @php
+                            $displayName = $patient->social_name ?: $patient->full_name;
+                        @endphp
                         <tr class="odd:bg-gray-50">
-                            <td class="border border-gray-200 px-4 py-3 font-medium text-gray-800" data-label="Nome">{{ $patient->full_name }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="CPF">{{ $patient->cpf ?? '-' }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Nascimento">
+                            <td class="border border-gray-200 px-4 py-3 font-medium text-gray-800" data-label="Nome">
+                                <span class="md:hidden">{{ $displayName }}</span>
+                                <span class="hidden md:block">{{ $patient->full_name }}</span>
+                                @if ($patient->social_name)
+                                    <span class="hidden text-xs font-normal text-gray-500 md:block">{{ $patient->social_name }}</span>
+                                @endif
+                            </td>
+                            <td class="patients-mobile-hidden border border-gray-200 px-4 py-3 text-gray-600" data-label="CPF">{{ $patient->cpf ?? '-' }}</td>
+                            <td class="patients-mobile-hidden border border-gray-200 px-4 py-3 text-gray-600" data-label="Nascimento">
                                 {{ $patient->birthdate ? $patient->birthdate->format('d/m/Y') : '-' }}
                             </td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Sexo">{{ ucfirst($patient->gender ?? '-') }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Telefone">{{ $patient->phone ?? '-' }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Celular">{{ $patient->cellphone ?? '-' }}</td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Ultimo atendimento">
+                            <td class="patients-mobile-hidden border border-gray-200 px-4 py-3 text-gray-600" data-label="Sexo">{{ ucfirst($patient->gender ?? '-') }}</td>
+                            <td class="patients-mobile-hidden border border-gray-200 px-4 py-3 text-gray-600" data-label="Telefone">{{ $patient->phone ?? '-' }}</td>
+                            <td class="patients-mobile-hidden border border-gray-200 px-4 py-3 text-gray-600" data-label="Celular">{{ $patient->cellphone ?? '-' }}</td>
+                            <td class="patients-mobile-hidden border border-gray-200 px-4 py-3 text-gray-600" data-label="Ultimo atendimento">
                                 @if ($patient->last_appointment_at)
                                     {{ \Illuminate\Support\Carbon::parse($patient->last_appointment_at)->format('d/m/Y H:i') }}
                                 @else
