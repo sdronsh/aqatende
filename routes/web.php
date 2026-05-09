@@ -11,6 +11,7 @@ use App\Http\Controllers\AttendanceWebController;
 use App\Http\Controllers\AppointmentWebController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProfessionalWebController;
+use App\Http\Controllers\PublicBookingController;
 use App\Http\Controllers\QueueWebController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ServiceWebController;
@@ -34,6 +35,10 @@ Route::get('/', function () {
 
 Route::get('/company-lookup', CompanyLookupController::class)
     ->name('company.lookup');
+Route::get('/agendar/{token}', [PublicBookingController::class, 'show'])
+    ->name('public.booking.show');
+Route::post('/agendar/{token}', [PublicBookingController::class, 'store'])
+    ->name('public.booking.store');
 Route::get('/contratar/{plan}', [SubscriptionController::class, 'create'])
     ->name('subscriptions.create');
 Route::post('/contratar/{plan}', [SubscriptionController::class, 'store'])
@@ -132,6 +137,9 @@ Route::middleware('auth')->group(function () {
     Route::get('/cadastro/pacientes/{patient}/edit', [PatientWebController::class, 'edit'])
         ->middleware('permission:cadastro.pacientes.update')
         ->name('patients.edit');
+    Route::post('/cadastro/pacientes/{patient}/link-agendamento', [PatientWebController::class, 'bookingLink'])
+        ->middleware('permission:cadastro.pacientes.update')
+        ->name('patients.booking-link');
     Route::put('/cadastro/pacientes/{patient}', [PatientWebController::class, 'update'])
         ->middleware('permission:cadastro.pacientes.update')
         ->name('patients.update');

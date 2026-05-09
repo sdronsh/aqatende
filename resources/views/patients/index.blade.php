@@ -9,6 +9,18 @@
         </div>
     </x-slot>
 
+    @if (session('booking_link'))
+        <div class="mb-4 rounded-xl border border-brand-200 bg-brand-50 p-4 text-sm text-brand-900 shadow-theme-sm">
+            <div class="font-semibold">Link de agendamento gerado</div>
+            <div class="mt-2 flex flex-col gap-2 sm:flex-row">
+                <input id="booking-link-input" class="w-full rounded-lg border border-brand-200 bg-white px-3 py-2 text-sm text-gray-700" value="{{ session('booking_link') }}" readonly onclick="this.select()" />
+                <a class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-700" href="{{ session('booking_link') }}" target="_blank" rel="noopener">Abrir</a>
+                <button class="inline-flex items-center justify-center rounded-lg border border-brand-600 bg-white px-4 py-2 text-sm font-semibold text-brand-700 hover:bg-white/70" type="button" data-copy-booking-link data-target="booking-link-input">Copiar</button>
+            </div>
+            <p class="mt-2 text-xs text-brand-700">Copie este link e envie para o cliente pelo WhatsApp. Ele expira em 7 dias ou apos o primeiro agendamento.</p>
+        </div>
+    @endif
+
     <div class="rounded-xl border border-gray-200 bg-white shadow-theme-sm">
         <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
             <div class="text-sm font-medium text-gray-700">Lista de Clientes</div>
@@ -59,6 +71,10 @@
                             <td class="border border-gray-200 px-4 py-3" data-actions>
                                 <div class="flex justify-end gap-2">
                                     <a class="rounded-lg border border-brand-500 px-2 py-1 text-xs font-medium text-brand-500 hover:bg-brand-50" href="{{ route('patients.edit', $patient) }}">Editar</a>
+                                    <form method="POST" action="{{ route('patients.booking-link', $patient) }}">
+                                        @csrf
+                                        <button class="rounded-lg border border-success-600 px-2 py-1 text-xs font-medium text-success-700 hover:bg-success-50" type="submit">Gerar link</button>
+                                    </form>
                                     <form method="POST" action="{{ route('patients.destroy', $patient) }}" onsubmit="return confirm('Remover cliente?');">
                                         @csrf
                                         @method('DELETE')
@@ -81,4 +97,27 @@
             </div>
         @endif
     </div>
+
+    <script>
+        document.querySelectorAll('[data-copy-booking-link]').forEach((button) => {
+            button.addEventListener('click', async () => {
+                const input = document.getElementById(button.dataset.target);
+                if (! input) return;
+
+                try {
+                    await navigator.clipboard.writeText(input.value);
+                    button.textContent = 'Copiado';
+                } catch (_) {
+                    input.focus();
+                    input.select();
+                    document.execCommand('copy');
+                    button.textContent = 'Copiado';
+                }
+
+                setTimeout(() => {
+                    button.textContent = 'Copiar';
+                }, 1800);
+            });
+        });
+    </script>
 </x-app-layout>

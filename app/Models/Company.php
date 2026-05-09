@@ -44,6 +44,11 @@ class Company extends Model
             ->withTimestamps();
     }
 
+    public function patientBookingLinks(): HasMany
+    {
+        return $this->hasMany(PatientBookingLink::class);
+    }
+
     protected static function booted(): void
     {
         static::creating(function (Company $company): void {

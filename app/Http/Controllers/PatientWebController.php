@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Clinic;
 use App\Models\Patient;
+use App\Models\PatientBookingLink;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -346,6 +347,26 @@ class PatientWebController extends Controller
         }
 
         return redirect()->route('patients.index')->with('status', 'Cliente atualizado.');
+    }
+
+    public function bookingLink(Request $request, Patient $patient): RedirectResponse
+    {
+        $companyId = $request->session()->get('active_company_id');
+        if (! $companyId || ! $patient->companies()->whereKey($companyId)->exists()) {
+            abort(403);
+        }
+
+        $bookingLink = PatientBookingLink::create([
+            'company_id' => $companyId,
+            'patient_id' => $patient->id,
+            'created_by' => $request->user()?->id,
+            'token' => Str::random(48),
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        return back()
+            ->with('status', 'Link de agendamento gerado.')
+            ->with('booking_link', route('public.booking.show', $bookingLink->token));
     }
 
     public function destroy(Request $request, Patient $patient): RedirectResponse

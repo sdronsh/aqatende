@@ -126,6 +126,11 @@ class Patient extends Model
         return $this->hasMany(MedicalRecord::class);
     }
 
+    public function bookingLinks(): HasMany
+    {
+        return $this->hasMany(PatientBookingLink::class);
+    }
+
     public function companies()
     {
         return $this->belongsToMany(Company::class)->withTimestamps();
