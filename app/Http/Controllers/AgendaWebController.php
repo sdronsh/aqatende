@@ -105,7 +105,7 @@ class AgendaWebController extends Controller
 
         $blocks = $blocksQuery->get();
 
-        $professionals = Professional::query()
+        $allProfessionals = Professional::query()
             ->with('services')
             ->when($companyId, function ($query) use ($companyId) {
                 $query->where(function ($companyScoped) use ($companyId) {
@@ -120,8 +120,9 @@ class AgendaWebController extends Controller
             ->orderBy('display_name')
             ->get();
 
+        $professionals = $allProfessionals;
         if ($selectedProfessionalId) {
-            $professionals = $professionals->where('id', $selectedProfessionalId)->values();
+            $professionals = $allProfessionals->where('id', $selectedProfessionalId)->values();
         }
 
         $clinics = Clinic::query()
@@ -297,6 +298,8 @@ class AgendaWebController extends Controller
             'prevDate' => $prevDate,
             'nextDate' => $nextDate,
             'professionals' => $professionals,
+            'filterProfessionals' => $allProfessionals,
+            'appointmentProfessionals' => $allProfessionals,
             'units' => $units,
             'clinics' => $clinics,
             'services' => $services,
@@ -360,7 +363,10 @@ class AgendaWebController extends Controller
         }
 
         $professionalOk = Professional::whereKey($data['professional_id'])
-            ->whereHas('user.companies', fn ($q) => $q->where('companies.id', $companyId))
+            ->where(function ($query) use ($companyId) {
+                $query->where('company_id', $companyId)
+                    ->orWhereHas('user.companies', fn ($companyQuery) => $companyQuery->where('companies.id', $companyId));
+            })
             ->exists();
         if (! $professionalOk) {
             return back()->withErrors(['professional_id' => 'Profissional invalido para esta empresa.'])->withInput();

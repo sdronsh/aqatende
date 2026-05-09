@@ -125,7 +125,7 @@ class AppointmentWebController extends Controller
             'units' => Unit::whereIn('clinic_id', $clinicIds)->orderBy('name')->get(),
             'professionals' => Professional::query()
                 ->with('services')
-                ->whereHas('user.companies', fn ($q) => $q->where('companies.id', $companyId))
+                ->where(fn ($query) => $this->scopeProfessionalCompany($query, $companyId))
                 ->orderBy('display_name')
                 ->get(),
             'patients' => Patient::query()
@@ -153,7 +153,7 @@ class AppointmentWebController extends Controller
             'units' => Unit::whereIn('clinic_id', $clinicIds)->orderBy('name')->get(),
             'professionals' => Professional::query()
                 ->with('services')
-                ->whereHas('user.companies', fn ($q) => $q->where('companies.id', $companyId))
+                ->where(fn ($query) => $this->scopeProfessionalCompany($query, $companyId))
                 ->orderBy('display_name')
                 ->get(),
             'patients' => Patient::query()
@@ -276,7 +276,7 @@ class AppointmentWebController extends Controller
             'units' => Unit::whereIn('clinic_id', $clinicIds)->orderBy('name')->get(),
             'professionals' => Professional::query()
                 ->with('services')
-                ->whereHas('user.companies', fn ($q) => $q->where('companies.id', $companyId))
+                ->where(fn ($query) => $this->scopeProfessionalCompany($query, $companyId))
                 ->orderBy('display_name')
                 ->get(),
             'patients' => Patient::query()
@@ -708,7 +708,7 @@ class AppointmentWebController extends Controller
             }
 
             $professional = Professional::whereKey($professionalId)
-                ->whereHas('user.companies', fn ($q) => $q->where('companies.id', $companyId))
+                ->where(fn ($query) => $this->scopeProfessionalCompany($query, $companyId))
                 ->first();
 
             if (! $professional) {
@@ -978,6 +978,12 @@ class AppointmentWebController extends Controller
         return $map[$key] ?? ucfirst($key);
     }
 
+    private function scopeProfessionalCompany($query, int $companyId): void
+    {
+        $query->where('company_id', $companyId)
+            ->orWhereHas('user.companies', fn ($companyQuery) => $companyQuery->where('companies.id', $companyId));
+    }
+
     private function validateClinicRelations(array $data, int $companyId): void
     {
         $clinic = Clinic::where('company_id', $companyId)->whereKey($data['clinic_id'])->first();
@@ -1000,7 +1006,7 @@ class AppointmentWebController extends Controller
         }
 
         $professionalOk = Professional::whereKey($data['professional_id'])
-            ->whereHas('user.companies', fn ($q) => $q->where('companies.id', $companyId))
+            ->where(fn ($query) => $this->scopeProfessionalCompany($query, $companyId))
             ->exists();
         if (! $professionalOk) {
             abort(403);

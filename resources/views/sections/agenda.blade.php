@@ -51,7 +51,7 @@
                         @endif
                         <select class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10 sm:w-auto {{ $lockProfessionalFilter ? 'bg-gray-100 text-gray-500' : '' }}" name="professional_id" @disabled($lockProfessionalFilter)>
                             <option value="">Todos os profissionais</option>
-                            @foreach ($professionals as $professional)
+                            @foreach (($filterProfessionals ?? $professionals) as $professional)
                                 <option value="{{ $professional->id }}" @selected($selectedProfessionalId === $professional->id)>
                                     {{ $professional->display_name }}
                                 </option>
@@ -404,7 +404,7 @@
                             </label>
                             <select class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs" name="service_professional_ids[{{ $service->id }}]">
                                 <option value="">Selecione profissional</option>
-                                @foreach ($professionals as $professional)
+                                @foreach (($appointmentProfessionals ?? $professionals) as $professional)
                                     @if ($professional->services->contains('id', $service->id))
                                         <option value="{{ $professional->id }}">{{ $professional->display_name }}</option>
                                     @endif
