@@ -29,8 +29,8 @@
         }
     </style>
 
-    <div class="rounded-xl border border-gray-200 bg-white shadow-theme-sm">
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-gray-200 px-6 py-4">
+    <div class="flex max-h-[calc(100vh-9rem)] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-theme-sm">
+        <div class="sticky top-0 z-10 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-6 py-4">
             <div class="text-sm font-medium text-gray-700">Lista de Clientes</div>
             <form method="GET" action="{{ route('patients.index') }}" class="flex w-full max-w-3xl flex-wrap items-center gap-2">
                 <input class="w-full flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" name="search" value="{{ request('search') }}" placeholder="Buscar por nome, CPF ou telefone" />
@@ -44,7 +44,7 @@
                 <button class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50" type="submit">Buscar</button>
             </form>
         </div>
-        <div class="responsive-table-wrapper overflow-x-auto">
+        <div class="responsive-table-wrapper flex-1 overflow-auto">
             <table class="responsive-table min-w-full border-separate border border-gray-200 [border-spacing:0] text-sm">
                 <thead class="bg-gray-50">
                     <tr class="text-left text-xs font-semibold uppercase text-gray-500">
