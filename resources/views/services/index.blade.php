@@ -48,7 +48,12 @@
                                 R$ {{ number_format(($service->price_cents ?? 0) / 100, 2, ',', '.') }}
                             </td>
                             <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Tipo">
-                                @if ($service->shared_service)
+                                @if ($service->is_package)
+                                    <span class="rounded-full bg-brand-50 px-2 py-1 text-xs font-semibold text-brand-600">Pacote</span>
+                                    @if ($service->packageItems->isNotEmpty())
+                                        <span class="mt-1 block text-xs text-gray-400">{{ $service->packageItems->pluck('name')->join(' + ') }}</span>
+                                    @endif
+                                @elseif ($service->shared_service)
                                     <span class="rounded-full bg-brand-50 px-2 py-1 text-xs font-semibold text-brand-600">Compartilhado</span>
                                 @else
                                     <span class="text-gray-400">Individual</span>

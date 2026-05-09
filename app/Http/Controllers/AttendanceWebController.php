@@ -48,6 +48,14 @@ class AttendanceWebController extends AgendaWebController
         if ($selectedClinicId && ! $clinicIds->contains($selectedClinicId)) {
             $selectedClinicId = null;
         }
+        $defaultUnits = Unit::query()
+            ->when($selectedClinicId, fn ($query) => $query->where('clinic_id', $selectedClinicId))
+            ->when(! $selectedClinicId && $companyId, fn ($query) => $query->whereIn('clinic_id', $clinicIds))
+            ->orderBy('name')
+            ->get();
+        if (! $selectedUnitId && $defaultUnits->count() === 1) {
+            $selectedUnitId = (int) $defaultUnits->first()->id;
+        }
 
         if ($view === 'week') {
             $start = $date->copy()->startOfWeek(Carbon::MONDAY)->startOfDay();

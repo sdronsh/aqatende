@@ -21,7 +21,7 @@ class ServiceWebController extends Controller
         }
 
         $clinicIds = Clinic::where('company_id', $companyId)->pluck('id');
-        $query = Service::with(['clinic', 'unit'])
+        $query = Service::with(['clinic', 'unit', 'packageItems'])
             ->whereIn('clinic_id', $clinicIds)
             ->orderBy('name');
 
@@ -63,8 +63,14 @@ class ServiceWebController extends Controller
         $units = Unit::whereIn('clinic_id', $clinics->pluck('id'))->orderBy('name')->get();
 
         return view('services.create', [
+            'service' => new Service(),
             'clinics' => $clinics,
             'units' => $units,
+            'componentServices' => Service::whereIn('clinic_id', $clinics->pluck('id'))
+                ->where('active', true)
+                ->where('is_package', false)
+                ->orderBy('name')
+                ->get(),
         ]);
     }
 
@@ -87,6 +93,9 @@ class ServiceWebController extends Controller
             'price_cents' => ['required_without:price', 'nullable', 'integer', 'min:0'],
             'active' => ['nullable', 'boolean'],
             'shared_service' => ['nullable', 'boolean'],
+            'is_package' => ['nullable', 'boolean'],
+            'package_service_ids' => ['nullable', 'array'],
+            'package_service_ids.*' => ['integer', 'exists:services,id'],
         ]);
 
         if (! Clinic::where('company_id', $companyId)->whereKey($data['clinic_id'])->exists()) {
@@ -107,9 +116,12 @@ class ServiceWebController extends Controller
         $data['price_cents'] = $this->resolvePriceCents($data);
         $data['active'] = (bool) ($data['active'] ?? false);
         $data['shared_service'] = (bool) ($data['shared_service'] ?? false);
-        unset($data['price']);
+        $data['is_package'] = (bool) ($data['is_package'] ?? false);
+        $packageServiceIds = $this->resolvePackageServiceIds($data, $companyId, (int) $data['clinic_id']);
+        unset($data['price'], $data['package_service_ids']);
 
-        Service::create($data);
+        $service = Service::create($data);
+        $this->syncPackageItems($service, $packageServiceIds);
 
         return redirect()->route('services.index')->with('status', 'Servico criado.');
     }
@@ -127,9 +139,15 @@ class ServiceWebController extends Controller
         $units = Unit::whereIn('clinic_id', $clinics->pluck('id'))->orderBy('name')->get();
 
         return view('services.edit', [
-            'service' => $service,
+            'service' => $service->load('packageItems'),
             'clinics' => $clinics,
             'units' => $units,
+            'componentServices' => Service::whereIn('clinic_id', $clinics->pluck('id'))
+                ->where('active', true)
+                ->where('is_package', false)
+                ->where('id', '!=', $service->id)
+                ->orderBy('name')
+                ->get(),
         ]);
     }
 
@@ -152,6 +170,9 @@ class ServiceWebController extends Controller
             'price_cents' => ['required_without:price', 'nullable', 'integer', 'min:0'],
             'active' => ['nullable', 'boolean'],
             'shared_service' => ['nullable', 'boolean'],
+            'is_package' => ['nullable', 'boolean'],
+            'package_service_ids' => ['nullable', 'array'],
+            'package_service_ids.*' => ['integer', 'exists:services,id'],
         ]);
 
         if (! Clinic::where('company_id', $companyId)->whereKey($data['clinic_id'])->exists()) {
@@ -172,9 +193,12 @@ class ServiceWebController extends Controller
         $data['price_cents'] = $this->resolvePriceCents($data);
         $data['active'] = (bool) ($data['active'] ?? false);
         $data['shared_service'] = (bool) ($data['shared_service'] ?? false);
-        unset($data['price']);
+        $data['is_package'] = (bool) ($data['is_package'] ?? false);
+        $packageServiceIds = $this->resolvePackageServiceIds($data, $companyId, (int) $data['clinic_id'], (int) $service->id);
+        unset($data['price'], $data['package_service_ids']);
 
         $service->update($data);
+        $this->syncPackageItems($service, $packageServiceIds);
 
         return redirect()->route('services.index')->with('status', 'Servico atualizado.');
     }
@@ -204,6 +228,47 @@ class ServiceWebController extends Controller
         }
 
         return 0;
+    }
+
+    private function resolvePackageServiceIds(array $data, int $companyId, int $clinicId, ?int $serviceId = null): array
+    {
+        if (empty($data['is_package'])) {
+            return [];
+        }
+
+        $ids = collect($data['package_service_ids'] ?? [])
+            ->map(fn ($id) => (int) $id)
+            ->filter(fn ($id) => $id > 0 && $id !== $serviceId)
+            ->unique()
+            ->values();
+
+        if ($ids->isEmpty()) {
+            return [];
+        }
+
+        $validIds = Service::query()
+            ->where('clinic_id', $clinicId)
+            ->whereIn('id', $ids)
+            ->whereHas('clinic', fn ($query) => $query->where('company_id', $companyId))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id);
+
+        return $ids->filter(fn ($id) => $validIds->contains($id))->values()->all();
+    }
+
+    private function syncPackageItems(Service $service, array $packageServiceIds): void
+    {
+        if (! $service->is_package || empty($packageServiceIds)) {
+            $service->packageItems()->sync([]);
+            return;
+        }
+
+        $sync = [];
+        foreach (array_values($packageServiceIds) as $position => $serviceId) {
+            $sync[$serviceId] = ['position' => $position];
+        }
+
+        $service->packageItems()->sync($sync);
     }
 
     private function parsePriceToCents(string $value): int

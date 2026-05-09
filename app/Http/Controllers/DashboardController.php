@@ -64,6 +64,9 @@ class DashboardController extends Controller
         if ($selectedUnitId && ! $units->pluck('id')->contains($selectedUnitId)) {
             $selectedUnitId = null;
         }
+        if (! $selectedUnitId && $units->count() === 1) {
+            $selectedUnitId = (int) $units->first()->id;
+        }
 
         $appointmentsBase = Appointment::query()
             ->when($clinicIds->isNotEmpty(), fn ($query) => $query->whereIn('clinic_id', $clinicIds), fn ($query) => $query->whereRaw('1 = 0'))

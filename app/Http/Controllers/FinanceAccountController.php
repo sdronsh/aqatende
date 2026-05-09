@@ -23,6 +23,10 @@ class FinanceAccountController extends Controller
         $clinicIds = $this->getClinicIds($request);
         $selectedClinicId = $request->integer('clinic_id') ?: null;
         $selectedUnitId = $request->integer('unit_id') ?: null;
+        $units = Unit::whereIn('clinic_id', $clinicIds)->orderBy('name')->get();
+        if (! $selectedUnitId && $units->count() === 1) {
+            $selectedUnitId = (int) $units->first()->id;
+        }
 
         $query = FinancialAccount::query()
             ->whereIn('clinic_id', $clinicIds)
@@ -63,7 +67,6 @@ class FinanceAccountController extends Controller
             : $query->paginate((int) $perPage)->withQueryString();
 
         $clinics = Clinic::whereIn('id', $clinicIds)->orderBy('name')->get();
-        $units = Unit::whereIn('clinic_id', $clinicIds)->orderBy('name')->get();
 
         return view('finance/accounts/index', [
             'accounts' => $accounts,

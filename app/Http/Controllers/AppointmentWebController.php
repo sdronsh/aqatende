@@ -35,6 +35,7 @@ class AppointmentWebController extends Controller
         $query = Appointment::with(['clinic', 'unit', 'professional', 'patient', 'service', 'services']);
 
         $clinicIds = Clinic::where('company_id', $companyId)->pluck('id');
+        $units = Unit::whereIn('clinic_id', $clinicIds)->orderBy('name')->get();
         $query->whereIn('clinic_id', $clinicIds);
 
         if ($user->patient && ! $companyId) {
@@ -59,6 +60,9 @@ class AppointmentWebController extends Controller
             'search' => $request->string('search')->toString(),
             'order_by' => $request->string('order_by', 'date_asc')->toString(),
         ];
+        if (! $filters['unit_id'] && $units->count() === 1) {
+            $filters['unit_id'] = (int) $units->first()->id;
+        }
 
         if ($filters['date']) {
             $query->whereDate('scheduled_at', $filters['date']);
@@ -122,7 +126,7 @@ class AppointmentWebController extends Controller
         return view('appointments.index', [
             'appointments' => $appointments,
             'clinics' => Clinic::whereIn('id', $clinicIds)->orderBy('name')->get(),
-            'units' => Unit::whereIn('clinic_id', $clinicIds)->orderBy('name')->get(),
+            'units' => $units,
             'professionals' => Professional::query()
                 ->with('services')
                 ->where(fn ($query) => $this->scopeProfessionalCompany($query, $companyId))
@@ -160,7 +164,10 @@ class AppointmentWebController extends Controller
                 ->whereHas('companies', fn ($q) => $q->where('companies.id', $companyId))
                 ->orderBy('full_name')
                 ->get(),
-            'services' => Service::whereIn('clinic_id', $clinicIds)->orderBy('name')->get(),
+            'services' => Service::with(['packageItems.professionals', 'professionals'])
+                ->whereIn('clinic_id', $clinicIds)
+                ->orderBy('name')
+                ->get(),
         ]);
     }
 
@@ -173,29 +180,20 @@ class AppointmentWebController extends Controller
 
         $data = $this->validateAppointment($request, true);
         $data['clinic_id'] = $this->resolveClinicIdFromUnit((int) $data['unit_id'], $companyId);
+        $data['service_id'] = $this->resolvePrimarySelectedServiceId($data);
         $selectedServices = $this->resolveSelectedServices($data, (int) $data['clinic_id']);
-        $primaryService = $selectedServices->first();
-        $data['service_id'] = $primaryService->id;
         $data['professional_id'] = $this->resolvePrimaryProfessionalId($data, $selectedServices);
 
         $this->validateClinicRelations($data, $companyId);
         $this->validateServiceProfessionals($data, $selectedServices, $companyId);
 
         $scheduledAt = Carbon::parse($data['scheduled_at']);
-        $durationMinutes = (int) ($data['duration_minutes'] ?? $selectedServices->sum('duration_minutes'));
-        $priceCents = $this->resolvePriceCents($data, (int) $selectedServices->sum('price_cents'));
+        $durationMinutes = (int) ($data['duration_minutes'] ?? $this->resolveSelectedDurationMinutes($data, (int) $data['clinic_id']));
+        $priceCents = $this->resolvePriceCents($data, $this->resolveSelectedPriceCents($data, (int) $data['clinic_id']));
         $status = $this->normalizeStatus($data['status']);
         $occurrenceDates = $this->buildRecurringDates($scheduledAt, $data);
-        $schedulesByWeekday = Schedule::query()
-            ->where('professional_id', $data['professional_id'])
-            ->where('unit_id', $data['unit_id'])
-            ->where('is_active', true)
-            ->get()
-            ->groupBy('weekday');
-
         foreach ($occurrenceDates as $occurrenceDate) {
-            $occurrenceEndsAt = $occurrenceDate->copy()->addMinutes($durationMinutes);
-            if (! $this->scheduleAllowsFromGrouped($schedulesByWeekday, $occurrenceDate, $occurrenceEndsAt)) {
+            if (! $this->selectedProfessionalsAreAvailable($data, $selectedServices, $occurrenceDate)) {
                 return back()->withErrors([
                     'scheduled_at' => 'Horario fora do atendimento do profissional em uma das recorrencias.',
                 ])->withInput();
@@ -283,7 +281,10 @@ class AppointmentWebController extends Controller
                 ->whereHas('companies', fn ($q) => $q->where('companies.id', $companyId))
                 ->orderBy('full_name')
                 ->get(),
-            'services' => Service::whereIn('clinic_id', $clinicIds)->orderBy('name')->get(),
+            'services' => Service::with(['packageItems.professionals', 'professionals'])
+                ->whereIn('clinic_id', $clinicIds)
+                ->orderBy('name')
+                ->get(),
         ]);
     }
 
@@ -296,21 +297,20 @@ class AppointmentWebController extends Controller
 
         $data = $this->validateAppointment($request, false);
         $data['clinic_id'] = $this->resolveClinicIdFromUnit((int) $data['unit_id'], $companyId);
+        $data['service_id'] = $this->resolvePrimarySelectedServiceId($data);
         $selectedServices = $this->resolveSelectedServices($data, (int) $data['clinic_id']);
-        $primaryService = $selectedServices->first();
-        $data['service_id'] = $primaryService->id;
         $data['professional_id'] = $this->resolvePrimaryProfessionalId($data, $selectedServices);
 
         $this->validateClinicRelations($data, $companyId);
         $this->validateServiceProfessionals($data, $selectedServices, $companyId);
 
         $scheduledAt = Carbon::parse($data['scheduled_at']);
-        $duration = (int) ($data['duration_minutes'] ?? $selectedServices->sum('duration_minutes'));
+        $duration = (int) ($data['duration_minutes'] ?? $this->resolveSelectedDurationMinutes($data, (int) $data['clinic_id']));
         $endsAt = $scheduledAt->copy()->addMinutes($duration);
         $status = $this->normalizeStatus($data['status']);
-        $priceCents = $this->resolvePriceCents($data, (int) $selectedServices->sum('price_cents'));
+        $priceCents = $this->resolvePriceCents($data, $this->resolveSelectedPriceCents($data, (int) $data['clinic_id']));
 
-        if (! $this->scheduleAllows($data['professional_id'], $data['unit_id'], $scheduledAt, $endsAt)) {
+        if (! $this->selectedProfessionalsAreAvailable($data, $selectedServices, $scheduledAt)) {
             return back()->withErrors([
                 'scheduled_at' => 'Horario fora do atendimento do profissional.',
             ])->withInput();
@@ -662,7 +662,8 @@ class AppointmentWebController extends Controller
             abort(422, 'Selecione pelo menos um servico.');
         }
 
-        $services = Service::where('clinic_id', $clinicId)
+        $services = Service::with('packageItems')
+            ->where('clinic_id', $clinicId)
             ->whereIn('id', $serviceIds)
             ->get()
             ->sortBy(fn (Service $service) => $serviceIds->search((int) $service->id))
@@ -672,7 +673,74 @@ class AppointmentWebController extends Controller
             abort(403);
         }
 
-        return $services;
+        return $this->expandPackageServices($services, $clinicId);
+    }
+
+    private function expandPackageServices(Collection $services, int $clinicId): Collection
+    {
+        $expanded = collect();
+
+        foreach ($services as $service) {
+            if ($service->is_package) {
+                $items = $service->relationLoaded('packageItems')
+                    ? $service->packageItems
+                    : $service->packageItems()->get();
+
+                $items = $items->filter(fn (Service $item) => (int) $item->clinic_id === $clinicId);
+                if ($items->isNotEmpty()) {
+                    $expanded = $expanded->merge($items);
+                    continue;
+                }
+            }
+
+            $expanded->push($service);
+        }
+
+        return $expanded->unique('id')->values();
+    }
+
+    private function resolveSelectedPriceCents(array $data, int $clinicId): int
+    {
+        $serviceIds = collect($data['service_ids'] ?? [])
+            ->filter()
+            ->map(fn ($id) => (int) $id);
+
+        if ($serviceIds->isEmpty() && ! empty($data['service_id'])) {
+            $serviceIds = collect([(int) $data['service_id']]);
+        }
+
+        return (int) Service::where('clinic_id', $clinicId)
+            ->whereIn('id', $serviceIds->unique()->values())
+            ->sum('price_cents');
+    }
+
+    private function resolveSelectedDurationMinutes(array $data, int $clinicId): int
+    {
+        $serviceIds = collect($data['service_ids'] ?? [])
+            ->filter()
+            ->map(fn ($id) => (int) $id);
+
+        if ($serviceIds->isEmpty() && ! empty($data['service_id'])) {
+            $serviceIds = collect([(int) $data['service_id']]);
+        }
+
+        return (int) Service::where('clinic_id', $clinicId)
+            ->whereIn('id', $serviceIds->unique()->values())
+            ->sum('duration_minutes');
+    }
+
+    private function resolvePrimarySelectedServiceId(array $data): int
+    {
+        $serviceIds = collect($data['service_ids'] ?? [])
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->values();
+
+        if ($serviceIds->isNotEmpty()) {
+            return (int) $serviceIds->first();
+        }
+
+        return (int) ($data['service_id'] ?? 0);
     }
 
     private function resolvePrimaryProfessionalId(array $data, Collection $services): int
@@ -796,6 +864,27 @@ class AppointmentWebController extends Controller
             ->where('type', 'receber')
             ->orderBy('name')
             ->value('id');
+    }
+
+    private function selectedProfessionalsAreAvailable(array $data, Collection $services, Carbon $scheduledAt): bool
+    {
+        $professionalMap = $data['service_professional_ids'] ?? [];
+        $unitId = (int) $data['unit_id'];
+
+        foreach ($services as $service) {
+            $professionalId = (int) ($professionalMap[$service->id] ?? $data['professional_id'] ?? 0);
+            if ($professionalId <= 0) {
+                return false;
+            }
+
+            $duration = (int) ($service->duration_minutes ?: ($data['duration_minutes'] ?? 5));
+            $duration = max(5, $duration);
+            if (! $this->scheduleAllows($professionalId, $unitId, $scheduledAt, $scheduledAt->copy()->addMinutes($duration))) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private function scheduleAllows(int $professionalId, int $unitId, Carbon $start, Carbon $end): bool

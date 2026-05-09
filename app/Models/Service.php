@@ -18,6 +18,7 @@ class Service extends Model
         'price_cents',
         'active',
         'shared_service',
+        'is_package',
     ];
 
     protected $casts = [
@@ -25,6 +26,7 @@ class Service extends Model
         'price_cents' => 'int',
         'active' => 'bool',
         'shared_service' => 'bool',
+        'is_package' => 'bool',
     ];
 
     public function clinic(): BelongsTo
@@ -40,6 +42,21 @@ class Service extends Model
     public function appointments(): HasMany
     {
         return $this->hasMany(Appointment::class);
+    }
+
+    public function packageItems()
+    {
+        return $this->belongsToMany(Service::class, 'service_package_items', 'package_service_id', 'component_service_id')
+            ->withPivot('position')
+            ->withTimestamps()
+            ->orderByPivot('position');
+    }
+
+    public function usedInPackages()
+    {
+        return $this->belongsToMany(Service::class, 'service_package_items', 'component_service_id', 'package_service_id')
+            ->withPivot('position')
+            ->withTimestamps();
     }
 
     public function professionals()

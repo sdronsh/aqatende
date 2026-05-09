@@ -22,7 +22,7 @@
         <select class="{{ $select }}" id="unit_id" name="unit_id">
             <option value="">Todas as unidades</option>
             @foreach ($units as $unit)
-                <option value="{{ $unit->id }}" @selected(old('unit_id', $payable->unit_id ?? '') == $unit->id)>{{ $unit->name }}</option>
+                <option value="{{ $unit->id }}" @selected((string) old('unit_id', $payable->unit_id ?? ($units->count() === 1 ? $units->first()->id : '')) === (string) $unit->id)>{{ $unit->name }}</option>
             @endforeach
         </select>
     </div>

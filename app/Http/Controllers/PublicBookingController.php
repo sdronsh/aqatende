@@ -26,7 +26,7 @@ class PublicBookingController extends Controller
         $companyId = (int) $bookingLink->company_id;
         $clinicIds = Clinic::where('company_id', $companyId)->pluck('id');
 
-        $services = Service::query()
+        $services = Service::with('packageItems')
             ->whereIn('clinic_id', $clinicIds)
             ->where('active', true)
             ->orderBy('name')
@@ -86,10 +86,10 @@ class PublicBookingController extends Controller
             'notes' => ['nullable', 'string', 'max:1000'],
         ]);
 
-        [$professionalId, $scheduledAtValue] = array_pad(explode('|', $data['slot'], 2), 2, null);
-        abort_unless($professionalId && $scheduledAtValue, 422);
+        [$slotProfessionalValue, $scheduledAtValue] = array_pad(explode('|', $data['slot'], 2), 2, null);
+        abort_unless($slotProfessionalValue && $scheduledAtValue, 422);
 
-        $service = Service::query()
+        $service = Service::with('packageItems')
             ->whereKey($data['service_id'])
             ->whereIn('clinic_id', $clinicIds)
             ->where('active', true)
@@ -101,24 +101,33 @@ class PublicBookingController extends Controller
             ->where('active', true)
             ->firstOrFail();
 
-        $professional = $this->availableProfessionals($companyId, $service, $unit)
-            ->firstWhere('id', (int) $professionalId);
-        abort_unless($professional, 422);
-
         $scheduledAt = Carbon::parse($scheduledAtValue);
         $date = $scheduledAt->copy()->startOfDay();
-        $slotIsAvailable = $this->availableSlots($service, $unit, collect([$professional]), $date, $professional)
-            ->contains(fn ($slot) => $slot['scheduled_at']->equalTo($scheduledAt));
+        $professionals = $this->availableProfessionals($companyId, $service, $unit);
+        $professional = null;
+        $serviceProfessionalIds = [];
+
+        if ($service->is_package) {
+            $serviceProfessionalIds = $this->decodePackageSlotAssignments($slotProfessionalValue);
+        } else {
+            $professional = $professionals->firstWhere('id', (int) $slotProfessionalValue);
+            abort_unless($professional, 422);
+            $serviceProfessionalIds = [$service->id => (int) $professional->id];
+        }
+
+        $slotIsAvailable = $this->availableSlots($service, $unit, $professionals, $date, $professional)
+            ->contains(fn ($slot) => $slot['scheduled_at']->equalTo($scheduledAt) && $slot['value'] === $data['slot']);
         abort_unless($slotIsAvailable, 422);
 
-        $appointment = DB::transaction(function () use ($bookingLink, $service, $unit, $professional, $scheduledAt, $data): Appointment {
+        $appointment = DB::transaction(function () use ($bookingLink, $service, $unit, $professionals, $serviceProfessionalIds, $scheduledAt, $data): Appointment {
             $duration = (int) ($service->duration_minutes ?: 30);
             $endsAt = $scheduledAt->copy()->addMinutes($duration);
+            $primaryProfessionalId = (int) collect($serviceProfessionalIds)->first();
 
             $appointment = Appointment::create([
                 'clinic_id' => $unit->clinic_id,
                 'unit_id' => $unit->id,
-                'professional_id' => $professional->id,
+                'professional_id' => $primaryProfessionalId,
                 'patient_id' => $bookingLink->patient_id,
                 'service_id' => $service->id,
                 'status' => 'agendado',
@@ -131,18 +140,21 @@ class PublicBookingController extends Controller
                 'payment_status' => 'pending',
             ]);
 
-            $appointment->services()->sync([
-                $service->id => [
-                    'professional_id' => $professional->id,
-                    'duration_minutes' => $duration,
-                    'price_cents' => $service->price_cents,
+            $sync = [];
+            foreach ($this->bookingServices($service)->values() as $position => $appointmentService) {
+                $serviceDuration = (int) ($appointmentService->duration_minutes ?: $duration);
+                $sync[$appointmentService->id] = [
+                    'professional_id' => (int) ($serviceProfessionalIds[$appointmentService->id] ?? $primaryProfessionalId),
+                    'duration_minutes' => $serviceDuration,
+                    'price_cents' => $appointmentService->price_cents,
                     'scheduled_at' => $scheduledAt,
-                    'ends_at' => $endsAt,
+                    'ends_at' => $scheduledAt->copy()->addMinutes($serviceDuration),
                     'status' => 'agendado',
                     'commission_amount_cents' => 0,
-                    'position' => 0,
-                ],
-            ]);
+                    'position' => $position,
+                ];
+            }
+            $appointment->services()->sync($sync);
 
             AccountReceivable::firstOrCreate(
                 ['appointment_id' => $appointment->id],
@@ -196,25 +208,61 @@ class PublicBookingController extends Controller
             ->get();
     }
 
+    private function bookingServices(Service $service): Collection
+    {
+        if ($service->is_package) {
+            $items = $service->relationLoaded('packageItems')
+                ? $service->packageItems
+                : $service->packageItems()->get();
+
+            if ($items->isNotEmpty()) {
+                return $items->values();
+            }
+        }
+
+        return collect([$service]);
+    }
+
+    private function decodePackageSlotAssignments(string $value): array
+    {
+        if (! str_starts_with($value, 'pkg:')) {
+            abort(422);
+        }
+
+        $decoded = json_decode(base64_decode(substr($value, 4), true) ?: '', true);
+        abort_unless(is_array($decoded) && ! empty($decoded), 422);
+
+        return collect($decoded)
+            ->mapWithKeys(fn ($professionalId, $serviceId) => [(int) $serviceId => (int) $professionalId])
+            ->all();
+    }
+
     private function availableProfessionals(int $companyId, Service $service, ?Unit $unit): Collection
     {
+        $serviceIds = $this->bookingServices($service)->pluck('id')->values();
+
         return Professional::query()
             ->where('active', true)
             ->where(function ($query) use ($companyId) {
                 $query->where('company_id', $companyId)
                     ->orWhereHas('user.companies', fn ($companyQuery) => $companyQuery->whereKey($companyId));
             })
-            ->whereHas('services', function ($query) use ($service) {
-                $query->where('services.id', $service->id)
+            ->whereHas('services', function ($query) use ($serviceIds) {
+                $query->whereIn('services.id', $serviceIds)
                     ->where('professional_service.active', true);
             })
             ->when($unit, fn ($query) => $query->whereHas('units', fn ($unitQuery) => $unitQuery->whereKey($unit->id)))
+            ->with('services')
             ->orderBy('display_name')
             ->get();
     }
 
     private function availableSlots(Service $service, Unit $unit, Collection $professionals, Carbon $date, ?Professional $selectedProfessional): Collection
     {
+        if ($service->is_package && $this->bookingServices($service)->count() > 1) {
+            return $this->availablePackageSlots($service, $unit, $professionals, $date);
+        }
+
         $duration = (int) ($service->duration_minutes ?: 30);
         $professionalIds = $professionals
             ->when($selectedProfessional, fn ($items) => $items->where('id', $selectedProfessional->id))
@@ -286,6 +334,7 @@ class PublicBookingController extends Controller
                                 'scheduled_at' => $slotStart,
                                 'ends_at' => $slotEnd,
                                 'label' => $slotStart->format('H:i') . ' - ' . $professional->display_name,
+                                'value' => $professional->id . '|' . $slotStart->toDateTimeString(),
                             ];
                         }
 
@@ -297,6 +346,77 @@ class PublicBookingController extends Controller
             })
             ->sortBy(fn ($slot) => $slot['scheduled_at']->timestamp . '-' . $slot['professional']->display_name)
             ->values();
+    }
+
+    private function availablePackageSlots(Service $service, Unit $unit, Collection $professionals, Carbon $date): Collection
+    {
+        $services = $this->bookingServices($service);
+        $duration = (int) ($service->duration_minutes ?: max(30, (int) $services->max('duration_minutes')));
+        $professionalIds = $professionals->pluck('id')->values();
+
+        if ($professionalIds->isEmpty()) {
+            return collect();
+        }
+
+        $dayStart = $date->copy()->startOfDay();
+        $dayEnd = $date->copy()->endOfDay();
+        $appointments = Appointment::query()
+            ->whereIn('professional_id', $professionalIds)
+            ->where('unit_id', $unit->id)
+            ->whereBetween('scheduled_at', [$dayStart, $dayEnd])
+            ->whereNotIn('status', ['cancelado', 'cancelled'])
+            ->get(['professional_id', 'scheduled_at', 'ends_at', 'duration_minutes']);
+        $blocks = ScheduleBlock::query()
+            ->whereIn('professional_id', $professionalIds)
+            ->where(function ($query) use ($unit) {
+                $query->whereNull('unit_id')->orWhere('unit_id', $unit->id);
+            })
+            ->where('starts_at', '<=', $dayEnd)
+            ->where('ends_at', '>=', $dayStart)
+            ->get(['professional_id', 'starts_at', 'ends_at']);
+
+        $slots = [];
+        $cursor = $date->copy()->startOfDay();
+        while ($cursor->copy()->addMinutes($duration)->lessThanOrEqualTo($dayEnd)) {
+            $slotStart = $cursor->copy();
+            $assignments = [];
+
+            if ($slotStart->isFuture()) {
+                foreach ($services as $component) {
+                    $componentDuration = (int) ($component->duration_minutes ?: $duration);
+                    $slotEnd = $slotStart->copy()->addMinutes($componentDuration);
+                    $professional = $professionals->first(function (Professional $professional) use ($component, $unit, $slotStart, $slotEnd, $appointments, $blocks) {
+                        return $professional->services->contains('id', $component->id)
+                            && $this->scheduleAllows($professional->id, $unit->id, $slotStart, $slotEnd)
+                            && ! $this->hasConflict($professional->id, $slotStart, $slotEnd, $appointments, $blocks);
+                    });
+
+                    if (! $professional) {
+                        $assignments = [];
+                        break;
+                    }
+
+                    $assignments[$component->id] = $professional->id;
+                }
+            }
+
+            if (! empty($assignments)) {
+                $assignmentLabel = collect($assignments)
+                    ->map(fn ($professionalId, $serviceId) => optional($services->firstWhere('id', (int) $serviceId))->name . ': ' . optional($professionals->firstWhere('id', (int) $professionalId))->display_name)
+                    ->join(' | ');
+                $slots[] = [
+                    'professional' => $professionals->firstWhere('id', (int) collect($assignments)->first()),
+                    'scheduled_at' => $slotStart,
+                    'ends_at' => $slotStart->copy()->addMinutes($duration),
+                    'label' => $assignmentLabel,
+                    'value' => 'pkg:' . base64_encode(json_encode($assignments)) . '|' . $slotStart->toDateTimeString(),
+                ];
+            }
+
+            $cursor->addMinutes(30);
+        }
+
+        return collect($slots)->values();
     }
 
     private function hasConflict(int $professionalId, Carbon $slotStart, Carbon $slotEnd, Collection $appointments, Collection $blocks): bool
@@ -317,6 +437,34 @@ class PublicBookingController extends Controller
         return $blocks
             ->where('professional_id', $professionalId)
             ->contains(fn (ScheduleBlock $block) => $block->starts_at < $slotEnd && $block->ends_at > $slotStart);
+    }
+
+    private function scheduleAllows(int $professionalId, int $unitId, Carbon $start, Carbon $end): bool
+    {
+        $schedulesByWeekday = Schedule::query()
+            ->where('professional_id', $professionalId)
+            ->where('unit_id', $unitId)
+            ->where('is_active', true)
+            ->get()
+            ->groupBy('weekday');
+
+        $weekday = $start->dayOfWeekIso;
+        $startMinutes = ($start->hour * 60) + $start->minute;
+        $endMinutes = ($end->hour * 60) + $end->minute;
+
+        $daySchedules = $schedulesByWeekday->get($weekday, collect());
+        if ($daySchedules->isEmpty() && $schedulesByWeekday->isEmpty()) {
+            return true;
+        }
+
+        return $daySchedules->contains(function (Schedule $schedule) use ($startMinutes, $endMinutes) {
+            [$scheduleStartHour, $scheduleStartMinute] = array_map('intval', explode(':', substr((string) $schedule->start_time, 0, 5)));
+            [$scheduleEndHour, $scheduleEndMinute] = array_map('intval', explode(':', substr((string) $schedule->end_time, 0, 5)));
+            $scheduleStart = ($scheduleStartHour * 60) + $scheduleStartMinute;
+            $scheduleEnd = ($scheduleEndHour * 60) + $scheduleEndMinute;
+
+            return $startMinutes >= $scheduleStart && $endMinutes <= $scheduleEnd;
+        });
     }
 
     private function resolveReceivableCategoryId(int $clinicId): ?int

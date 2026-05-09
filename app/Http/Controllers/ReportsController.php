@@ -87,6 +87,9 @@ class ReportsController extends Controller
         if ($filters['unit_id'] && ! $units->pluck('id')->contains($filters['unit_id'])) {
             $filters['unit_id'] = null;
         }
+        if (! $filters['unit_id'] && $units->count() === 1) {
+            $filters['unit_id'] = (int) $units->first()->id;
+        }
 
         $professionals = Professional::query()
             ->whereHas('user.companies', fn ($q) => $q->where('companies.id', $companyId))

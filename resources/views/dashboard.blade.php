@@ -178,8 +178,8 @@
                         @if ($can('atendimento.atendimentos.view'))
                             <a class="rounded-md px-3 py-1.5 text-gray-600 hover:bg-gray-50" href="{{ route('queue.index') }}">Fila</a>
                         @endif
-                        @if ($can('atendimento.atendimentos.view'))
-                            <a class="rounded-md px-3 py-1.5 text-gray-600 hover:bg-gray-50" href="{{ route('attendance.index') }}">Atendidos</a>
+                        @if ($can('agendamento.agendamentos.view'))
+                            <a class="rounded-md px-3 py-1.5 text-gray-600 hover:bg-gray-50" href="{{ route('appointments.index') }}">Agendamentos</a>
                         @endif
                     </div>
                 </div>
@@ -191,8 +191,8 @@
                             [$statusLabel, $statusClass] = $statusMap[$rawStatus] ?? [ucfirst($appointment->status ?? 'Agendado'), 'border-gray-200 bg-gray-50 text-gray-700'];
                             if ($can('agendamento.agendamentos.update')) {
                                 $appointmentUrl = route('appointments.edit', $appointment);
-                            } elseif ($can('atendimento.atendimentos.view')) {
-                                $appointmentUrl = route('attendance.record.edit', $appointment);
+                            } elseif ($can('agendamento.agendamentos.view')) {
+                                $appointmentUrl = route('appointments.index');
                             } elseif ($can('agendamento.agenda.view')) {
                                 $appointmentUrl = route('agenda.index', ['view' => 'day', 'date' => $today->toDateString()]);
                             } else {
@@ -222,9 +222,9 @@
                                 </div>
                             </div>
                             <div class="flex flex-wrap gap-2 md:justify-end">
-                                @if ($can('atendimento.atendimentos.view'))
-                                    <a class="inline-flex rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white shadow-theme-xs hover:bg-brand-700" href="{{ route('attendance.record.edit', $appointment) }}">
-                                        Atender
+                                @if ($can('agendamento.agendamentos.update'))
+                                    <a class="inline-flex rounded-lg bg-brand-600 px-3 py-2 text-xs font-semibold text-white shadow-theme-xs hover:bg-brand-700" href="{{ route('appointments.edit', $appointment) }}">
+                                        Finalizar
                                     </a>
                                 @endif
                                 <a class="inline-flex rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-semibold text-gray-700 shadow-theme-xs hover:bg-gray-50" href="{{ $appointmentUrl }}">

@@ -20,7 +20,7 @@
                 <select name="unit_id" id="queue_unit_id" class="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm" required>
                     <option value="">Unidade</option>
                     @foreach ($units as $unit)
-                        <option value="{{ $unit->id }}" data-clinic-id="{{ $unit->clinic_id }}" @selected(old('unit_id') == $unit->id)>{{ $unit->name }}</option>
+                        <option value="{{ $unit->id }}" data-clinic-id="{{ $unit->clinic_id }}" @selected((string) old('unit_id', $units->count() === 1 ? $units->first()->id : '') === (string) $unit->id)>{{ $unit->name }}</option>
                     @endforeach
                 </select>
                 <select name="patient_id" class="h-11 w-full rounded-lg border border-gray-200 px-3 text-sm" required>

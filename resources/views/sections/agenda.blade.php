@@ -366,7 +366,7 @@
                     <select class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" id="unit_id" name="unit_id" required>
                         <option value="">Selecione</option>
                         @foreach ($units as $unit)
-                            <option value="{{ $unit->id }}">{{ $unit->name }}</option>
+                            <option value="{{ $unit->id }}" @selected((string) old('unit_id', $selectedUnitId ?: ($units->count() === 1 ? $units->first()->id : '')) === (string) $unit->id)>{{ $unit->name }}</option>
                         @endforeach
                     </select>
                 </div>

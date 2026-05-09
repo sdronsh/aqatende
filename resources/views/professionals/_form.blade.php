@@ -138,7 +138,7 @@
                     $oldSchedule = old('schedules.'.$weekday);
                     $savedSchedule = $schedulesByWeekday[$weekday] ?? [];
                     $isActive = $oldSchedule['is_active'] ?? ($savedSchedule['is_active'] ?? false);
-                    $unitId = $oldSchedule['unit_id'] ?? ($savedSchedule['unit_id'] ?? null);
+                    $unitId = $oldSchedule['unit_id'] ?? ($savedSchedule['unit_id'] ?? ($units->count() === 1 ? $units->first()->id : null));
                     $slot1 = $savedSchedule['slot1'] ?? null;
                     $slot2 = $savedSchedule['slot2'] ?? null;
                     $startTime1 = $oldSchedule['slot1']['start_time'] ?? ($slot1->start_time ?? '');

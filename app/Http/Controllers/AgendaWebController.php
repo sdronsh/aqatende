@@ -41,6 +41,13 @@ class AgendaWebController extends Controller
 
         $companyId = $request->session()->get('active_company_id');
         $clinicIds = $companyId ? Clinic::where('company_id', $companyId)->pluck('id') : collect();
+        $defaultUnits = Unit::query()
+            ->when($companyId, fn ($query) => $query->whereIn('clinic_id', $clinicIds))
+            ->orderBy('name')
+            ->get();
+        if (! $selectedUnitId && $defaultUnits->count() === 1) {
+            $selectedUnitId = (int) $defaultUnits->first()->id;
+        }
 
         $user = $request->user();
         if ($user?->professional) {
@@ -141,6 +148,9 @@ class AgendaWebController extends Controller
             })
             ->orderBy('name')
             ->get();
+        if (! $selectedUnitId && $units->count() === 1) {
+            $selectedUnitId = (int) $units->first()->id;
+        }
 
         $services = Service::query()
             ->when($companyId, function ($query) use ($companyId, $clinicIds) {

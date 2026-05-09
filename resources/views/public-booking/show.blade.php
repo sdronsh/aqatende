@@ -57,15 +57,17 @@
                         </select>
                     </div>
 
-                    <div>
-                        <label class="mb-1 block text-sm font-medium text-gray-700" for="professional_id">Profissional</label>
-                        <select id="professional_id" name="professional_id" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" onchange="this.form.submit()">
-                            <option value="">Qualquer profissional disponivel</option>
-                            @foreach ($professionals as $professional)
-                                <option value="{{ $professional->id }}" @selected($selectedProfessional?->id === $professional->id)>{{ $professional->display_name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
+                    @if (! $selectedService->is_package)
+                        <div>
+                            <label class="mb-1 block text-sm font-medium text-gray-700" for="professional_id">Profissional</label>
+                            <select id="professional_id" name="professional_id" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" onchange="this.form.submit()">
+                                <option value="">Qualquer profissional disponivel</option>
+                                @foreach ($professionals as $professional)
+                                    <option value="{{ $professional->id }}" @selected($selectedProfessional?->id === $professional->id)>{{ $professional->display_name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+                    @endif
 
                     <div>
                         <div class="mb-2 text-sm font-medium text-gray-700">Data</div>
@@ -111,10 +113,10 @@
                     <div class="mt-4 grid gap-2 sm:grid-cols-2">
                         @forelse ($slots as $slot)
                             <label class="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 px-3 py-3 text-sm hover:border-brand-300 hover:bg-brand-50">
-                                <input type="radio" name="slot" value="{{ $slot['professional']->id }}|{{ $slot['scheduled_at']->toDateTimeString() }}" required class="h-4 w-4 text-brand-600">
+                                <input type="radio" name="slot" value="{{ $slot['value'] }}" required class="h-4 w-4 text-brand-600">
                                 <span>
                                     <span class="block font-semibold text-gray-900">{{ $slot['scheduled_at']->format('H:i') }}</span>
-                                    <span class="block text-xs text-gray-500">{{ $slot['professional']->display_name }}</span>
+                                    <span class="block text-xs text-gray-500">{{ $slot['label'] }}</span>
                                 </span>
                             </label>
                         @empty

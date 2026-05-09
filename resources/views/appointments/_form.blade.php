@@ -15,7 +15,7 @@
 <div class="grid gap-4 md:grid-cols-12">
     <div class="md:col-span-6">
         <label class="mb-1 block text-sm font-medium text-gray-700" for="unit_id">Unidade</label>
-        @php $unitId = old('unit_id', $appointment->unit_id ?? null); @endphp
+        @php $unitId = old('unit_id', $appointment->unit_id ?? ($units->count() === 1 ? $units->first()->id : null)); @endphp
         <select class="{{ $input }}" id="unit_id" name="unit_id" required>
             <option value="">Selecione</option>
             @foreach ($units as $unit)
@@ -38,7 +38,10 @@
     <div class="md:col-span-6">
         <label class="mb-1 block text-sm font-medium text-gray-700">Servicos</label>
         @php
-            $selectedServiceIds = collect(old('service_ids', $appointment->exists ? $appointment->services()->pluck('services.id')->all() : []));
+            $savedServiceIds = $appointment->exists
+                ? ($appointment->service?->is_package ? [$appointment->service_id] : $appointment->services()->pluck('services.id')->all())
+                : [];
+            $selectedServiceIds = collect(old('service_ids', $savedServiceIds));
             if ($selectedServiceIds->isEmpty() && old('service_id', $appointment->service_id ?? null)) {
                 $selectedServiceIds = collect([old('service_id', $appointment->service_id ?? null)]);
             }
@@ -66,18 +69,45 @@
                         @checked($selectedServiceIds->contains($service->id))
                     />
                     <span class="flex-1 text-gray-700">{{ $service->name }}</span>
+                    @if ($service->is_package)
+                        <span class="rounded-full bg-brand-50 px-2 py-0.5 text-[11px] font-semibold text-brand-700">Pacote</span>
+                    @endif
                     <span class="text-xs text-gray-500">R$ {{ $servicePrice }}</span>
                     </label>
-                    <select class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs" name="service_professional_ids[{{ $service->id }}]">
-                        <option value="">Selecione profissional</option>
-                        @foreach ($professionals as $professional)
-                            @if ($professional->services->contains('id', $service->id))
-                                <option value="{{ $professional->id }}" @selected((string) $serviceProfessionalIds->get($service->id) === (string) $professional->id)>
-                                    {{ $professional->display_name }}
-                                </option>
-                            @endif
-                        @endforeach
-                    </select>
+                    @if ($service->is_package && $service->packageItems->isNotEmpty())
+                        <div class="md:text-right text-xs text-gray-500">profissionais por servico</div>
+                        <div class="md:col-span-2 ml-7 grid gap-2 rounded-lg border border-gray-100 bg-gray-50 p-2">
+                            @foreach ($service->packageItems as $packageItem)
+                                <div class="grid gap-2 md:grid-cols-[1fr_220px]">
+                                    <div>
+                                        <div class="font-medium text-gray-700">{{ $packageItem->name }}</div>
+                                        <div class="text-xs text-gray-500">{{ $packageItem->duration_minutes }} min</div>
+                                    </div>
+                                    <select class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs" name="service_professional_ids[{{ $packageItem->id }}]">
+                                        <option value="">Selecione profissional</option>
+                                        @foreach ($professionals as $professional)
+                                            @if ($professional->services->contains('id', $packageItem->id))
+                                                <option value="{{ $professional->id }}" @selected((string) $serviceProfessionalIds->get($packageItem->id) === (string) $professional->id)>
+                                                    {{ $professional->display_name }}
+                                                </option>
+                                            @endif
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @endforeach
+                        </div>
+                    @else
+                        <select class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs" name="service_professional_ids[{{ $service->id }}]">
+                            <option value="">Selecione profissional</option>
+                            @foreach ($professionals as $professional)
+                                @if ($professional->services->contains('id', $service->id))
+                                    <option value="{{ $professional->id }}" @selected((string) $serviceProfessionalIds->get($service->id) === (string) $professional->id)>
+                                        {{ $professional->display_name }}
+                                    </option>
+                                @endif
+                            @endforeach
+                        </select>
+                    @endif
                 </div>
             @endforeach
         </div>
