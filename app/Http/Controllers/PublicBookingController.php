@@ -231,6 +231,13 @@ class PublicBookingController extends Controller
             ->where('weekday', $date->dayOfWeekIso)
             ->where('is_active', true)
             ->get();
+        $professionalsWithAnySchedule = Schedule::query()
+            ->whereIn('professional_id', $professionalIds)
+            ->where('unit_id', $unit->id)
+            ->where('is_active', true)
+            ->distinct()
+            ->pluck('professional_id')
+            ->map(fn ($id) => (int) $id);
 
         $dayStart = $date->copy()->startOfDay();
         $dayEnd = $date->copy()->endOfDay();
@@ -249,31 +256,41 @@ class PublicBookingController extends Controller
             ->where('ends_at', '>=', $dayStart)
             ->get(['professional_id', 'starts_at', 'ends_at']);
 
-        return $schedules
-            ->flatMap(function (Schedule $schedule) use ($professionals, $date, $duration, $appointments, $blocks) {
-                $professional = $professionals->firstWhere('id', $schedule->professional_id);
+        return $professionalIds
+            ->flatMap(function (int $professionalId) use ($professionals, $professionalsWithAnySchedule, $schedules, $date, $duration, $appointments, $blocks) {
+                $professional = $professionals->firstWhere('id', $professionalId);
                 if (! $professional) {
                     return [];
                 }
 
-                $cursor = $date->copy()->setTimeFromTimeString(substr((string) $schedule->start_time, 0, 5));
-                $end = $date->copy()->setTimeFromTimeString(substr((string) $schedule->end_time, 0, 5));
+                $daySchedules = $schedules->where('professional_id', $professionalId);
+                if ($daySchedules->isEmpty() && ! $professionalsWithAnySchedule->contains($professionalId)) {
+                    $daySchedules = collect([(object) [
+                        'start_time' => '00:00',
+                        'end_time' => '23:59',
+                    ]]);
+                }
+
                 $slots = [];
+                foreach ($daySchedules as $schedule) {
+                    $cursor = $date->copy()->setTimeFromTimeString(substr((string) $schedule->start_time, 0, 5));
+                    $end = $date->copy()->setTimeFromTimeString(substr((string) $schedule->end_time, 0, 5));
 
-                while ($cursor->copy()->addMinutes($duration)->lessThanOrEqualTo($end)) {
-                    $slotStart = $cursor->copy();
-                    $slotEnd = $slotStart->copy()->addMinutes($duration);
+                    while ($cursor->copy()->addMinutes($duration)->lessThanOrEqualTo($end)) {
+                        $slotStart = $cursor->copy();
+                        $slotEnd = $slotStart->copy()->addMinutes($duration);
 
-                    if ($slotStart->isFuture() && ! $this->hasConflict($professional->id, $slotStart, $slotEnd, $appointments, $blocks)) {
-                        $slots[] = [
-                            'professional' => $professional,
-                            'scheduled_at' => $slotStart,
-                            'ends_at' => $slotEnd,
-                            'label' => $slotStart->format('H:i') . ' - ' . $professional->display_name,
-                        ];
+                        if ($slotStart->isFuture() && ! $this->hasConflict($professional->id, $slotStart, $slotEnd, $appointments, $blocks)) {
+                            $slots[] = [
+                                'professional' => $professional,
+                                'scheduled_at' => $slotStart,
+                                'ends_at' => $slotEnd,
+                                'label' => $slotStart->format('H:i') . ' - ' . $professional->display_name,
+                            ];
+                        }
+
+                        $cursor->addMinutes(30);
                     }
-
-                    $cursor->addMinutes(30);
                 }
 
                 return $slots;

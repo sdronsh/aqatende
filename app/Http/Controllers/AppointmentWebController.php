@@ -816,6 +816,10 @@ class AppointmentWebController extends Controller
         $startMinutes = ($start->hour * 60) + $start->minute;
         $endMinutes = ($end->hour * 60) + $end->minute;
 
+        if ($schedulesByWeekday->isEmpty()) {
+            return true;
+        }
+
         $schedules = $schedulesByWeekday->get($weekday);
         if (! $schedules || $schedules->isEmpty()) {
             return false;
