@@ -248,7 +248,15 @@
                                     </li>
                                 @endforeach
                             </ul>
-                            <a class="mt-8 inline-flex rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-600" href="{{ route('subscriptions.create', $slug) }}">Contratar</a>
+                            <a
+                                class="mt-8 inline-flex rounded-full bg-brand-500 px-6 py-3 text-sm font-semibold text-white hover:bg-brand-600"
+                                href="{{ route('subscriptions.create', $slug) }}"
+                                data-ga-plan-click
+                                data-plan-slug="{{ $slug }}"
+                                data-plan-name="{{ $title }}"
+                            >
+                                Contratar
+                            </a>
                         </div>
                     @endforeach
                 </div>
@@ -294,6 +302,8 @@
                             href="https://wa.me/5531993723008"
                             target="_blank"
                             rel="noopener"
+                            data-ga-whatsapp-click
+                            data-contact-context="whatsapp_addon"
                         >
                             Entre em contato
                         </a>
@@ -327,5 +337,35 @@
             <div class="text-sm text-white/55">Agenda · Fila · Profissionais · Financeiro</div>
         </div>
     </footer>
+    @if (config('services.google_analytics.measurement_id'))
+        <script>
+            document.querySelectorAll('[data-ga-plan-click]').forEach((link) => {
+                link.addEventListener('click', () => {
+                    if (typeof gtag !== 'function') {
+                        return;
+                    }
+
+                    gtag('event', 'select_plan', {
+                        plan_slug: link.dataset.planSlug,
+                        plan_name: link.dataset.planName,
+                        link_url: link.href,
+                    });
+                });
+            });
+
+            document.querySelectorAll('[data-ga-whatsapp-click]').forEach((link) => {
+                link.addEventListener('click', () => {
+                    if (typeof gtag !== 'function') {
+                        return;
+                    }
+
+                    gtag('event', 'contact_whatsapp', {
+                        contact_context: link.dataset.contactContext,
+                        link_url: link.href,
+                    });
+                });
+            });
+        </script>
+    @endif
 </body>
 </html>
