@@ -133,6 +133,49 @@ class SettingsController extends Controller
         }
     }
 
+    public function generateWhatsappPairingCode(Request $request, CommunicationClient $communication): RedirectResponse
+    {
+        $company = $this->getCompany($request);
+
+        $data = $request->validate([
+            'phone' => ['required', 'string', 'max:20'],
+        ]);
+
+        if (! $communication->configured()) {
+            return redirect()->route('settings.whatsapp')
+                ->withErrors(['whatsapp' => 'API de comunicacao nao configurada. Verifique COMMUNICATION_API_URL e COMMUNICATION_API_TOKEN.']);
+        }
+
+        try {
+            $session = $this->getWhatsappSessionSnapshot($company->id);
+            $uuid = (string) ($session['uuid'] ?? '');
+
+            if ($uuid === '') {
+                $session = $communication->createWhatsappSession([
+                    'system_slug' => 'aqatende',
+                    'external_tenant_id' => (string) $company->id,
+                    'external_unit_id' => null,
+                    'name' => 'WhatsApp '.$company->id,
+                    'callback_base_url' => config('app.url'),
+                ]);
+                $uuid = (string) ($session['uuid'] ?? '');
+            }
+
+            if ($uuid === '') {
+                return redirect()->route('settings.whatsapp')
+                    ->withErrors(['whatsapp' => 'Nao foi possivel identificar a sessao WhatsApp criada.']);
+            }
+
+            $session = $communication->getWhatsappPairingCode($uuid, $data['phone']);
+            $this->storeWhatsappSessionSnapshot($company->id, $session);
+
+            return redirect()->route('settings.whatsapp')->with('status', 'Codigo de pareamento gerado.');
+        } catch (Throwable $exception) {
+            return redirect()->route('settings.whatsapp')
+                ->withErrors(['whatsapp' => 'Nao foi possivel gerar o codigo: '.$exception->getMessage()]);
+        }
+    }
+
     public function updateLogo(Request $request): RedirectResponse
     {
         $company = $this->getCompany($request);

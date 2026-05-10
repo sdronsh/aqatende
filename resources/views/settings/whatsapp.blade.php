@@ -46,6 +46,7 @@
                     $statusLabel = match ($status) {
                         'connected' => 'Conectado',
                         'qr_pending' => 'Aguardando leitura do QR Code',
+                        'pairing_code' => 'Aguardando codigo de pareamento',
                         'connecting' => 'Conectando',
                         'error' => 'Erro',
                         'disconnected' => 'Desconectado',
@@ -77,6 +78,18 @@
                         </div>
                     @endif
 
+                    @if (! empty($session['pairing_code']) && $status !== 'connected')
+                        <div class="mt-4 rounded-lg border border-brand-100 bg-brand-50 p-4">
+                            <div class="text-xs font-semibold uppercase text-brand-700">Codigo de pareamento</div>
+                            <div class="mt-2 inline-flex rounded-lg border border-brand-200 bg-white px-4 py-3 font-mono text-2xl font-bold tracking-widest text-brand-700">
+                                {{ $session['pairing_code'] }}
+                            </div>
+                            <p class="mt-3 text-sm text-brand-700">
+                                No WhatsApp, acesse Dispositivos conectados, escolha conectar com numero de telefone e digite este codigo.
+                            </p>
+                        </div>
+                    @endif
+
                     @if ($qrCode && $status !== 'connected')
                         <div class="mt-4">
                             <div class="mb-2 text-xs font-semibold uppercase text-gray-400">QR Code</div>
@@ -92,6 +105,16 @@
                 </div>
 
                 <div class="mt-5 flex flex-wrap gap-2">
+                    <form method="POST" action="{{ route('settings.whatsapp.pairing-code') }}" class="flex w-full flex-col gap-2 rounded-lg border border-gray-100 bg-gray-50 p-3 sm:flex-row sm:items-end">
+                        @csrf
+                        <div class="flex-1">
+                            <label class="mb-1 block text-xs font-semibold uppercase text-gray-500" for="phone">Telefone do WhatsApp</label>
+                            <input id="phone" name="phone" value="{{ old('phone', $session['pairing_phone'] ?? $session['phone_number'] ?? '') }}" placeholder="5531999999999" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10">
+                        </div>
+                        <button type="submit" class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60" @disabled(! $apiConfigured)>
+                            Gerar codigo
+                        </button>
+                    </form>
                     <form method="POST" action="{{ route('settings.whatsapp.qr') }}">
                         @csrf
                         <button type="submit" class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600 disabled:cursor-not-allowed disabled:opacity-60" @disabled(! $apiConfigured)>

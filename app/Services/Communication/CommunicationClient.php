@@ -36,6 +36,16 @@ class CommunicationClient
             ->json();
     }
 
+    public function getWhatsappPairingCode(string $uuid, string $phone): array
+    {
+        return $this->request()
+            ->post($this->url("/whatsapp/sessions/{$uuid}/pairing-code"), [
+                'phone' => preg_replace('/\D+/', '', $phone) ?: $phone,
+            ])
+            ->throw()
+            ->json();
+    }
+
     private function request(): PendingRequest
     {
         return Http::acceptJson()

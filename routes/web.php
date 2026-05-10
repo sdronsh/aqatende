@@ -279,6 +279,9 @@ Route::middleware('auth')->group(function () {
         Route::post('/whatsapp/status', [\App\Http\Controllers\SettingsController::class, 'refreshWhatsappStatus'])
             ->middleware('permission:configuracoes.logo.view')
             ->name('whatsapp.status');
+        Route::post('/whatsapp/codigo-pareamento', [\App\Http\Controllers\SettingsController::class, 'generateWhatsappPairingCode'])
+            ->middleware('permission:configuracoes.logo.view')
+            ->name('whatsapp.pairing-code');
 
         Route::get('/termo-uso', [\App\Http\Controllers\SettingsController::class, 'terms'])
             ->middleware('platform')
