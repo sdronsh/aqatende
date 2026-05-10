@@ -94,7 +94,7 @@ class ServiceWebController extends Controller
             'active' => ['nullable', 'boolean'],
             'shared_service' => ['nullable', 'boolean'],
             'is_package' => ['nullable', 'boolean'],
-            'package_service_ids' => ['nullable', 'array'],
+            'package_service_ids' => ['required_if:is_package,1', 'array', 'min:1'],
             'package_service_ids.*' => ['integer', 'exists:services,id'],
         ]);
 
@@ -118,6 +118,11 @@ class ServiceWebController extends Controller
         $data['shared_service'] = (bool) ($data['shared_service'] ?? false);
         $data['is_package'] = (bool) ($data['is_package'] ?? false);
         $packageServiceIds = $this->resolvePackageServiceIds($data, $companyId, (int) $data['clinic_id']);
+        if ($data['is_package'] && empty($packageServiceIds)) {
+            return back()->withErrors([
+                'package_service_ids' => 'Selecione pelo menos um servico interno para montar o pacote.',
+            ])->withInput();
+        }
         unset($data['price'], $data['package_service_ids']);
 
         $service = Service::create($data);
@@ -171,7 +176,7 @@ class ServiceWebController extends Controller
             'active' => ['nullable', 'boolean'],
             'shared_service' => ['nullable', 'boolean'],
             'is_package' => ['nullable', 'boolean'],
-            'package_service_ids' => ['nullable', 'array'],
+            'package_service_ids' => ['required_if:is_package,1', 'array', 'min:1'],
             'package_service_ids.*' => ['integer', 'exists:services,id'],
         ]);
 
@@ -195,6 +200,11 @@ class ServiceWebController extends Controller
         $data['shared_service'] = (bool) ($data['shared_service'] ?? false);
         $data['is_package'] = (bool) ($data['is_package'] ?? false);
         $packageServiceIds = $this->resolvePackageServiceIds($data, $companyId, (int) $data['clinic_id'], (int) $service->id);
+        if ($data['is_package'] && empty($packageServiceIds)) {
+            return back()->withErrors([
+                'package_service_ids' => 'Selecione pelo menos um servico interno para montar o pacote.',
+            ])->withInput();
+        }
         unset($data['price'], $data['package_service_ids']);
 
         $service->update($data);

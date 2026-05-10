@@ -5,11 +5,13 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\CompanySetting;
 use App\Models\Term;
+use App\Services\Communication\CommunicationClient;
 use App\Services\Licenses\LicenseClient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
+use Throwable;
 
 class SettingsController extends Controller
 {
@@ -56,6 +58,79 @@ class SettingsController extends Controller
             'company' => $company,
             'logoPath' => $this->getSetting($company->id, 'logo_path'),
         ]);
+    }
+
+    public function whatsapp(Request $request, CommunicationClient $communication): View
+    {
+        $company = $this->getCompany($request);
+        $apiUrl = (string) config('aqamed.communication.api_url', '');
+        $session = $this->getWhatsappSessionSnapshot($company->id);
+
+        return view('settings/whatsapp', [
+            'company' => $company,
+            'apiUrl' => $apiUrl,
+            'apiConfigured' => $communication->configured(),
+            'session' => $session,
+        ]);
+    }
+
+    public function generateWhatsappQr(Request $request, CommunicationClient $communication): RedirectResponse
+    {
+        $company = $this->getCompany($request);
+
+        if (! $communication->configured()) {
+            return redirect()->route('settings.whatsapp')
+                ->withErrors(['whatsapp' => 'API de comunicacao nao configurada. Verifique COMMUNICATION_API_URL e COMMUNICATION_API_TOKEN.']);
+        }
+
+        try {
+            $currentSession = $this->getWhatsappSessionSnapshot($company->id);
+            $uuid = (string) ($currentSession['uuid'] ?? '');
+
+            $session = $uuid !== ''
+                ? $communication->getWhatsappSessionQr($uuid)
+                : $communication->createWhatsappSession([
+                    'system_slug' => 'aqatende',
+                    'external_tenant_id' => (string) $company->id,
+                    'external_unit_id' => null,
+                    'name' => 'WhatsApp '.$company->id,
+                    'callback_base_url' => config('app.url'),
+                ]);
+
+            $this->storeWhatsappSessionSnapshot($company->id, $session);
+
+            return redirect()->route('settings.whatsapp')->with('status', 'QR Code atualizado.');
+        } catch (Throwable $exception) {
+            return redirect()->route('settings.whatsapp')
+                ->withErrors(['whatsapp' => 'Nao foi possivel gerar o QR Code: '.$exception->getMessage()]);
+        }
+    }
+
+    public function refreshWhatsappStatus(Request $request, CommunicationClient $communication): RedirectResponse
+    {
+        $company = $this->getCompany($request);
+        $session = $this->getWhatsappSessionSnapshot($company->id);
+        $uuid = (string) ($session['uuid'] ?? '');
+
+        if (! $communication->configured()) {
+            return redirect()->route('settings.whatsapp')
+                ->withErrors(['whatsapp' => 'API de comunicacao nao configurada. Verifique COMMUNICATION_API_URL e COMMUNICATION_API_TOKEN.']);
+        }
+
+        if ($uuid === '') {
+            return redirect()->route('settings.whatsapp')
+                ->withErrors(['whatsapp' => 'Gere o QR Code antes de atualizar o status.']);
+        }
+
+        try {
+            $session = $communication->getWhatsappSessionStatus($uuid);
+            $this->storeWhatsappSessionSnapshot($company->id, $session);
+
+            return redirect()->route('settings.whatsapp')->with('status', 'Status atualizado.');
+        } catch (Throwable $exception) {
+            return redirect()->route('settings.whatsapp')
+                ->withErrors(['whatsapp' => 'Nao foi possivel atualizar o status: '.$exception->getMessage()]);
+        }
     }
 
     public function updateLogo(Request $request): RedirectResponse
@@ -141,6 +216,24 @@ class SettingsController extends Controller
             ['company_id' => $companyId, 'key' => $key],
             ['value' => $value]
         );
+    }
+
+    private function getWhatsappSessionSnapshot(int $companyId): ?array
+    {
+        $value = $this->getSetting($companyId, 'whatsapp_session');
+
+        if (! $value) {
+            return null;
+        }
+
+        $decoded = json_decode($value, true);
+
+        return is_array($decoded) ? $decoded : null;
+    }
+
+    private function storeWhatsappSessionSnapshot(int $companyId, array $session): void
+    {
+        $this->storeSetting($companyId, 'whatsapp_session', json_encode($session));
     }
 
     private function resolveLicensePaymentUrl(Company $company, ?array $license): ?string

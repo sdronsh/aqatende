@@ -74,7 +74,13 @@
                     @endif
                     <span class="text-xs text-gray-500">R$ {{ $servicePrice }}</span>
                     </label>
-                    @if ($service->is_package && $service->packageItems->isNotEmpty())
+                    @if ($service->is_package)
+                        @if ($service->packageItems->isEmpty())
+                            <div class="md:col-span-2 ml-7 rounded-lg border border-warning-200 bg-warning-50 px-3 py-2 text-xs text-warning-700">
+                                Pacote sem servicos internos. Edite o servico e selecione os itens do pacote antes de agendar.
+                            </div>
+                            @continue
+                        @endif
                         <div class="md:text-right text-xs text-gray-500">profissionais por servico</div>
                         <div class="md:col-span-2 ml-7 grid gap-2 rounded-lg border border-gray-100 bg-gray-50 p-2">
                             @foreach ($service->packageItems as $packageItem)

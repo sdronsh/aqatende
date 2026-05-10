@@ -25,4 +25,8 @@ return [
             'unit_limit' => 2,
         ],
     ],
+    'communication' => [
+        'api_url' => env('COMMUNICATION_API_URL'),
+        'api_token' => env('COMMUNICATION_API_TOKEN'),
+    ],
 ];

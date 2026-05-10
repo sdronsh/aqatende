@@ -270,6 +270,16 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:configuracoes.logo.update')
             ->name('logo.update');
 
+        Route::get('/whatsapp', [\App\Http\Controllers\SettingsController::class, 'whatsapp'])
+            ->middleware('permission:configuracoes.logo.view')
+            ->name('whatsapp');
+        Route::post('/whatsapp/qrcode', [\App\Http\Controllers\SettingsController::class, 'generateWhatsappQr'])
+            ->middleware('permission:configuracoes.logo.view')
+            ->name('whatsapp.qr');
+        Route::post('/whatsapp/status', [\App\Http\Controllers\SettingsController::class, 'refreshWhatsappStatus'])
+            ->middleware('permission:configuracoes.logo.view')
+            ->name('whatsapp.status');
+
         Route::get('/termo-uso', [\App\Http\Controllers\SettingsController::class, 'terms'])
             ->middleware('platform')
             ->name('terms.edit');
