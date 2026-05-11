@@ -58,7 +58,7 @@ class CommunicationClient
     {
         return $this->request()
             ->post($this->url("/whatsapp/sessions/{$uuid}/messages"), [
-                'phone' => preg_replace('/\D+/', '', $phone) ?: $phone,
+                'to' => preg_replace('/\D+/', '', $phone) ?: $phone,
                 'text' => $text,
             ])
             ->throw()
