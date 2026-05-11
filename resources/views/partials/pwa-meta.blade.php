@@ -1,3 +1,4 @@
+<meta name="google" content="notranslate">
 <meta name="theme-color" content="#a81d8e">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">

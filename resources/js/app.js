@@ -11,3 +11,82 @@ if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/service-worker.js').catch(() => {});
     });
 }
+
+let deferredPwaInstallPrompt = null;
+
+const isPwaStandalone = () => {
+    return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+};
+
+const isMobileDevice = () => {
+    return window.matchMedia('(max-width: 768px)').matches || /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+};
+
+const isIosDevice = () => {
+    return /iPhone|iPad|iPod/i.test(navigator.userAgent);
+};
+
+const pwaInstallDismissed = () => {
+    const dismissedUntil = Number(localStorage.getItem('aqatende.pwaInstall.dismissedUntil') || 0);
+
+    return dismissedUntil > Date.now();
+};
+
+const dismissPwaInstallPrompt = () => {
+    const sevenDays = 7 * 24 * 60 * 60 * 1000;
+    localStorage.setItem('aqatende.pwaInstall.dismissedUntil', String(Date.now() + sevenDays));
+    document.querySelector('[data-pwa-install-prompt]')?.remove();
+};
+
+const showPwaInstallPrompt = (mode = 'native') => {
+    const prompt = document.querySelector('[data-pwa-install-prompt]');
+    const button = document.querySelector('[data-pwa-install-button]');
+    const text = document.querySelector('[data-pwa-install-text]');
+
+    if (!prompt || !button || isPwaStandalone() || !isMobileDevice() || pwaInstallDismissed()) {
+        return;
+    }
+
+    if (mode === 'ios') {
+        text.textContent = 'No iPhone, toque em Compartilhar e depois em Adicionar a Tela de Inicio.';
+        button.textContent = 'Entendi';
+    }
+
+    prompt.classList.remove('hidden');
+};
+
+window.addEventListener('beforeinstallprompt', (event) => {
+    event.preventDefault();
+    deferredPwaInstallPrompt = event;
+    showPwaInstallPrompt('native');
+});
+
+window.addEventListener('appinstalled', () => {
+    deferredPwaInstallPrompt = null;
+    document.querySelector('[data-pwa-install-prompt]')?.remove();
+});
+
+window.addEventListener('load', () => {
+    document.querySelectorAll('[data-pwa-install-dismiss]').forEach((button) => {
+        button.addEventListener('click', dismissPwaInstallPrompt);
+    });
+
+    document.querySelector('[data-pwa-install-button]')?.addEventListener('click', async () => {
+        if (deferredPwaInstallPrompt) {
+            deferredPwaInstallPrompt.prompt();
+            await deferredPwaInstallPrompt.userChoice.catch(() => null);
+            deferredPwaInstallPrompt = null;
+            document.querySelector('[data-pwa-install-prompt]')?.remove();
+
+            return;
+        }
+
+        if (isIosDevice()) {
+            dismissPwaInstallPrompt();
+        }
+    });
+
+    if (isIosDevice()) {
+        showPwaInstallPrompt('ios');
+    }
+});

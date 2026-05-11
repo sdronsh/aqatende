@@ -368,5 +368,6 @@
             });
         </script>
     @endif
+    @include('partials.pwa-install-prompt')
 </body>
 </html>

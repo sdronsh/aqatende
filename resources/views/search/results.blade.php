@@ -134,5 +134,6 @@
             <a class="text-sm font-semibold text-white" href="{{ url('/') }}">Voltar para a home</a>
         </div>
     </footer>
+    @include('partials.pwa-install-prompt')
 </body>
 </html>

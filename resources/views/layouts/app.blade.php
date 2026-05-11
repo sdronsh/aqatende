@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="pt-BR" class="notranslate">
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -134,6 +134,8 @@
                 </div>
             </div>
         </div>
+
+        @include('partials.pwa-install-prompt')
 
         <script>
             const resetGlobalOverlays = () => {
