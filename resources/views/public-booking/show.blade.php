@@ -6,6 +6,7 @@
     <meta name="description" content="Agendamento online AQAtende">
     <title>Agendar atendimento | AQAtende</title>
     <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
+    @include('partials.pwa-meta')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-gray-50 text-gray-900">

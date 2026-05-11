@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Buscar horarios | AQAtende</title>
     <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
+    @include('partials.pwa-meta')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-gray-50 text-gray-900">

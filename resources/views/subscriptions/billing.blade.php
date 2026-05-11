@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Assinatura {{ $plan['name'] }} | AQAtende</title>
     <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
+    @include('partials.pwa-meta')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     <style>
         .billing-shell {

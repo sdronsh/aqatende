@@ -9,6 +9,7 @@
         <title>{{ config('app.name', 'Laravel') }}</title>
         <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
         <link rel="shortcut icon" type="image/png" href="{{ asset('logo.png') }}">
+        @include('partials.pwa-meta')
 
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">

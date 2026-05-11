@@ -1,6 +1,11 @@
 @php
     $companyId = session('active_company_id');
     $company = $companyId ? \App\Models\Company::find($companyId) : null;
+    $licenseEnforcer = app(\App\Services\Licenses\LicenseEnforcer::class);
+    $hasWhatsappModule = $companyId ? $licenseEnforcer->hasModule((int) $companyId, 'whatsapp') : true;
+    $showWhatsappOffer = $companyId && ! auth()->user()?->is_platform_admin && ! $hasWhatsappModule;
+    $whatsappOfferMessage = 'Tenho interesse em contratar o modulo WhatsApp para a minha empresa.';
+    $whatsappOfferUrl = 'https://wa.me/5531993723008?text='.urlencode($whatsappOfferMessage);
     $companyLogo = $companyId
         ? \App\Models\CompanySetting::where('company_id', $companyId)->where('key', 'logo_path')->value('value')
         : null;
@@ -41,6 +46,53 @@
             </form>
         </div>
     </div>
+
+    @if ($showWhatsappOffer)
+        <div
+            class="hidden border-t border-emerald-100 bg-emerald-50 px-4 py-3 lg:px-6"
+            data-whatsapp-offer
+            data-company-id="{{ $companyId }}"
+        >
+            <div class="mx-auto flex max-w-(--breakpoint-2xl) flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div class="flex min-w-0 items-start gap-3">
+                    <span class="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5z" />
+                            <path d="M9 8.5c.2 2.9 2.1 5 5 5.5l1.2-1.2c.2-.2.2-.5 0-.7l-1.1-1.1c-.2-.2-.5-.2-.7 0l-.6.6c-1-.4-1.8-1.2-2.2-2.2l.6-.6c.2-.2.2-.5 0-.7L10.1 7c-.2-.2-.5-.2-.7 0L9 7.4c-.1.2-.1.6 0 1.1z" />
+                        </svg>
+                    </span>
+                    <div class="min-w-0">
+                        <div class="text-sm font-semibold text-emerald-900">Modulo WhatsApp disponivel para contratacao</div>
+                        <div class="mt-0.5 text-sm text-emerald-800">
+                            Sua empresa ainda nao possui o WhatsApp no plano. Ative para automatizar agendamentos, lembretes e atendimento.
+                            <a class="font-semibold underline underline-offset-2 hover:text-emerald-950" href="{{ $whatsappOfferUrl }}" target="_blank" rel="noopener noreferrer">
+                                Tenho interesse pelo WhatsApp
+                            </a>
+                            ou entre em contato pelo telefone (31) 99372-3008.
+                        </div>
+                    </div>
+                </div>
+                <div class="flex shrink-0 items-center gap-2 self-end sm:self-auto">
+                    <a
+                        href="{{ $whatsappOfferUrl }}"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        class="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white shadow-theme-xs hover:bg-emerald-700"
+                    >
+                        Tenho interesse
+                    </a>
+                    <button
+                        type="button"
+                        class="flex h-9 w-9 items-center justify-center rounded-lg text-emerald-800 hover:bg-emerald-100"
+                        aria-label="Fechar aviso do modulo WhatsApp"
+                        data-dismiss-whatsapp-offer
+                    >
+                        &times;
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
 
     <dialog id="support-confirm-dialog" class="m-auto max-h-[90vh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-xl border border-gray-200 p-0 shadow-theme-lg">
         <div class="flex flex-col gap-4 p-5">
@@ -97,6 +149,10 @@
         const messageInput = document.getElementById('support-message');
         const confirmNo = document.getElementById('support-confirm-no');
         const confirmYes = document.getElementById('support-confirm-yes');
+        const whatsappOffer = document.querySelector('[data-whatsapp-offer]');
+        const whatsappOfferStorageKey = whatsappOffer?.dataset.companyId
+            ? `aqamed.whatsappOffer.v2.dismissed.${whatsappOffer.dataset.companyId}`
+            : null;
 
         const closeSupportDialogs = () => {
             if (confirmDialog?.open) confirmDialog.close();
@@ -133,5 +189,18 @@
                 closeSupportDialogs();
             }
         });
+
+        if (whatsappOffer && whatsappOfferStorageKey) {
+            if (localStorage.getItem(whatsappOfferStorageKey) === '1') {
+                whatsappOffer.remove();
+            } else {
+                whatsappOffer.classList.remove('hidden');
+            }
+
+            whatsappOffer.querySelector('[data-dismiss-whatsapp-offer]')?.addEventListener('click', () => {
+                localStorage.setItem(whatsappOfferStorageKey, '1');
+                whatsappOffer.remove();
+            });
+        }
     });
 </script>

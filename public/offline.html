@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#a81d8e">
+    <title>AQAtende offline</title>
+    <style>
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        background: #f9fafb;
+        color: #1d2939;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+
+      main {
+        width: min(100% - 32px, 420px);
+        text-align: center;
+      }
+
+      img {
+        width: 96px;
+        height: 96px;
+        object-fit: contain;
+        margin-bottom: 20px;
+      }
+
+      h1 {
+        margin: 0 0 8px;
+        font-size: 22px;
+      }
+
+      p {
+        margin: 0 0 20px;
+        color: #475467;
+        line-height: 1.5;
+      }
+
+      button {
+        border: 0;
+        border-radius: 8px;
+        background: #a81d8e;
+        color: #fff;
+        cursor: pointer;
+        font-weight: 700;
+        padding: 12px 16px;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <img src="/icons/icon-192.png" alt="AQAtende">
+      <h1>Sem conexao no momento</h1>
+      <p>O AQAtende esta instalado, mas precisa de internet para carregar dados atualizados.</p>
+      <button type="button" onclick="window.location.reload()">Tentar novamente</button>
+    </main>
+  </body>
+</html>

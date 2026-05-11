@@ -136,7 +136,7 @@
                                 @endif
                             </div>
                         </div>
-                        <form method="POST" action="{{ route('settings.license.payment') }}">
+                        <form method="POST" action="{{ route('settings.license.payment') }}" target="_blank">
                             @csrf
                             <button class="inline-flex rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600" type="submit">
                                 Gerar pagamento
