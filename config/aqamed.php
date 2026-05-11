@@ -28,5 +28,6 @@ return [
     'communication' => [
         'api_url' => env('COMMUNICATION_API_URL'),
         'api_token' => env('COMMUNICATION_API_TOKEN'),
+        'webhook_token' => env('COMMUNICATION_WEBHOOK_TOKEN'),
     ],
 ];

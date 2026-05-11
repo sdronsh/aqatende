@@ -7,6 +7,7 @@ use App\Models\CompanySetting;
 use App\Models\Term;
 use App\Services\Communication\CommunicationClient;
 use App\Services\Licenses\LicenseClient;
+use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -65,13 +66,74 @@ class SettingsController extends Controller
         $company = $this->getCompany($request);
         $apiUrl = (string) config('aqamed.communication.api_url', '');
         $session = $this->getWhatsappSessionSnapshot($company->id);
+        $activeTab = (string) $request->query('tab', 'templates');
+        $allowedTabs = ['templates', 'campanhas', 'fluxo', 'regras', 'conexao'];
+        if (! in_array($activeTab, $allowedTabs, true)) {
+            $activeTab = 'templates';
+        }
+        $automation = $this->getWhatsappAutomationSettings($company->id);
+        $webhookUrl = rtrim((string) config('app.url'), '/').'/api/whatsapp/webhook';
+        $webhookTokenConfigured = (string) config('aqamed.communication.webhook_token', '') !== '';
 
         return view('settings/whatsapp', [
             'company' => $company,
             'apiUrl' => $apiUrl,
             'apiConfigured' => $communication->configured(),
             'session' => $session,
+            'activeTab' => $activeTab,
+            'automation' => $automation,
+            'webhookUrl' => $webhookUrl,
+            'webhookTokenConfigured' => $webhookTokenConfigured,
         ]);
+    }
+
+    public function updateWhatsappAutomation(Request $request): RedirectResponse
+    {
+        $company = $this->getCompany($request);
+        $data = $request->validate([
+            'inactive_days' => ['nullable', 'integer', 'min:1', 'max:365'],
+            'send_to_all' => ['nullable', 'boolean'],
+            'send_to_inactive' => ['nullable', 'boolean'],
+            'bot_enabled' => ['nullable', 'boolean'],
+            'bot_allow_any_professional' => ['nullable', 'boolean'],
+            'bot_confirmation_template' => ['nullable', 'string', 'max:280'],
+            'template_welcome' => ['nullable', 'string', 'max:2000'],
+            'template_inactive' => ['nullable', 'string', 'max:2000'],
+            'template_birthday' => ['nullable', 'string', 'max:2000'],
+        ]);
+
+        $payload = [
+            'templates' => [
+                'welcome' => (string) ($data['template_welcome'] ?? ''),
+                'inactive' => (string) ($data['template_inactive'] ?? ''),
+                'birthday' => (string) ($data['template_birthday'] ?? ''),
+            ],
+            'campaigns' => [
+                'send_to_all' => (bool) ($data['send_to_all'] ?? false),
+                'send_to_inactive' => (bool) ($data['send_to_inactive'] ?? false),
+                'inactive_days' => (int) ($data['inactive_days'] ?? 30),
+            ],
+            'flow' => [
+                'bot_enabled' => (bool) ($data['bot_enabled'] ?? false),
+                'bot_allow_any_professional' => (bool) ($data['bot_allow_any_professional'] ?? true),
+                'bot_confirmation_template' => (string) ($data['bot_confirmation_template'] ?? ''),
+            ],
+            'rules' => [
+                'steps' => [
+                    'ask_booking' => true,
+                    'select_service' => true,
+                    'select_professional' => true,
+                    'select_time' => true,
+                    'auto_schedule' => true,
+                ],
+            ],
+        ];
+
+        $this->storeSetting($company->id, 'whatsapp_automation', json_encode($payload));
+
+        return redirect()
+            ->route('settings.whatsapp', ['tab' => (string) $request->input('tab', 'templates')])
+            ->with('status', 'Configuracoes de automacao salvas.');
     }
 
     public function generateWhatsappQr(Request $request, CommunicationClient $communication): RedirectResponse
@@ -87,15 +149,19 @@ class SettingsController extends Controller
             $currentSession = $this->getWhatsappSessionSnapshot($company->id);
             $uuid = (string) ($currentSession['uuid'] ?? '');
 
-            $session = $uuid !== ''
-                ? $communication->getWhatsappSessionQr($uuid)
-                : $communication->createWhatsappSession([
-                    'system_slug' => 'aqatende',
-                    'external_tenant_id' => (string) $company->id,
-                    'external_unit_id' => null,
-                    'name' => 'WhatsApp '.$company->id,
-                    'callback_base_url' => config('app.url'),
-                ]);
+            if ($uuid !== '') {
+                try {
+                    $session = $communication->getWhatsappSessionQr($uuid);
+                } catch (RequestException $exception) {
+                    if ($exception->response?->status() !== 404) {
+                        throw $exception;
+                    }
+
+                    $session = $this->createWhatsappSession($communication, $company);
+                }
+            } else {
+                $session = $this->createWhatsappSession($communication, $company);
+            }
 
             $this->storeWhatsappSessionSnapshot($company->id, $session);
 
@@ -139,7 +205,15 @@ class SettingsController extends Controller
 
         $data = $request->validate([
             'phone' => ['required', 'string', 'max:20'],
+            'phone_variant' => ['nullable', 'in:with_ninth,without_ninth'],
         ]);
+        $phone = $this->normalizeBrazilPhone($data['phone'], $data['phone_variant'] ?? 'with_ninth');
+
+        if ($phone === null) {
+            return redirect()->route('settings.whatsapp')
+                ->withErrors(['whatsapp' => 'Informe um telefone brasileiro valido com DDD. Exemplo: (31) 99999-9999.'])
+                ->withInput();
+        }
 
         if (! $communication->configured()) {
             return redirect()->route('settings.whatsapp')
@@ -151,13 +225,7 @@ class SettingsController extends Controller
             $uuid = (string) ($session['uuid'] ?? '');
 
             if ($uuid === '') {
-                $session = $communication->createWhatsappSession([
-                    'system_slug' => 'aqatende',
-                    'external_tenant_id' => (string) $company->id,
-                    'external_unit_id' => null,
-                    'name' => 'WhatsApp '.$company->id,
-                    'callback_base_url' => config('app.url'),
-                ]);
+                $session = $this->createWhatsappSession($communication, $company);
                 $uuid = (string) ($session['uuid'] ?? '');
             }
 
@@ -166,7 +234,24 @@ class SettingsController extends Controller
                     ->withErrors(['whatsapp' => 'Nao foi possivel identificar a sessao WhatsApp criada.']);
             }
 
-            $session = $communication->getWhatsappPairingCode($uuid, $data['phone']);
+            try {
+                $session = $communication->getWhatsappPairingCode($uuid, $phone);
+            } catch (RequestException $exception) {
+                if ($exception->response?->status() !== 404) {
+                    throw $exception;
+                }
+
+                $session = $this->createWhatsappSession($communication, $company);
+                $uuid = (string) ($session['uuid'] ?? '');
+
+                if ($uuid === '') {
+                    return redirect()->route('settings.whatsapp')
+                        ->withErrors(['whatsapp' => 'Nao foi possivel identificar a sessao WhatsApp criada.']);
+                }
+
+                $session = $communication->getWhatsappPairingCode($uuid, $phone);
+            }
+
             $this->storeWhatsappSessionSnapshot($company->id, $session);
 
             return redirect()->route('settings.whatsapp')->with('status', 'Codigo de pareamento gerado.');
@@ -174,6 +259,25 @@ class SettingsController extends Controller
             return redirect()->route('settings.whatsapp')
                 ->withErrors(['whatsapp' => 'Nao foi possivel gerar o codigo: '.$exception->getMessage()]);
         }
+    }
+
+    public function resetWhatsappSession(Request $request, CommunicationClient $communication): RedirectResponse
+    {
+        $company = $this->getCompany($request);
+        $session = $this->getWhatsappSessionSnapshot($company->id);
+        $uuid = (string) ($session['uuid'] ?? '');
+
+        if ($uuid !== '' && $communication->configured()) {
+            try {
+                $communication->deleteWhatsappSession($uuid);
+            } catch (Throwable) {
+                // A sessao local sera removida mesmo que ela ja nao exista no servico de comunicacao.
+            }
+        }
+
+        $this->storeSetting($company->id, 'whatsapp_session', null);
+
+        return redirect()->route('settings.whatsapp')->with('status', 'Sessao WhatsApp reiniciada.');
     }
 
     public function updateLogo(Request $request): RedirectResponse
@@ -277,6 +381,78 @@ class SettingsController extends Controller
     private function storeWhatsappSessionSnapshot(int $companyId, array $session): void
     {
         $this->storeSetting($companyId, 'whatsapp_session', json_encode($session));
+    }
+
+    private function getWhatsappAutomationSettings(int $companyId): array
+    {
+        $defaults = [
+            'templates' => [
+                'welcome' => 'Oi, {nome}! Como posso ajudar no seu agendamento hoje?',
+                'inactive' => 'Oi, {nome}! Sentimos sua falta. Quer agendar um novo horario?',
+                'birthday' => 'Feliz aniversario, {nome}! Temos condicoes especiais para voce.',
+            ],
+            'campaigns' => [
+                'send_to_all' => false,
+                'send_to_inactive' => true,
+                'inactive_days' => 30,
+            ],
+            'flow' => [
+                'bot_enabled' => false,
+                'bot_allow_any_professional' => true,
+                'bot_confirmation_template' => 'Perfeito, {nome}. Seu horario foi confirmado para {data_hora}.',
+            ],
+            'rules' => [
+                'steps' => [
+                    'ask_booking' => true,
+                    'select_service' => true,
+                    'select_professional' => true,
+                    'select_time' => true,
+                    'auto_schedule' => true,
+                ],
+            ],
+        ];
+
+        $raw = $this->getSetting($companyId, 'whatsapp_automation');
+        if (! $raw) {
+            return $defaults;
+        }
+
+        $decoded = json_decode($raw, true);
+        if (! is_array($decoded)) {
+            return $defaults;
+        }
+
+        return array_replace_recursive($defaults, $decoded);
+    }
+
+    private function createWhatsappSession(CommunicationClient $communication, Company $company): array
+    {
+        return $communication->createWhatsappSession([
+            'system_slug' => 'aqatende',
+            'external_tenant_id' => (string) $company->id,
+            'external_unit_id' => null,
+            'name' => 'WhatsApp '.$company->id,
+            'callback_base_url' => config('app.url'),
+        ]);
+    }
+
+    private function normalizeBrazilPhone(string $phone, string $variant = 'with_ninth'): ?string
+    {
+        $digits = preg_replace('/\D+/', '', $phone) ?? '';
+
+        if (str_starts_with($digits, '55') && strlen($digits) > 11) {
+            $digits = substr($digits, 2);
+        }
+
+        if (strlen($digits) === 11 && $variant === 'without_ninth' && $digits[2] === '9') {
+            $digits = substr($digits, 0, 2).substr($digits, 3);
+        }
+
+        if (strlen($digits) === 10 || strlen($digits) === 11) {
+            return '55'.$digits;
+        }
+
+        return null;
     }
 
     private function resolveLicensePaymentUrl(Company $company, ?array $license): ?string

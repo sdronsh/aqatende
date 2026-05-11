@@ -4,7 +4,11 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\ClinicController;
 use App\Http\Controllers\ServiceController;
 use App\Http\Controllers\UnitController;
+use App\Http\Controllers\WhatsappAutomationWebhookController;
 use Illuminate\Support\Facades\Route;
+
+Route::post('whatsapp/webhook', WhatsappAutomationWebhookController::class)
+    ->name('api.whatsapp.webhook');
 
 Route::middleware('auth')
     ->name('api.')

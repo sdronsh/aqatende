@@ -46,6 +46,25 @@ class CommunicationClient
             ->json();
     }
 
+    public function deleteWhatsappSession(string $uuid): array
+    {
+        return $this->request()
+            ->delete($this->url("/whatsapp/sessions/{$uuid}"))
+            ->throw()
+            ->json();
+    }
+
+    public function sendWhatsappMessage(string $uuid, string $phone, string $text): array
+    {
+        return $this->request()
+            ->post($this->url("/whatsapp/sessions/{$uuid}/messages"), [
+                'phone' => preg_replace('/\D+/', '', $phone) ?: $phone,
+                'text' => $text,
+            ])
+            ->throw()
+            ->json();
+    }
+
     private function request(): PendingRequest
     {
         return Http::acceptJson()
