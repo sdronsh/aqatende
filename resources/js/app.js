@@ -16,6 +16,7 @@ if ('serviceWorker' in navigator) {
 }
 
 let deferredPwaInstallPrompt = null;
+const pwaInstallDismissedKey = 'aqatende.pwaInstall.v2.dismissedUntil';
 
 const isPwaStandalone = () => {
     return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
@@ -30,14 +31,14 @@ const isIosDevice = () => {
 };
 
 const pwaInstallDismissed = () => {
-    const dismissedUntil = Number(localStorage.getItem('aqatende.pwaInstall.dismissedUntil') || 0);
+    const dismissedUntil = Number(localStorage.getItem(pwaInstallDismissedKey) || 0);
 
     return dismissedUntil > Date.now();
 };
 
 const dismissPwaInstallPrompt = () => {
-    const sevenDays = 7 * 24 * 60 * 60 * 1000;
-    localStorage.setItem('aqatende.pwaInstall.dismissedUntil', String(Date.now() + sevenDays));
+    const oneDay = 24 * 60 * 60 * 1000;
+    localStorage.setItem(pwaInstallDismissedKey, String(Date.now() + oneDay));
     document.querySelector('[data-pwa-install-prompt]')?.remove();
 };
 
@@ -59,6 +60,12 @@ const showPwaInstallPrompt = (mode = 'native') => {
     if (mode === 'native') {
         text.textContent = 'Acesse mais rapido pela tela inicial do celular.';
         button.textContent = 'Instalar app';
+        button.disabled = false;
+    }
+
+    if (mode === 'manual') {
+        text.textContent = 'Se o Chrome nao mostrar o botao automatico, toque no menu do navegador e escolha Instalar app ou Adicionar a tela inicial.';
+        button.textContent = 'Entendi';
         button.disabled = false;
     }
 
@@ -111,7 +118,7 @@ window.addEventListener('load', () => {
             return;
         }
 
-        if (isIosDevice()) {
+        if (isIosDevice() || !deferredPwaInstallPrompt) {
             dismissPwaInstallPrompt();
         }
     });
@@ -120,6 +127,11 @@ window.addEventListener('load', () => {
         showPwaInstallPrompt('ios');
     } else {
         showPwaInstallPrompt(deferredPwaInstallPrompt ? 'native' : 'preparing');
+        window.setTimeout(() => {
+            if (!deferredPwaInstallPrompt) {
+                showPwaInstallPrompt('manual');
+            }
+        }, 2500);
     }
 });
 
