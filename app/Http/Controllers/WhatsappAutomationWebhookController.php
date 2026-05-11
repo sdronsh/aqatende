@@ -314,19 +314,62 @@ class WhatsappAutomationWebhookController extends Controller
 
     private function resolvePatientByPhone(int $companyId, string $phone): ?Patient
     {
-        $digits = preg_replace('/\D+/', '', $phone) ?: '';
-        $tail10 = substr($digits, -10);
-        $tail11 = substr($digits, -11);
-        $normalizedSql = "REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(COALESCE(cellphone,''), '(', ''), ')', ''), '-', ''), ' ', ''), '+', '')";
+        $incomingCandidates = $this->phoneCandidates($phone);
 
-        return Patient::query()
+        $patients = Patient::query()
+            ->select(['id', 'cellphone'])
             ->whereHas('companies', fn ($query) => $query->where('companies.id', $companyId))
-            ->where(function ($query) use ($tail10, $tail11, $normalizedSql) {
-                $query->whereRaw("{$normalizedSql} LIKE ?", ["%{$tail11}"])
-                    ->orWhereRaw("{$normalizedSql} LIKE ?", ["%{$tail10}"]);
-            })
             ->orderBy('id')
-            ->first();
+            ->get();
+
+        foreach ($patients as $patient) {
+            $patientCandidates = $this->phoneCandidates((string) ($patient->cellphone ?? ''));
+            if (! empty(array_intersect($incomingCandidates, $patientCandidates))) {
+                return $patient;
+            }
+        }
+
+        return null;
+    }
+
+    private function phoneCandidates(string $value): array
+    {
+        $digits = preg_replace('/\D+/', '', $value) ?: '';
+        if ($digits === '') {
+            return [];
+        }
+
+        $set = [];
+        $set[$digits] = true;
+
+        if (str_starts_with($digits, '55')) {
+            if (strlen($digits) === 13 && ($digits[4] ?? '') === '9') {
+                $set[substr($digits, 0, 4).substr($digits, 5)] = true;
+            }
+
+            if (strlen($digits) === 12) {
+                $set[substr($digits, 0, 4).'9'.substr($digits, 4)] = true;
+            }
+
+            $local = substr($digits, 2);
+            $set[$local] = true;
+            if (strlen($local) === 11 && ($local[2] ?? '') === '9') {
+                $set[substr($local, 0, 2).substr($local, 3)] = true;
+            }
+            if (strlen($local) === 10) {
+                $set[substr($local, 0, 2).'9'.substr($local, 2)] = true;
+            }
+        } else {
+            $set['55'.$digits] = true;
+            if (strlen($digits) === 11 && ($digits[2] ?? '') === '9') {
+                $set['55'.substr($digits, 0, 2).substr($digits, 3)] = true;
+            }
+            if (strlen($digits) === 10) {
+                $set['55'.substr($digits, 0, 2).'9'.substr($digits, 2)] = true;
+            }
+        }
+
+        return array_keys($set);
     }
 
     private function parseDateTime(string $text): ?Carbon
