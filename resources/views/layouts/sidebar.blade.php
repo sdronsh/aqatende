@@ -1,6 +1,8 @@
 @php
     $companyId = session('active_company_id');
     $company = $companyId ? \App\Models\Company::find($companyId) : null;
+    $licenseEnforcer = app(\App\Services\Licenses\LicenseEnforcer::class);
+    $hasWhatsappModule = $companyId ? $licenseEnforcer->hasModule((int) $companyId, 'whatsapp') : false;
     $companyLogo = $companyId
         ? \App\Models\CompanySetting::where('company_id', $companyId)->where('key', 'logo_path')->value('value')
         : null;
@@ -35,7 +37,7 @@
         'configuracoes' => [
             ['label' => 'Licenca', 'route' => 'settings.license', 'permission' => 'configuracoes.logo.view', 'icon' => 'M7 4h10v16H7zM9 8h6M9 12h6M9 16h3'],
             ['label' => 'Logo da empresa', 'route' => 'settings.logo', 'permission' => 'configuracoes.logo.view', 'icon' => 'M4 5h16v14H4zM8 13l2.5-3 2 2.5L15 9l5 7M8 8h.01'],
-            ['label' => 'WhatsApp', 'route' => 'settings.whatsapp', 'permission' => 'configuracoes.logo.view', 'icon' => 'M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5zM9 8.5c.2 2.9 2.1 5 5 5.5l1.2-1.2c.2-.2.2-.5 0-.7l-1.1-1.1c-.2-.2-.5-.2-.7 0l-.6.6c-1-.4-1.8-1.2-2.2-2.2l.6-.6c.2-.2.2-.5 0-.7L10.1 7c-.2-.2-.5-.2-.7 0L9 7.4c-.1.2-.1.6 0 1.1z'],
+            ['label' => 'WhatsApp', 'route' => 'settings.whatsapp', 'permission' => 'configuracoes.logo.view', 'requires_module' => 'whatsapp', 'icon' => 'M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5zM9 8.5c.2 2.9 2.1 5 5 5.5l1.2-1.2c.2-.2.2-.5 0-.7l-1.1-1.1c-.2-.2-.5-.2-.7 0l-.6.6c-1-.4-1.8-1.2-2.2-2.2l.6-.6c.2-.2.2-.5 0-.7L10.1 7c-.2-.2-.5-.2-.7 0L9 7.4c-.1.2-.1.6 0 1.1z'],
             ['label' => 'Termo de uso', 'route' => 'settings.terms.edit', 'admin_only' => true, 'icon' => 'M6 4h9l3 3v13H6zM9 10h6M9 14h6M9 18h4'],
         ],
     ];
@@ -58,13 +60,17 @@
             <div class="flex flex-col gap-4">
                 @foreach ($menuItems as $section => $items)
                     @php
-                    $visibleItems = collect($items)->filter(function ($item) use ($companyId) {
-                        if (! empty($item['admin_only'])) {
-                            return auth()->user()->is_platform_admin;
-                        }
-
+                    $visibleItems = collect($items)->filter(function ($item) use ($companyId, $hasWhatsappModule) {
                         if (auth()->user()->is_platform_admin) {
                             return true;
+                        }
+
+                        if (($item['requires_module'] ?? null) === 'whatsapp' && ! $hasWhatsappModule) {
+                            return false;
+                        }
+
+                        if (! empty($item['admin_only'])) {
+                            return auth()->user()->is_platform_admin;
                         }
 
                         if (empty($item['permission'])) {

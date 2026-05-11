@@ -67,6 +67,21 @@
             </select>
         </div>
         <div class="md:col-span-4">
+            <label class="mb-1 block text-sm font-medium text-gray-700" for="phone">Telefone</label>
+            <input class="{{ $input }}" id="phone" name="phone" value="{{ old('phone', $patient->phone ?? '') }}" />
+        </div>
+        <div class="md:col-span-4">
+            <label class="mb-1 block text-sm font-medium text-gray-700" for="cellphone">Celular</label>
+            <input class="{{ $input }}" id="cellphone" name="cellphone" value="{{ old('cellphone', $patient->cellphone ?? '') }}" />
+        </div>
+        <div class="md:col-span-4">
+            @php $whatsapp = old('whatsapp', $patient->whatsapp ?? false); @endphp
+            <label class="mt-6 inline-flex items-center gap-2 text-sm text-gray-600">
+                <input type="checkbox" name="whatsapp" value="1" class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" @checked($whatsapp) />
+                WhatsApp
+            </label>
+        </div>
+        <div class="md:col-span-4">
             <label class="mb-1 block text-sm font-medium text-gray-700" for="photo">Foto</label>
             <input class="{{ $input }}" id="photo" name="photo" type="file" accept="image/*" />
             @if (! empty($patient->photo_path))
@@ -144,24 +159,9 @@
 <div class="hidden space-y-4 pt-4" data-tab-pane="contato">
     <div class="grid gap-4 md:grid-cols-12">
         <div class="md:col-span-4">
-            <label class="mb-1 block text-sm font-medium text-gray-700" for="phone">Telefone</label>
-            <input class="{{ $input }}" id="phone" name="phone" value="{{ old('phone', $patient->phone ?? '') }}" />
-        </div>
-        <div class="md:col-span-4">
-            <label class="mb-1 block text-sm font-medium text-gray-700" for="cellphone">Celular</label>
-            <input class="{{ $input }}" id="cellphone" name="cellphone" value="{{ old('cellphone', $patient->cellphone ?? '') }}" />
-        </div>
-        <div class="md:col-span-4">
             <label class="mb-1 block text-sm font-medium text-gray-700" for="email">E-mail</label>
             <input class="{{ $input }}" id="email" name="email" value="{{ old('email', optional($patient->user)->email) }}" />
             <x-input-error class="mt-1" :messages="$errors->get('email')" />
-        </div>
-        <div class="md:col-span-4">
-            @php $whatsapp = old('whatsapp', $patient->whatsapp ?? false); @endphp
-            <label class="mt-6 inline-flex items-center gap-2 text-sm text-gray-600">
-                <input type="checkbox" name="whatsapp" value="1" class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" @checked($whatsapp) />
-                WhatsApp
-            </label>
         </div>
         <div class="md:col-span-4">
             <label class="mb-1 block text-sm font-medium text-gray-700" for="emergency_contact_name">Contato alternativo</label>

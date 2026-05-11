@@ -90,6 +90,74 @@ class LicenseEnforcer
         return null;
     }
 
+    public function hasModule(int $companyId, string $module, bool $useCache = true): bool
+    {
+        $normalizedModule = strtolower(trim($module));
+        if ($normalizedModule === '') {
+            return false;
+        }
+
+        $company = Company::find($companyId);
+        if (! $company || ! $company->cnpj) {
+            return false;
+        }
+
+        $license = $this->client->getLicenseByCnpj($company->cnpj, $useCache);
+        if (! is_array($license)) {
+            return false;
+        }
+
+        $moduleTokens = collect();
+        $candidates = [
+            $license['modules'] ?? null,
+            $license['module_ids'] ?? null,
+            $license['module_codes'] ?? null,
+            $license['module_slugs'] ?? null,
+            $license['features'] ?? null,
+            collect($license['systems_access'] ?? [])->pluck('modules')->filter()->values()->all(),
+            data_get($license, 'plan.modules'),
+            data_get($license, 'subscription.modules'),
+        ];
+
+        $collectTokens = function (mixed $item) use (&$collectTokens, $moduleTokens): void {
+            if (is_array($item)) {
+                foreach (['slug', 'code', 'name', 'id'] as $key) {
+                    $value = strtolower((string) ($item[$key] ?? ''));
+                    if ($value !== '') {
+                        $moduleTokens->push($value);
+                    }
+                }
+
+                foreach ($item as $nested) {
+                    if (is_array($nested)) {
+                        $collectTokens($nested);
+                    } elseif (! is_object($nested)) {
+                        $value = strtolower(trim((string) $nested));
+                        if ($value !== '') {
+                            $moduleTokens->push($value);
+                        }
+                    }
+                }
+
+                return;
+            }
+
+            if (! is_object($item)) {
+                $value = strtolower(trim((string) $item));
+                if ($value !== '') {
+                    $moduleTokens->push($value);
+                }
+            }
+        };
+
+        foreach ($candidates as $candidate) {
+            $collectTokens($candidate);
+        }
+
+        return $moduleTokens
+            ->contains(fn (string $token) => $token === $normalizedModule || str_contains($token, $normalizedModule));
+    }
+
     private function intOrDefault(?int $value, string $key): int
     {
         if ($value !== null && $value > 0) {

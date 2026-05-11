@@ -161,26 +161,23 @@ class WhatsappAutomationWebhookController extends Controller
 
             $patient = $this->resolvePatientByPhone((int) $company['company_id'], $phone);
             if (! $patient) {
-                $this->send($communication, $sessionUuid, $phone, 'Seu numero ainda nao esta vinculado a um cliente no sistema.');
+                $this->saveState((int) $company['company_id'], $stateKey, [
+                    'step' => 'confirm_guest_create',
+                    'service_id' => $service->id,
+                    'professional_id' => $professional->id,
+                    'scheduled_at' => $scheduledAt->toIso8601String(),
+                    'unit_id' => $unit->id,
+                ]);
+                $this->send(
+                    $communication,
+                    $sessionUuid,
+                    $phone,
+                    'Nao encontramos seu cadastro. Quer agendar assim mesmo? Responda *sim* ou *nao*.'
+                );
                 return response()->json(['ok' => true]);
             }
 
-            $duration = (int) ($service->duration_minutes ?: 30);
-            $appointment = Appointment::create([
-                'clinic_id' => $unit->clinic_id,
-                'unit_id' => $unit->id,
-                'professional_id' => $professional->id,
-                'patient_id' => $patient->id,
-                'service_id' => $service->id,
-                'status' => 'agendado',
-                'channel' => 'whatsapp',
-                'scheduled_at' => $scheduledAt,
-                'ends_at' => $scheduledAt->copy()->addMinutes($duration),
-                'duration_minutes' => $duration,
-                'notes' => 'Agendado automaticamente via WhatsApp.',
-                'price_cents' => (int) ($service->price_cents ?? 0),
-                'payment_status' => 'pending',
-            ]);
+            $appointment = $this->createAppointmentForFlow($service, $professional, $unit, $patient, $scheduledAt);
 
             $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
             $this->send(
@@ -191,6 +188,57 @@ class WhatsappAutomationWebhookController extends Controller
             );
 
             return response()->json(['ok' => true, 'appointment_id' => $appointment->id]);
+        }
+
+        if (($state['step'] ?? null) === 'confirm_guest_create') {
+            if ($this->isAffirmative($lower)) {
+                $this->saveState((int) $company['company_id'], $stateKey, array_merge($state, [
+                    'step' => 'collect_guest_name',
+                ]));
+                $this->send($communication, $sessionUuid, $phone, 'Perfeito. Qual o seu nome completo?');
+                return response()->json(['ok' => true]);
+            }
+
+            if ($this->isNegative($lower)) {
+                $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
+                $this->send($communication, $sessionUuid, $phone, 'Sem problema. Quando quiser, envie *agendar* para iniciar novamente.');
+                return response()->json(['ok' => true]);
+            }
+
+            $this->send($communication, $sessionUuid, $phone, 'Responda *sim* para continuar ou *nao* para cancelar.');
+            return response()->json(['ok' => true]);
+        }
+
+        if (($state['step'] ?? null) === 'collect_guest_name') {
+            $name = trim($text);
+            if (mb_strlen($name) < 3) {
+                $this->send($communication, $sessionUuid, $phone, 'Nome muito curto. Informe seu nome completo.');
+                return response()->json(['ok' => true]);
+            }
+
+            $service = Service::find((int) ($state['service_id'] ?? 0));
+            $professional = Professional::find((int) ($state['professional_id'] ?? 0));
+            $unit = Unit::find((int) ($state['unit_id'] ?? 0));
+            $scheduledAt = isset($state['scheduled_at']) ? Carbon::parse((string) $state['scheduled_at']) : null;
+
+            if (! $service || ! $professional || ! $unit || ! $scheduledAt) {
+                $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
+                $this->send($communication, $sessionUuid, $phone, 'Nao consegui concluir. Envie *agendar* para recomecar.');
+                return response()->json(['ok' => true]);
+            }
+
+            $patient = $this->createPatientForFlow((int) $company['company_id'], $name, $phone);
+            $appointment = $this->createAppointmentForFlow($service, $professional, $unit, $patient, $scheduledAt);
+
+            $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
+            $this->send(
+                $communication,
+                $sessionUuid,
+                $phone,
+                'Cadastro concluido e agendamento confirmado: '.$scheduledAt->format('d/m/Y H:i').' com '.$professional->display_name.' para '.$service->name.'.'
+            );
+
+            return response()->json(['ok' => true, 'appointment_id' => $appointment->id, 'patient_id' => $patient->id]);
         }
 
         $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
@@ -411,5 +459,58 @@ class WhatsappAutomationWebhookController extends Controller
 
         $decoded = is_string($raw) ? json_decode($raw, true) : null;
         return is_array($decoded) ? $decoded : [];
+    }
+
+    private function isAffirmative(string $value): bool
+    {
+        $value = trim(mb_strtolower($value));
+        return in_array($value, ['sim', 's', 'ok', 'pode', 'yes', 'y'], true);
+    }
+
+    private function isNegative(string $value): bool
+    {
+        $value = trim(mb_strtolower($value));
+        return in_array($value, ['nao', 'não', 'n', 'cancelar', 'no'], true);
+    }
+
+    private function createPatientForFlow(int $companyId, string $name, string $phone): Patient
+    {
+        $digits = preg_replace('/\D+/', '', $phone) ?: '';
+        $formatted = $digits !== '' ? $digits : $phone;
+
+        $patient = Patient::create([
+            'full_name' => $name,
+            'social_name' => null,
+            'status' => 'ativo',
+            'cellphone' => $formatted,
+            'phone' => $formatted,
+            'whatsapp' => true,
+            'admin_notes' => 'Cadastro criado automaticamente via WhatsApp.',
+            'created_by_name' => 'WhatsApp Bot',
+        ]);
+        $patient->companies()->syncWithoutDetaching([$companyId]);
+
+        return $patient;
+    }
+
+    private function createAppointmentForFlow(Service $service, Professional $professional, Unit $unit, Patient $patient, Carbon $scheduledAt): Appointment
+    {
+        $duration = (int) ($service->duration_minutes ?: 30);
+
+        return Appointment::create([
+            'clinic_id' => $unit->clinic_id,
+            'unit_id' => $unit->id,
+            'professional_id' => $professional->id,
+            'patient_id' => $patient->id,
+            'service_id' => $service->id,
+            'status' => 'agendado',
+            'channel' => 'whatsapp',
+            'scheduled_at' => $scheduledAt,
+            'ends_at' => $scheduledAt->copy()->addMinutes($duration),
+            'duration_minutes' => $duration,
+            'notes' => 'Agendado automaticamente via WhatsApp.',
+            'price_cents' => (int) ($service->price_cents ?? 0),
+            'payment_status' => 'pending',
+        ]);
     }
 }

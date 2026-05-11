@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
             'permission' => \App\Http\Middleware\CheckPermission::class,
             'platform' => \App\Http\Middleware\EnsurePlatformAdmin::class,
             'terms-accepted' => \App\Http\Middleware\EnsureClinicTermsAccepted::class,
+            'whatsapp-module' => \App\Http\Middleware\EnsureWhatsappModuleEnabled::class,
         ]);
 
         $middleware->appendToGroup('web', \App\Http\Middleware\EnsureActiveCompany::class);

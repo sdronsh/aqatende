@@ -271,22 +271,22 @@ Route::middleware('auth')->group(function () {
             ->name('logo.update');
 
         Route::get('/whatsapp', [\App\Http\Controllers\SettingsController::class, 'whatsapp'])
-            ->middleware('permission:configuracoes.logo.view')
+            ->middleware(['permission:configuracoes.logo.view', 'whatsapp-module'])
             ->name('whatsapp');
         Route::post('/whatsapp/configuracoes', [\App\Http\Controllers\SettingsController::class, 'updateWhatsappAutomation'])
-            ->middleware('permission:configuracoes.logo.view')
+            ->middleware(['permission:configuracoes.logo.view', 'whatsapp-module'])
             ->name('whatsapp.automation');
         Route::post('/whatsapp/qrcode', [\App\Http\Controllers\SettingsController::class, 'generateWhatsappQr'])
-            ->middleware('permission:configuracoes.logo.view')
+            ->middleware(['permission:configuracoes.logo.view', 'whatsapp-module'])
             ->name('whatsapp.qr');
         Route::post('/whatsapp/status', [\App\Http\Controllers\SettingsController::class, 'refreshWhatsappStatus'])
-            ->middleware('permission:configuracoes.logo.view')
+            ->middleware(['permission:configuracoes.logo.view', 'whatsapp-module'])
             ->name('whatsapp.status');
         Route::post('/whatsapp/codigo-pareamento', [\App\Http\Controllers\SettingsController::class, 'generateWhatsappPairingCode'])
-            ->middleware('permission:configuracoes.logo.view')
+            ->middleware(['permission:configuracoes.logo.view', 'whatsapp-module'])
             ->name('whatsapp.pairing-code');
         Route::delete('/whatsapp/sessao', [\App\Http\Controllers\SettingsController::class, 'resetWhatsappSession'])
-            ->middleware('permission:configuracoes.logo.view')
+            ->middleware(['permission:configuracoes.logo.view', 'whatsapp-module'])
             ->name('whatsapp.reset');
 
         Route::get('/termo-uso', [\App\Http\Controllers\SettingsController::class, 'terms'])

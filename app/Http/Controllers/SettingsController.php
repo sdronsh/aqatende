@@ -139,9 +139,10 @@ class SettingsController extends Controller
     public function generateWhatsappQr(Request $request, CommunicationClient $communication): RedirectResponse
     {
         $company = $this->getCompany($request);
+        $tab = $this->resolveWhatsappTab($request, 'conexao');
 
         if (! $communication->configured()) {
-            return redirect()->route('settings.whatsapp')
+            return redirect()->route('settings.whatsapp', ['tab' => $tab])
                 ->withErrors(['whatsapp' => 'API de comunicacao nao configurada. Verifique COMMUNICATION_API_URL e COMMUNICATION_API_TOKEN.']);
         }
 
@@ -165,9 +166,9 @@ class SettingsController extends Controller
 
             $this->storeWhatsappSessionSnapshot($company->id, $session);
 
-            return redirect()->route('settings.whatsapp')->with('status', 'QR Code atualizado.');
+            return redirect()->route('settings.whatsapp', ['tab' => $tab])->with('status', 'QR Code atualizado.');
         } catch (Throwable $exception) {
-            return redirect()->route('settings.whatsapp')
+            return redirect()->route('settings.whatsapp', ['tab' => $tab])
                 ->withErrors(['whatsapp' => 'Nao foi possivel gerar o QR Code: '.$exception->getMessage()]);
         }
     }
@@ -175,16 +176,17 @@ class SettingsController extends Controller
     public function refreshWhatsappStatus(Request $request, CommunicationClient $communication): RedirectResponse
     {
         $company = $this->getCompany($request);
+        $tab = $this->resolveWhatsappTab($request, 'conexao');
         $session = $this->getWhatsappSessionSnapshot($company->id);
         $uuid = (string) ($session['uuid'] ?? '');
 
         if (! $communication->configured()) {
-            return redirect()->route('settings.whatsapp')
+            return redirect()->route('settings.whatsapp', ['tab' => $tab])
                 ->withErrors(['whatsapp' => 'API de comunicacao nao configurada. Verifique COMMUNICATION_API_URL e COMMUNICATION_API_TOKEN.']);
         }
 
         if ($uuid === '') {
-            return redirect()->route('settings.whatsapp')
+            return redirect()->route('settings.whatsapp', ['tab' => $tab])
                 ->withErrors(['whatsapp' => 'Gere o QR Code antes de atualizar o status.']);
         }
 
@@ -192,9 +194,9 @@ class SettingsController extends Controller
             $session = $communication->getWhatsappSessionStatus($uuid);
             $this->storeWhatsappSessionSnapshot($company->id, $session);
 
-            return redirect()->route('settings.whatsapp')->with('status', 'Status atualizado.');
+            return redirect()->route('settings.whatsapp', ['tab' => $tab])->with('status', 'Status atualizado.');
         } catch (Throwable $exception) {
-            return redirect()->route('settings.whatsapp')
+            return redirect()->route('settings.whatsapp', ['tab' => $tab])
                 ->withErrors(['whatsapp' => 'Nao foi possivel atualizar o status: '.$exception->getMessage()]);
         }
     }
@@ -202,6 +204,7 @@ class SettingsController extends Controller
     public function generateWhatsappPairingCode(Request $request, CommunicationClient $communication): RedirectResponse
     {
         $company = $this->getCompany($request);
+        $tab = $this->resolveWhatsappTab($request, 'conexao');
 
         $data = $request->validate([
             'phone' => ['required', 'string', 'max:20'],
@@ -210,13 +213,13 @@ class SettingsController extends Controller
         $phone = $this->normalizeBrazilPhone($data['phone'], $data['phone_variant'] ?? 'with_ninth');
 
         if ($phone === null) {
-            return redirect()->route('settings.whatsapp')
+            return redirect()->route('settings.whatsapp', ['tab' => $tab])
                 ->withErrors(['whatsapp' => 'Informe um telefone brasileiro valido com DDD. Exemplo: (31) 99999-9999.'])
                 ->withInput();
         }
 
         if (! $communication->configured()) {
-            return redirect()->route('settings.whatsapp')
+            return redirect()->route('settings.whatsapp', ['tab' => $tab])
                 ->withErrors(['whatsapp' => 'API de comunicacao nao configurada. Verifique COMMUNICATION_API_URL e COMMUNICATION_API_TOKEN.']);
         }
 
@@ -230,7 +233,7 @@ class SettingsController extends Controller
             }
 
             if ($uuid === '') {
-                return redirect()->route('settings.whatsapp')
+                return redirect()->route('settings.whatsapp', ['tab' => $tab])
                     ->withErrors(['whatsapp' => 'Nao foi possivel identificar a sessao WhatsApp criada.']);
             }
 
@@ -245,7 +248,7 @@ class SettingsController extends Controller
                 $uuid = (string) ($session['uuid'] ?? '');
 
                 if ($uuid === '') {
-                    return redirect()->route('settings.whatsapp')
+                    return redirect()->route('settings.whatsapp', ['tab' => $tab])
                         ->withErrors(['whatsapp' => 'Nao foi possivel identificar a sessao WhatsApp criada.']);
                 }
 
@@ -254,9 +257,9 @@ class SettingsController extends Controller
 
             $this->storeWhatsappSessionSnapshot($company->id, $session);
 
-            return redirect()->route('settings.whatsapp')->with('status', 'Codigo de pareamento gerado.');
+            return redirect()->route('settings.whatsapp', ['tab' => $tab])->with('status', 'Codigo de pareamento gerado.');
         } catch (Throwable $exception) {
-            return redirect()->route('settings.whatsapp')
+            return redirect()->route('settings.whatsapp', ['tab' => $tab])
                 ->withErrors(['whatsapp' => 'Nao foi possivel gerar o codigo: '.$exception->getMessage()]);
         }
     }
@@ -264,6 +267,7 @@ class SettingsController extends Controller
     public function resetWhatsappSession(Request $request, CommunicationClient $communication): RedirectResponse
     {
         $company = $this->getCompany($request);
+        $tab = $this->resolveWhatsappTab($request, 'conexao');
         $session = $this->getWhatsappSessionSnapshot($company->id);
         $uuid = (string) ($session['uuid'] ?? '');
 
@@ -277,7 +281,7 @@ class SettingsController extends Controller
 
         $this->storeSetting($company->id, 'whatsapp_session', null);
 
-        return redirect()->route('settings.whatsapp')->with('status', 'Sessao WhatsApp reiniciada.');
+        return redirect()->route('settings.whatsapp', ['tab' => $tab])->with('status', 'Sessao WhatsApp reiniciada.');
     }
 
     public function updateLogo(Request $request): RedirectResponse
@@ -490,5 +494,13 @@ class SettingsController extends Controller
         );
 
         return filter_var($url, FILTER_VALIDATE_URL) ? $url : null;
+    }
+
+    private function resolveWhatsappTab(Request $request, string $default = 'conexao'): string
+    {
+        $tab = (string) $request->input('tab', $default);
+        $allowedTabs = ['templates', 'campanhas', 'fluxo', 'regras', 'conexao'];
+
+        return in_array($tab, $allowedTabs, true) ? $tab : $default;
     }
 }

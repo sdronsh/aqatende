@@ -227,6 +227,7 @@
                     <div class="mt-5 flex flex-wrap gap-2">
                         <form method="POST" action="{{ route('settings.whatsapp.pairing-code') }}" class="flex w-full flex-col gap-2 rounded-lg border border-gray-100 bg-gray-50 p-3 sm:flex-row sm:items-end">
                             @csrf
+                            <input type="hidden" name="tab" value="conexao">
                             <div class="flex-1">
                                 <label class="mb-1 block text-xs font-semibold uppercase text-gray-500" for="phone">Telefone do WhatsApp</label>
                                 <input id="phone" name="phone" value="{{ old('phone', $session['pairing_phone'] ?? $session['phone_number'] ?? '') }}" placeholder="(31) 99999-9999" inputmode="numeric" autocomplete="tel-national" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700">
@@ -237,12 +238,14 @@
                         </form>
                         <form method="POST" action="{{ route('settings.whatsapp.qr') }}">
                             @csrf
+                            <input type="hidden" name="tab" value="conexao">
                             <button type="submit" class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600" @disabled(! $apiConfigured)>
                                 Gerar QR Code
                             </button>
                         </form>
                         <form method="POST" action="{{ route('settings.whatsapp.status') }}">
                             @csrf
+                            <input type="hidden" name="tab" value="conexao">
                             <button type="submit" class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 hover:bg-gray-50" @disabled(! $apiConfigured || ! $session)>
                                 Atualizar status
                             </button>
@@ -250,6 +253,7 @@
                         <form method="POST" action="{{ route('settings.whatsapp.reset') }}" onsubmit="return confirm('Reiniciar a sessao WhatsApp e gerar uma nova conexao?')">
                             @csrf
                             @method('DELETE')
+                            <input type="hidden" name="tab" value="conexao">
                             <button type="submit" class="rounded-lg border border-error-200 bg-white px-4 py-2 text-sm font-semibold text-error-700 hover:bg-error-50" @disabled(! $session)>
                                 Reiniciar sessao
                             </button>
