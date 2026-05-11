@@ -426,11 +426,13 @@ class WhatsappAutomationWebhookController extends Controller
             return null;
         }
 
+        $timezone = (string) config('aqamed.whatsapp.timezone', 'America/Sao_Paulo');
         $year = now()->year;
-        $candidate = Carbon::createFromFormat('d/m/Y H:i', "{$matches[1]}/{$matches[2]}/{$year} {$matches[3]}:{$matches[4]}", config('app.timezone'));
-        if ($candidate->isPast()) {
-            $candidate = $candidate->addYear();
-        }
+        $candidate = Carbon::createFromFormat(
+            'd/m/Y H:i',
+            "{$matches[1]}/{$matches[2]}/{$year} {$matches[3]}:{$matches[4]}",
+            $timezone
+        );
 
         return $candidate;
     }
@@ -475,8 +477,9 @@ class WhatsappAutomationWebhookController extends Controller
 
     private function createPatientForFlow(int $companyId, string $name, string $phone): Patient
     {
-        $digits = preg_replace('/\D+/', '', $phone) ?: '';
-        $formatted = $digits !== '' ? $digits : $phone;
+        $digits = $this->normalizeBrazilLocalPhone($phone);
+        $digits = $this->normalizeBrazilMobileDigits($digits);
+        $formatted = $this->formatBrazilPhone($digits);
 
         $patient = Patient::create([
             'full_name' => $name,
@@ -491,6 +494,46 @@ class WhatsappAutomationWebhookController extends Controller
         $patient->companies()->syncWithoutDetaching([$companyId]);
 
         return $patient;
+    }
+
+    private function normalizeBrazilLocalPhone(string $phone): string
+    {
+        $digits = preg_replace('/\D+/', '', $phone) ?: '';
+        if ($digits === '') {
+            return '';
+        }
+
+        if (str_starts_with($digits, '55') && strlen($digits) >= 12) {
+            $digits = substr($digits, 2);
+        }
+
+        return $digits;
+    }
+
+    private function normalizeBrazilMobileDigits(string $digits): string
+    {
+        if (strlen($digits) === 10) {
+            return substr($digits, 0, 2).'9'.substr($digits, 2);
+        }
+
+        if (strlen($digits) > 11) {
+            $digits = substr($digits, -11);
+        }
+
+        return $digits;
+    }
+
+    private function formatBrazilPhone(string $digits): string
+    {
+        if (strlen($digits) === 11) {
+            return sprintf('(%s) %s-%s', substr($digits, 0, 2), substr($digits, 2, 5), substr($digits, 7, 4));
+        }
+
+        if (strlen($digits) === 10) {
+            return sprintf('(%s) %s-%s', substr($digits, 0, 2), substr($digits, 2, 4), substr($digits, 6, 4));
+        }
+
+        return $digits;
     }
 
     private function createAppointmentForFlow(Service $service, Professional $professional, Unit $unit, Patient $patient, Carbon $scheduledAt): Appointment
