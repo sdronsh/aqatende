@@ -150,6 +150,5 @@
             </div>
         </div>
     </main>
-    @include('partials.pwa-install-prompt')
 </body>
 </html>

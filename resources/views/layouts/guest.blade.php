@@ -163,6 +163,5 @@
                 target.value = formatCnpj(target.value);
             });
         </script>
-        @include('partials.pwa-install-prompt')
     </body>
 </html>

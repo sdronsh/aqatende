@@ -140,6 +140,5 @@
             @endif
         </section>
     </main>
-    @include('partials.pwa-install-prompt')
 </body>
 </html>

@@ -8,7 +8,10 @@ Alpine.start();
 
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/service-worker.js').catch(() => {});
+        navigator.serviceWorker.register('/service-worker.js')
+            .then(() => navigator.serviceWorker.ready)
+            .then(() => window.dispatchEvent(new Event('aqatende:pwa-ready')))
+            .catch(() => {});
     });
 }
 
@@ -47,9 +50,22 @@ const showPwaInstallPrompt = (mode = 'native') => {
         return;
     }
 
+    if (mode === 'preparing') {
+        text.textContent = 'Preparando a instalacao para acesso rapido pela tela inicial do celular.';
+        button.textContent = 'Preparando...';
+        button.disabled = true;
+    }
+
+    if (mode === 'native') {
+        text.textContent = 'Acesse mais rapido pela tela inicial do celular.';
+        button.textContent = 'Instalar app';
+        button.disabled = false;
+    }
+
     if (mode === 'ios') {
         text.textContent = 'No iPhone, toque em Compartilhar e depois em Adicionar a Tela de Inicio.';
         button.textContent = 'Entendi';
+        button.disabled = false;
     }
 
     prompt.classList.remove('hidden');
@@ -67,6 +83,20 @@ window.addEventListener('appinstalled', () => {
 });
 
 window.addEventListener('load', () => {
+    document.querySelectorAll('form[action$="/logout"], form[action*="/logout"]').forEach((form) => {
+        form.addEventListener('submit', () => {
+            if (!isPwaStandalone() || form.querySelector('[name="pwa_standalone"]')) {
+                return;
+            }
+
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'pwa_standalone';
+            input.value = '1';
+            form.appendChild(input);
+        });
+    });
+
     document.querySelectorAll('[data-pwa-install-dismiss]').forEach((button) => {
         button.addEventListener('click', dismissPwaInstallPrompt);
     });
@@ -88,5 +118,13 @@ window.addEventListener('load', () => {
 
     if (isIosDevice()) {
         showPwaInstallPrompt('ios');
+    } else {
+        showPwaInstallPrompt(deferredPwaInstallPrompt ? 'native' : 'preparing');
+    }
+});
+
+window.addEventListener('aqatende:pwa-ready', () => {
+    if (!isIosDevice() && !deferredPwaInstallPrompt) {
+        showPwaInstallPrompt('preparing');
     }
 });

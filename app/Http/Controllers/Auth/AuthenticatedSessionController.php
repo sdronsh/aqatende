@@ -141,6 +141,7 @@ class AuthenticatedSessionController extends Controller
      */
     public function destroy(Request $request): RedirectResponse
     {
+        $fromInstalledApp = $request->boolean('pwa_standalone');
         $user = $request->user();
         $sessionId = $request->session()->getId();
 
@@ -156,7 +157,9 @@ class AuthenticatedSessionController extends Controller
             $user->save();
         }
 
-        return redirect('/');
+        return $fromInstalledApp
+            ? redirect()->route('login', ['mode' => 'company'])
+            : redirect('/');
     }
 
     private function handleSessionConflict(Request $request, $user, string $mode): ?RedirectResponse
