@@ -223,10 +223,23 @@
                 return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12, 14)}`;
             };
 
+            const formatPhone = (value) => {
+                const digits = value.replace(/\D/g, '').slice(0, 11);
+                if (digits.length <= 2) return digits;
+                if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+                if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+                return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+            };
+
             document.addEventListener('input', (event) => {
                 const target = event.target;
-                if (!target || target.dataset?.mask !== 'cnpj') return;
-                target.value = formatCnpj(target.value);
+                if (!target) return;
+                if (target.dataset?.mask === 'cnpj') {
+                    target.value = formatCnpj(target.value);
+                }
+                if (target.dataset?.mask === 'phone') {
+                    target.value = formatPhone(target.value);
+                }
             });
         </script>
     </body>

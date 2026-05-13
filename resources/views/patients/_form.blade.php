@@ -68,11 +68,11 @@
         </div>
         <div class="md:col-span-4">
             <label class="mb-1 block text-sm font-medium text-gray-700" for="phone">Telefone</label>
-            <input class="{{ $input }}" id="phone" name="phone" value="{{ old('phone', $patient->phone ?? '') }}" />
+            <input class="{{ $input }}" id="phone" name="phone" value="{{ old('phone', $patient->phone ?? '') }}" data-mask="phone" inputmode="tel" autocomplete="tel" />
         </div>
         <div class="md:col-span-4">
             <label class="mb-1 block text-sm font-medium text-gray-700" for="cellphone">Celular</label>
-            <input class="{{ $input }}" id="cellphone" name="cellphone" value="{{ old('cellphone', $patient->cellphone ?? '') }}" />
+            <input class="{{ $input }}" id="cellphone" name="cellphone" value="{{ old('cellphone', $patient->cellphone ?? '') }}" data-mask="phone" inputmode="tel" autocomplete="tel" />
         </div>
         <div class="md:col-span-4">
             @php $whatsapp = old('whatsapp', $patient->whatsapp ?? false); @endphp
@@ -169,7 +169,7 @@
         </div>
         <div class="md:col-span-4">
             <label class="mb-1 block text-sm font-medium text-gray-700" for="emergency_contact_phone">Telefone alternativo</label>
-            <input class="{{ $input }}" id="emergency_contact_phone" name="emergency_contact_phone" value="{{ old('emergency_contact_phone', $patient->emergency_contact_phone ?? '') }}" />
+            <input class="{{ $input }}" id="emergency_contact_phone" name="emergency_contact_phone" value="{{ old('emergency_contact_phone', $patient->emergency_contact_phone ?? '') }}" data-mask="phone" inputmode="tel" autocomplete="tel" />
         </div>
     </div>
 </div>
@@ -190,7 +190,7 @@
         </div>
         <div class="md:col-span-4">
             <label class="mb-1 block text-sm font-medium text-gray-700" for="legal_guardian_phone">Telefone responsável</label>
-            <input class="{{ $input }}" id="legal_guardian_phone" name="legal_guardian_phone" value="{{ old('legal_guardian_phone', $patient->legal_guardian_phone ?? '') }}" />
+            <input class="{{ $input }}" id="legal_guardian_phone" name="legal_guardian_phone" value="{{ old('legal_guardian_phone', $patient->legal_guardian_phone ?? '') }}" data-mask="phone" inputmode="tel" autocomplete="tel" />
         </div>
         <div class="md:col-span-4">
             <label class="mb-1 block text-sm font-medium text-gray-700" for="guardian_relationship">Relação</label>

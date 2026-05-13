@@ -526,13 +526,16 @@ class WhatsappAutomationWebhookController extends Controller
         $incomingCandidates = $this->phoneCandidates($phone);
 
         $patients = Patient::query()
-            ->select(['id', 'cellphone'])
+            ->select(['id', 'full_name', 'social_name', 'phone', 'cellphone'])
             ->whereHas('companies', fn ($query) => $query->where('companies.id', $companyId))
             ->orderBy('id')
             ->get();
 
         foreach ($patients as $patient) {
-            $patientCandidates = $this->phoneCandidates((string) ($patient->cellphone ?? ''));
+            $patientCandidates = array_merge(
+                $this->phoneCandidates((string) ($patient->cellphone ?? '')),
+                $this->phoneCandidates((string) ($patient->phone ?? '')),
+            );
             if (! empty(array_intersect($incomingCandidates, $patientCandidates))) {
                 return $patient;
             }

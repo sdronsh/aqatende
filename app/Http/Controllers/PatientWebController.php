@@ -173,6 +173,7 @@ class PatientWebController extends Controller
         $data['controlled_medication'] = (bool) ($data['controlled_medication'] ?? false);
         $data['suicide_history'] = (bool) ($data['suicide_history'] ?? false);
         $data['pregnant'] = (bool) ($data['pregnant'] ?? false);
+        $this->formatPhoneFields($data);
 
         if ($request->hasFile('photo')) {
             $data['photo_path'] = $request->file('photo')->store('patients', 'public');
@@ -321,6 +322,7 @@ class PatientWebController extends Controller
         $data['controlled_medication'] = (bool) ($data['controlled_medication'] ?? false);
         $data['suicide_history'] = (bool) ($data['suicide_history'] ?? false);
         $data['pregnant'] = (bool) ($data['pregnant'] ?? false);
+        $this->formatPhoneFields($data);
 
         if ($request->hasFile('photo')) {
             if ($patient->photo_path) {
@@ -347,6 +349,33 @@ class PatientWebController extends Controller
         }
 
         return redirect()->route('patients.index')->with('status', 'Cliente atualizado.');
+    }
+
+    private function formatPhoneFields(array &$data): void
+    {
+        foreach (['phone', 'cellphone', 'emergency_contact_phone', 'legal_guardian_phone'] as $field) {
+            if (array_key_exists($field, $data)) {
+                $data[$field] = $this->formatBrazilPhone((string) $data[$field]);
+            }
+        }
+    }
+
+    private function formatBrazilPhone(string $value): string
+    {
+        $digits = preg_replace('/\D+/', '', $value) ?: '';
+        if (str_starts_with($digits, '55') && strlen($digits) > 11) {
+            $digits = substr($digits, 2);
+        }
+
+        if (strlen($digits) === 11) {
+            return sprintf('(%s) %s-%s', substr($digits, 0, 2), substr($digits, 2, 5), substr($digits, 7, 4));
+        }
+
+        if (strlen($digits) === 10) {
+            return sprintf('(%s) %s-%s', substr($digits, 0, 2), substr($digits, 2, 4), substr($digits, 6, 4));
+        }
+
+        return $value;
     }
 
     public function bookingLink(Request $request, Patient $patient): RedirectResponse
