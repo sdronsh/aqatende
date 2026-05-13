@@ -92,7 +92,12 @@
                                         @csrf
                                         <button class="rounded-lg border border-success-600 px-2 py-1 text-xs font-medium text-success-700 hover:bg-success-50" type="submit">Gerar link</button>
                                     </form>
-                                    <form method="POST" action="{{ route('patients.destroy', $patient) }}" onsubmit="return confirm('Remover cliente?');">
+                                    <form
+                                        method="POST"
+                                        action="{{ route('patients.destroy', $patient) }}"
+                                        data-delete-patient-form
+                                        data-has-appointments="{{ $patient->has_appointments ? '1' : '0' }}"
+                                    >
                                         @csrf
                                         @method('DELETE')
                                         <button class="rounded-lg border border-error-500 px-2 py-1 text-xs font-medium text-error-500 hover:bg-error-50" type="submit">Excluir</button>
@@ -115,6 +120,23 @@
         @endif
     </div>
 
+    <dialog id="delete-patient-dialog" class="m-auto max-h-[90vh] w-[calc(100%-2rem)] max-w-md overflow-y-auto rounded-xl border border-gray-200 p-0 shadow-theme-lg">
+        <div class="flex flex-col gap-4 p-5">
+            <div class="text-lg font-semibold text-gray-800">Excluir cliente</div>
+            <p id="delete-patient-message" class="text-sm text-gray-600">
+                Confirma a exclusao deste cliente?
+            </p>
+            <div class="flex flex-col-reverse gap-2 border-t border-gray-100 pt-4 sm:flex-row sm:items-center sm:justify-end">
+                <button type="button" id="delete-patient-no" class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50">
+                    Nao
+                </button>
+                <button type="button" id="delete-patient-yes" class="rounded-lg bg-error-500 px-4 py-2 text-sm font-semibold text-white shadow-theme-xs hover:bg-error-600">
+                    Sim
+                </button>
+            </div>
+        </div>
+    </dialog>
+
     <script>
         document.querySelectorAll('[data-copy-booking-link]').forEach((button) => {
             button.addEventListener('click', async () => {
@@ -134,6 +156,51 @@
                 setTimeout(() => {
                     button.textContent = 'Copiar';
                 }, 1800);
+            });
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const dialog = document.getElementById('delete-patient-dialog');
+            const message = document.getElementById('delete-patient-message');
+            const noButton = document.getElementById('delete-patient-no');
+            const yesButton = document.getElementById('delete-patient-yes');
+            let pendingForm = null;
+
+            const closeDialog = () => {
+                if (dialog?.open) dialog.close();
+                pendingForm = null;
+            };
+
+            document.querySelectorAll('[data-delete-patient-form]').forEach((form) => {
+                form.addEventListener('submit', (event) => {
+                    event.preventDefault();
+                    pendingForm = form;
+
+                    if (message) {
+                        message.textContent = form.dataset.hasAppointments === '1'
+                            ? 'Este cliente possui agendamentos. Ao confirmar, ele sera removido da lista de clientes, mas o historico de agendamentos sera preservado. Deseja continuar?'
+                            : 'Confirma a exclusao deste cliente?';
+                    }
+
+                    dialog?.showModal();
+                    noButton?.focus();
+                });
+            });
+
+            noButton?.addEventListener('click', closeDialog);
+
+            yesButton?.addEventListener('click', () => {
+                if (pendingForm) {
+                    pendingForm.submit();
+                }
+
+                closeDialog();
+            });
+
+            dialog?.addEventListener('click', (event) => {
+                if (event.target === dialog) {
+                    closeDialog();
+                }
             });
         });
     </script>

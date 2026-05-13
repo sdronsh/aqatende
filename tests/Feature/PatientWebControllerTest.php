@@ -2,8 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Appointment;
+use App\Models\Clinic;
 use App\Models\Company;
 use App\Models\Patient;
+use App\Models\Service;
+use App\Models\Unit;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -60,5 +64,51 @@ class PatientWebControllerTest extends TestCase
 
         $this->assertNull($patient->fresh()->user_id);
         $this->assertModelMissing($patientUser);
+    }
+
+    public function test_patient_with_appointment_is_detached_from_company_without_physical_delete(): void
+    {
+        $company = Company::create(['name' => 'Clinica Teste']);
+        $clinic = Clinic::create(['company_id' => $company->id, 'name' => 'Clinica Teste']);
+        $unit = Unit::create([
+            'clinic_id' => $clinic->id,
+            'name' => 'Unidade Central',
+            'address_line1' => 'Rua Teste, 123',
+            'city' => 'Belo Horizonte',
+            'state' => 'MG',
+            'zip' => '30100-000',
+            'country' => 'BR',
+        ]);
+        $service = Service::create([
+            'clinic_id' => $clinic->id,
+            'unit_id' => $unit->id,
+            'name' => 'Consulta',
+            'duration_minutes' => 30,
+            'modality' => 'presencial',
+            'price_cents' => 10000,
+            'active' => true,
+        ]);
+        $admin = User::factory()->create(['is_platform_admin' => true]);
+        $patient = Patient::create(['full_name' => 'Cliente Com Historico']);
+        $patient->companies()->attach($company);
+
+        Appointment::create([
+            'clinic_id' => $clinic->id,
+            'unit_id' => $unit->id,
+            'patient_id' => $patient->id,
+            'service_id' => $service->id,
+            'status' => 'scheduled',
+            'channel' => 'manual',
+            'scheduled_at' => now()->addDay(),
+        ]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->withSession(['active_company_id' => $company->id])
+            ->delete(route('patients.destroy', $patient));
+
+        $response->assertRedirect(route('patients.index', absolute: false));
+        $this->assertModelExists($patient);
+        $this->assertFalse($patient->fresh()->companies()->whereKey($company->id)->exists());
     }
 }

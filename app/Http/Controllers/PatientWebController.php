@@ -8,6 +8,7 @@ use App\Models\PatientBookingLink;
 use App\Models\User;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
@@ -32,6 +33,11 @@ class PatientWebController extends Controller
                     $appointmentQuery->whereIn('clinic_id', $clinicIds);
                 },
             ], 'scheduled_at')
+            ->withExists([
+                'appointments as has_appointments' => function ($appointmentQuery) use ($clinicIds) {
+                    $appointmentQuery->whereIn('clinic_id', $clinicIds);
+                },
+            ])
             ->orderBy('full_name');
 
         if ($request->filled('search')) {
@@ -405,14 +411,31 @@ class PatientWebController extends Controller
             abort(403);
         }
 
-        $patient->companies()->detach($companyId);
+        DB::transaction(function () use ($companyId, $patient): void {
+            $patient->companies()->detach($companyId);
 
-        if (! $patient->companies()->exists()) {
-            $patient->user?->delete();
+            if ($patient->companies()->exists() || $this->patientHasHistory($patient)) {
+                return;
+            }
+
+            $user = $patient->user;
+
+            if ($patient->photo_path) {
+                Storage::disk('public')->delete($patient->photo_path);
+            }
+
             $patient->delete();
-        }
+            $user?->delete();
+        });
 
         return redirect()->route('patients.index')->with('status', 'Cliente removido.');
+    }
+
+    private function patientHasHistory(Patient $patient): bool
+    {
+        return $patient->appointments()->exists()
+            || $patient->medicalRecords()->exists()
+            || DB::table('contas_receber')->where('patient_id', $patient->id)->exists();
     }
 
     private function createPatientUser(string $name, string $email): User
