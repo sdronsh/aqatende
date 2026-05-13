@@ -46,6 +46,7 @@ class WhatsappAutomationWebhookController extends Controller
         $stateKey = "whatsapp_flow_state_{$phone}";
         $state = $this->loadState((int) $company['company_id'], $stateKey);
         $lower = mb_strtolower($text);
+        $patient = $this->resolvePatientByPhone((int) $company['company_id'], $phone);
 
         if ($this->isCancelCommand($lower)) {
             return $this->cancelFlow($communication, (int) $company['company_id'], $stateKey, $sessionUuid, $phone);
@@ -57,13 +58,13 @@ class WhatsappAutomationWebhookController extends Controller
 
         if (($state['step'] ?? 'start') === 'start') {
             if ($this->isGreetingCommand($lower)) {
-                $this->send($communication, $sessionUuid, $phone, $this->welcomeMessage($automation));
+                $this->send($communication, $sessionUuid, $phone, $this->welcomeMessage($automation, $patient));
                 $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
                 return response()->json(['ok' => true]);
             }
 
             if (! $this->isStartCommand($lower)) {
-                $this->send($communication, $sessionUuid, $phone, $this->welcomeMessage($automation));
+                $this->send($communication, $sessionUuid, $phone, $this->welcomeMessage($automation, $patient));
                 $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
                 return response()->json(['ok' => true]);
             }
@@ -179,7 +180,6 @@ class WhatsappAutomationWebhookController extends Controller
                 return response()->json(['ok' => true]);
             }
 
-            $patient = $this->resolvePatientByPhone((int) $company['company_id'], $phone);
             if (! $patient) {
                 $this->saveState((int) $company['company_id'], $stateKey, [
                     'step' => 'confirm_guest_create',
@@ -661,15 +661,32 @@ class WhatsappAutomationWebhookController extends Controller
         return in_array($value, ['oi', 'ola', 'olá', 'bom dia', 'boa tarde', 'boa noite'], true);
     }
 
-    private function welcomeMessage(array $automation): string
+    private function welcomeMessage(array $automation, ?Patient $patient = null): string
     {
         $message = trim((string) data_get($automation, 'templates.welcome', ''));
+        $clientName = $this->patientGreetingName($patient);
 
         $message = $message !== ''
-            ? str_replace('{nome}', 'cliente', $message)
+            ? str_replace(['{cliente}', '{nome}'], $clientName, $message)
             : "Oi! Responda *agendar* para iniciar seu agendamento.";
 
         return rtrim($message)."\n\nSe quiser iniciar um agendamento basta nos enviar a palavra *agendar* a qualquer momento.";
+    }
+
+    private function patientGreetingName(?Patient $patient): string
+    {
+        if (! $patient) {
+            return 'cliente';
+        }
+
+        $socialName = trim((string) ($patient->social_name ?? ''));
+        if ($socialName !== '') {
+            return $socialName;
+        }
+
+        $fullName = trim((string) ($patient->full_name ?? ''));
+
+        return $fullName !== '' ? $fullName : 'cliente';
     }
 
     private function createPatientForFlow(int $companyId, string $name, string $phone): Patient
