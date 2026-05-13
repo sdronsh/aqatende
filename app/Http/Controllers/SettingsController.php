@@ -102,30 +102,40 @@ class SettingsController extends Controller
             'template_birthday' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        $payload = [
-            'templates' => [
+        $tab = (string) $request->input('tab', 'templates');
+        $payload = $this->getWhatsappAutomationSettings($company->id);
+
+        if ($tab === 'templates') {
+            $payload['templates'] = array_replace($payload['templates'] ?? [], [
                 'welcome' => (string) ($data['template_welcome'] ?? ''),
                 'inactive' => (string) ($data['template_inactive'] ?? ''),
                 'birthday' => (string) ($data['template_birthday'] ?? ''),
-            ],
-            'campaigns' => [
+            ]);
+        }
+
+        if ($tab === 'campanhas') {
+            $payload['campaigns'] = array_replace($payload['campaigns'] ?? [], [
                 'send_to_all' => (bool) ($data['send_to_all'] ?? false),
                 'send_to_inactive' => (bool) ($data['send_to_inactive'] ?? false),
                 'inactive_days' => (int) ($data['inactive_days'] ?? 30),
-            ],
-            'flow' => [
+            ]);
+        }
+
+        if ($tab === 'fluxo') {
+            $payload['flow'] = array_replace($payload['flow'] ?? [], [
                 'bot_enabled' => (bool) ($data['bot_enabled'] ?? false),
                 'bot_allow_any_professional' => (bool) ($data['bot_allow_any_professional'] ?? true),
                 'bot_confirmation_template' => (string) ($data['bot_confirmation_template'] ?? ''),
-            ],
-            'rules' => [
-                'steps' => [
-                    'ask_booking' => true,
-                    'select_service' => true,
-                    'select_professional' => true,
-                    'select_time' => true,
-                    'auto_schedule' => true,
-                ],
+            ]);
+        }
+
+        $payload['rules'] = [
+            'steps' => [
+                'ask_booking' => true,
+                'select_service' => true,
+                'select_professional' => true,
+                'select_time' => true,
+                'auto_schedule' => true,
             ],
         ];
 
