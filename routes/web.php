@@ -24,6 +24,7 @@ use App\Http\Controllers\Security\RoleController;
 use App\Http\Controllers\UnitWebController;
 use App\Http\Controllers\PatientWebController;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\PwaServiceWorkerController;
 
 Route::get('/', function () {
     if (auth()->check()) {
@@ -35,6 +36,8 @@ Route::get('/', function () {
 
 Route::get('/company-lookup', CompanyLookupController::class)
     ->name('company.lookup');
+Route::get('/sw.js', PwaServiceWorkerController::class)
+    ->name('pwa.service-worker');
 Route::get('/agendar/{token}', [PublicBookingController::class, 'show'])
     ->name('public.booking.show');
 Route::post('/agendar/{token}', [PublicBookingController::class, 'store'])

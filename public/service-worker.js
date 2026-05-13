@@ -1,4 +1,8 @@
-const CACHE_NAME = 'aqatende-pwa-v1';
+const BUILD_VERSION = '__AQATENDE_APP_VERSION__';
+const APP_VERSION = BUILD_VERSION.startsWith('__')
+  ? (new URL(self.location.href).searchParams.get('v') || '1.0.0')
+  : BUILD_VERSION;
+const CACHE_NAME = `aqatende-pwa-v${APP_VERSION.replace(/[^a-zA-Z0-9._-]/g, '-')}`;
 const APP_SHELL = [
   '/offline.html',
   '/logo.png',
@@ -59,4 +63,10 @@ self.addEventListener('fetch', (event) => {
       });
     })
   );
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });

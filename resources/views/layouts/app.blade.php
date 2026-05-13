@@ -136,6 +136,7 @@
         </div>
 
         @include('partials.pwa-install-prompt')
+        @include('partials.pwa-connection-status')
 
         <script>
             const resetGlobalOverlays = () => {

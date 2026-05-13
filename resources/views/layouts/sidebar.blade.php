@@ -110,6 +110,9 @@
                 @endforeach
             </div>
         </nav>
+        <div class="menu-text mt-auto border-t border-gray-100 pt-3 text-xs text-gray-400">
+            Versao {{ config('app.version') }}
+        </div>
     </div>
 </aside>
 <div id="sidebar-backdrop" class="fixed inset-0 bg-black/40 z-50 hidden lg:hidden"></div>
