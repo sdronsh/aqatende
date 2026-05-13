@@ -56,6 +56,12 @@ class WhatsappAutomationWebhookController extends Controller
         }
 
         if (($state['step'] ?? 'start') === 'start') {
+            if (! $this->isStartCommand($lower)) {
+                $this->send($communication, $sessionUuid, $phone, "Oi! Responda *agendar* para iniciar seu agendamento.");
+                $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
+                return response()->json(['ok' => true]);
+            }
+
             $services = $this->servicesForCompany((int) $company['company_id']);
             if ($services->isEmpty()) {
                 $this->send($communication, $sessionUuid, $phone, 'No momento nao ha servicos habilitados para agendamento via WhatsApp.');
@@ -316,6 +322,40 @@ class WhatsappAutomationWebhookController extends Controller
             if ($digits !== '') {
                 return $digits;
             }
+        }
+
+        return $this->extractPhoneFromPayloadValues($payload);
+    }
+
+    private function extractPhoneFromPayloadValues(mixed $payload): string
+    {
+        if (is_array($payload)) {
+            foreach ($payload as $value) {
+                $phone = $this->extractPhoneFromPayloadValues($value);
+                if ($phone !== '') {
+                    return $phone;
+                }
+            }
+
+            return '';
+        }
+
+        if (is_object($payload)) {
+            return $this->extractPhoneFromPayloadValues((array) $payload);
+        }
+
+        $value = trim((string) $payload);
+        if ($value === '') {
+            return '';
+        }
+
+        if (preg_match('/(?:^|[^0-9])((?:55)?[1-9]{2}9?[0-9]{8})(?:@(?:s\.whatsapp\.net|c\.us)|[^0-9]|$)/', $value, $matches)) {
+            return $matches[1];
+        }
+
+        $digits = preg_replace('/\D+/', '', $value) ?: '';
+        if (strlen($digits) >= 10 && strlen($digits) <= 13) {
+            return $digits;
         }
 
         return '';
@@ -595,6 +635,16 @@ class WhatsappAutomationWebhookController extends Controller
         $value = trim(mb_strtolower($value));
 
         return in_array($value, ['cancelar', 'cancela', 'sair', 'encerrar', 'parar', 'fim'], true);
+    }
+
+    private function isStartCommand(string $value): bool
+    {
+        $value = trim(mb_strtolower($value));
+
+        return str_contains($value, 'agendar')
+            || str_contains($value, 'horario')
+            || str_contains($value, 'horário')
+            || in_array($value, ['1', 'oi', 'ola', 'olá', 'bom dia', 'boa tarde', 'boa noite'], true);
     }
 
     private function createPatientForFlow(int $companyId, string $name, string $phone): Patient
