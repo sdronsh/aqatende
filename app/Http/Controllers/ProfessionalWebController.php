@@ -338,7 +338,7 @@ class ProfessionalWebController extends Controller
             $startTime2 = $slot2['start_time'] ?? null;
             $endTime2 = $slot2['end_time'] ?? null;
             $isActive = filter_var($schedule['is_active'] ?? false, FILTER_VALIDATE_BOOLEAN);
-            $hasAny = $isActive || $unitId || $startTime1 || $endTime1 || $startTime2 || $endTime2;
+            $hasAny = $isActive || $startTime1 || $endTime1 || $startTime2 || $endTime2;
 
             if (! $hasAny) {
                 continue;

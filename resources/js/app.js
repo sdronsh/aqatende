@@ -16,7 +16,7 @@ if ('serviceWorker' in navigator) {
 }
 
 let deferredPwaInstallPrompt = null;
-const pwaInstallDismissedKey = 'aqatende.pwaInstall.v2.dismissedUntil';
+const pwaInstallDismissedKey = 'aqatende.pwaInstall.v3.dismissed';
 
 const isPwaStandalone = () => {
     return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
@@ -31,14 +31,11 @@ const isIosDevice = () => {
 };
 
 const pwaInstallDismissed = () => {
-    const dismissedUntil = Number(localStorage.getItem(pwaInstallDismissedKey) || 0);
-
-    return dismissedUntil > Date.now();
+    return sessionStorage.getItem(pwaInstallDismissedKey) === '1';
 };
 
 const dismissPwaInstallPrompt = () => {
-    const oneDay = 24 * 60 * 60 * 1000;
-    localStorage.setItem(pwaInstallDismissedKey, String(Date.now() + oneDay));
+    sessionStorage.setItem(pwaInstallDismissedKey, '1');
     document.querySelector('[data-pwa-install-prompt]')?.remove();
 };
 

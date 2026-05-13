@@ -591,12 +591,21 @@ class WhatsappAutomationWebhookController extends Controller
         }
 
         $timezone = (string) config('aqamed.whatsapp.timezone', 'America/Sao_Paulo');
-        $year = now()->year;
+        $now = now($timezone);
+        $year = $now->year;
         $candidate = Carbon::createFromFormat(
             'd/m/Y H:i',
             "{$matches[1]}/{$matches[2]}/{$year} {$matches[3]}:{$matches[4]}",
             $timezone
         );
+
+        if ($candidate->isPast()) {
+            $candidate = Carbon::createFromFormat(
+                'd/m/Y H:i',
+                "{$matches[1]}/{$matches[2]}/".($year + 1)." {$matches[3]}:{$matches[4]}",
+                $timezone
+            );
+        }
 
         return $candidate;
     }
