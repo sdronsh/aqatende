@@ -57,7 +57,7 @@ class WhatsappAutomationWebhookController extends Controller
 
         if (($state['step'] ?? 'start') === 'start') {
             if (! $this->isStartCommand($lower)) {
-                $this->send($communication, $sessionUuid, $phone, "Oi! Responda *agendar* para iniciar seu agendamento.");
+                $this->send($communication, $sessionUuid, $phone, $this->welcomeMessage($automation));
                 $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
                 return response()->json(['ok' => true]);
             }
@@ -645,6 +645,15 @@ class WhatsappAutomationWebhookController extends Controller
             || str_contains($value, 'horario')
             || str_contains($value, 'horário')
             || in_array($value, ['1', 'oi', 'ola', 'olá', 'bom dia', 'boa tarde', 'boa noite'], true);
+    }
+
+    private function welcomeMessage(array $automation): string
+    {
+        $message = trim((string) data_get($automation, 'templates.welcome', ''));
+
+        return $message !== ''
+            ? str_replace('{nome}', 'cliente', $message)
+            : "Oi! Responda *agendar* para iniciar seu agendamento.";
     }
 
     private function createPatientForFlow(int $companyId, string $name, string $phone): Patient
