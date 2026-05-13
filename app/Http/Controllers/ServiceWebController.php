@@ -93,6 +93,7 @@ class ServiceWebController extends Controller
             'price_cents' => ['required_without:price', 'nullable', 'integer', 'min:0'],
             'active' => ['nullable', 'boolean'],
             'shared_service' => ['nullable', 'boolean'],
+            'whatsapp_booking_enabled' => ['nullable', 'boolean'],
             'is_package' => ['nullable', 'boolean'],
             'package_service_ids' => ['required_if:is_package,1', 'array', 'min:1'],
             'package_service_ids.*' => ['integer', 'exists:services,id'],
@@ -116,6 +117,7 @@ class ServiceWebController extends Controller
         $data['price_cents'] = $this->resolvePriceCents($data);
         $data['active'] = (bool) ($data['active'] ?? false);
         $data['shared_service'] = (bool) ($data['shared_service'] ?? false);
+        $data['whatsapp_booking_enabled'] = (bool) ($data['whatsapp_booking_enabled'] ?? false);
         $data['is_package'] = (bool) ($data['is_package'] ?? false);
         $packageServiceIds = $this->resolvePackageServiceIds($data, $companyId, (int) $data['clinic_id']);
         if ($data['is_package'] && empty($packageServiceIds)) {
@@ -175,6 +177,7 @@ class ServiceWebController extends Controller
             'price_cents' => ['required_without:price', 'nullable', 'integer', 'min:0'],
             'active' => ['nullable', 'boolean'],
             'shared_service' => ['nullable', 'boolean'],
+            'whatsapp_booking_enabled' => ['nullable', 'boolean'],
             'is_package' => ['nullable', 'boolean'],
             'package_service_ids' => ['required_if:is_package,1', 'array', 'min:1'],
             'package_service_ids.*' => ['integer', 'exists:services,id'],
@@ -198,6 +201,7 @@ class ServiceWebController extends Controller
         $data['price_cents'] = $this->resolvePriceCents($data);
         $data['active'] = (bool) ($data['active'] ?? false);
         $data['shared_service'] = (bool) ($data['shared_service'] ?? false);
+        $data['whatsapp_booking_enabled'] = (bool) ($data['whatsapp_booking_enabled'] ?? false);
         $data['is_package'] = (bool) ($data['is_package'] ?? false);
         $packageServiceIds = $this->resolvePackageServiceIds($data, $companyId, (int) $data['clinic_id'], (int) $service->id);
         if ($data['is_package'] && empty($packageServiceIds)) {

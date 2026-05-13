@@ -47,18 +47,21 @@
                             <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Preco">
                                 R$ {{ number_format(($service->price_cents ?? 0) / 100, 2, ',', '.') }}
                             </td>
-                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Tipo">
-                                @if ($service->is_package)
-                                    <span class="rounded-full bg-brand-50 px-2 py-1 text-xs font-semibold text-brand-600">Pacote</span>
+	                            <td class="border border-gray-200 px-4 py-3 text-gray-600" data-label="Tipo">
+	                                @if ($service->is_package)
+	                                    <span class="rounded-full bg-brand-50 px-2 py-1 text-xs font-semibold text-brand-600">Pacote</span>
                                     @if ($service->packageItems->isNotEmpty())
                                         <span class="mt-1 block text-xs text-gray-400">{{ $service->packageItems->pluck('name')->join(' + ') }}</span>
                                     @endif
                                 @elseif ($service->shared_service)
                                     <span class="rounded-full bg-brand-50 px-2 py-1 text-xs font-semibold text-brand-600">Compartilhado</span>
-                                @else
-                                    <span class="text-gray-400">Individual</span>
-                                @endif
-                            </td>
+	                                @else
+	                                    <span class="text-gray-400">Individual</span>
+	                                @endif
+                                    @if ($service->whatsapp_booking_enabled)
+                                        <span class="mt-1 block rounded-full bg-success-50 px-2 py-1 text-xs font-semibold text-success-700">WhatsApp</span>
+                                    @endif
+	                            </td>
                             <td class="border border-gray-200 px-4 py-3" data-actions>
                                 <div class="flex justify-end gap-2">
                                     <a class="rounded-lg border border-brand-500 px-2 py-1 text-xs font-medium text-brand-500 hover:bg-brand-50" href="{{ route('services.edit', $service) }}">Editar</a>

@@ -18,6 +18,7 @@ class Service extends Model
         'price_cents',
         'active',
         'shared_service',
+        'whatsapp_booking_enabled',
         'is_package',
     ];
 
@@ -26,6 +27,7 @@ class Service extends Model
         'price_cents' => 'int',
         'active' => 'bool',
         'shared_service' => 'bool',
+        'whatsapp_booking_enabled' => 'bool',
         'is_package' => 'bool',
     ];
 

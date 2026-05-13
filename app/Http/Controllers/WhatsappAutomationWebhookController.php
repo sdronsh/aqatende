@@ -25,9 +25,9 @@ class WhatsappAutomationWebhookController extends Controller
         }
 
         $payload = $request->all();
-        $sessionUuid = (string) (data_get($payload, 'session.uuid') ?? data_get($payload, 'session_uuid') ?? '');
-        $phone = preg_replace('/\D+/', '', (string) (data_get($payload, 'message.phone_number') ?? data_get($payload, 'phone_number') ?? '')) ?: '';
-        $text = trim((string) (data_get($payload, 'message.body') ?? data_get($payload, 'body') ?? data_get($payload, 'text') ?? ''));
+        $sessionUuid = $this->extractSessionUuid($payload);
+        $phone = $this->extractPhone($payload);
+        $text = $this->extractText($payload);
 
         if ($sessionUuid === '' || $phone === '' || $text === '') {
             return response()->json(['ok' => true, 'ignored' => true]);
@@ -47,20 +47,18 @@ class WhatsappAutomationWebhookController extends Controller
         $state = $this->loadState((int) $company['company_id'], $stateKey);
         $lower = mb_strtolower($text);
 
+        if ($this->isCancelCommand($lower)) {
+            return $this->cancelFlow($communication, (int) $company['company_id'], $stateKey, $sessionUuid, $phone);
+        }
+
         if ($lower === 'menu' || $lower === 'reiniciar') {
             $state = ['step' => 'start'];
         }
 
         if (($state['step'] ?? 'start') === 'start') {
-            if (! str_contains($lower, 'agendar') && ! in_array($lower, ['1', 'oi', 'ola', 'olá'], true)) {
-                $this->send($communication, $sessionUuid, $phone, "Oi! Responda *agendar* para iniciar seu agendamento.");
-                $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
-                return response()->json(['ok' => true]);
-            }
-
             $services = $this->servicesForCompany((int) $company['company_id']);
             if ($services->isEmpty()) {
-                $this->send($communication, $sessionUuid, $phone, 'No momento nao ha servicos ativos para agendamento.');
+                $this->send($communication, $sessionUuid, $phone, 'No momento nao ha servicos habilitados para agendamento via WhatsApp.');
                 return response()->json(['ok' => true]);
             }
 
@@ -68,6 +66,7 @@ class WhatsappAutomationWebhookController extends Controller
             foreach ($services as $idx => $service) {
                 $lines[] = ($idx + 1).'. '.$service->name;
             }
+            $lines[] = ($services->count() + 1).'. Cancelar atendimento';
             $this->send($communication, $sessionUuid, $phone, implode("\n", $lines));
             $this->saveState((int) $company['company_id'], $stateKey, [
                 'step' => 'service',
@@ -78,8 +77,12 @@ class WhatsappAutomationWebhookController extends Controller
 
         if (($state['step'] ?? null) === 'service') {
             $index = (int) $text;
+            if ($index === count($state['services'] ?? []) + 1) {
+                return $this->cancelFlow($communication, (int) $company['company_id'], $stateKey, $sessionUuid, $phone);
+            }
+
             $serviceId = $state['services'][$index - 1] ?? null;
-            $service = $serviceId ? Service::find($serviceId) : null;
+            $service = $serviceId ? $this->findWhatsappService((int) $company['company_id'], (int) $serviceId) : null;
             if (! $service) {
                 $this->send($communication, $sessionUuid, $phone, 'Opcao invalida. Envie o numero do servico.');
                 return response()->json(['ok' => true]);
@@ -96,6 +99,7 @@ class WhatsappAutomationWebhookController extends Controller
             foreach ($professionals as $idx => $professional) {
                 $lines[] = ($idx + 1).'. '.$professional->display_name;
             }
+            $lines[] = ($professionals->count() + 1).'. Cancelar atendimento';
             $this->send($communication, $sessionUuid, $phone, implode("\n", $lines));
             $this->saveState((int) $company['company_id'], $stateKey, [
                 'step' => 'professional',
@@ -106,7 +110,7 @@ class WhatsappAutomationWebhookController extends Controller
         }
 
         if (($state['step'] ?? null) === 'professional') {
-            $service = Service::find((int) ($state['service_id'] ?? 0));
+            $service = $this->findWhatsappService((int) $company['company_id'], (int) ($state['service_id'] ?? 0));
             if (! $service) {
                 $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
                 $this->send($communication, $sessionUuid, $phone, 'Vamos recomecar. Envie *agendar*.');
@@ -115,6 +119,10 @@ class WhatsappAutomationWebhookController extends Controller
 
             $professionals = $this->professionalsForService((int) $company['company_id'], $service);
             $option = (int) $text;
+            if ($option === count($state['professionals'] ?? []) + 1) {
+                return $this->cancelFlow($communication, (int) $company['company_id'], $stateKey, $sessionUuid, $phone);
+            }
+
             $professional = $option === 0
                 ? $professionals->first()
                 : (($state['professionals'][$option - 1] ?? null) ? $professionals->firstWhere('id', $state['professionals'][$option - 1]) : null);
@@ -129,12 +137,12 @@ class WhatsappAutomationWebhookController extends Controller
                 'service_id' => $service->id,
                 'professional_id' => $professional->id,
             ]);
-            $this->send($communication, $sessionUuid, $phone, 'Envie a data e hora desejada no formato *DD/MM HH:MM* (ex: 15/05 14:30).');
+            $this->send($communication, $sessionUuid, $phone, "Envie a data e hora desejada no formato *DD/MM HH:MM* (ex: 15/05 14:30).\nDigite *cancelar* para encerrar.");
             return response()->json(['ok' => true]);
         }
 
         if (($state['step'] ?? null) === 'datetime') {
-            $service = Service::find((int) ($state['service_id'] ?? 0));
+            $service = $this->findWhatsappService((int) $company['company_id'], (int) ($state['service_id'] ?? 0));
             $professional = Professional::find((int) ($state['professional_id'] ?? 0));
             if (! $service || ! $professional) {
                 $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
@@ -172,7 +180,7 @@ class WhatsappAutomationWebhookController extends Controller
                     $communication,
                     $sessionUuid,
                     $phone,
-                    'Nao encontramos seu cadastro. Quer agendar assim mesmo? Responda *sim* ou *nao*.'
+                    "Nao encontramos seu cadastro. Quer agendar assim mesmo? Responda *sim* ou *nao*.\nDigite *cancelar* para encerrar."
                 );
                 return response()->json(['ok' => true]);
             }
@@ -201,22 +209,22 @@ class WhatsappAutomationWebhookController extends Controller
 
             if ($this->isNegative($lower)) {
                 $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
-                $this->send($communication, $sessionUuid, $phone, 'Sem problema. Quando quiser, envie *agendar* para iniciar novamente.');
+                $this->send($communication, $sessionUuid, $phone, 'Sem problema. Quando quiser, envie uma nova mensagem para iniciar novamente.');
                 return response()->json(['ok' => true]);
             }
 
-            $this->send($communication, $sessionUuid, $phone, 'Responda *sim* para continuar ou *nao* para cancelar.');
+            $this->send($communication, $sessionUuid, $phone, "Responda *sim* para continuar ou *nao* para cancelar.\nDigite *cancelar* para encerrar.");
             return response()->json(['ok' => true]);
         }
 
         if (($state['step'] ?? null) === 'collect_guest_name') {
             $name = trim($text);
             if (mb_strlen($name) < 3) {
-                $this->send($communication, $sessionUuid, $phone, 'Nome muito curto. Informe seu nome completo.');
+                $this->send($communication, $sessionUuid, $phone, "Nome muito curto. Informe seu nome completo.\nDigite *cancelar* para encerrar.");
                 return response()->json(['ok' => true]);
             }
 
-            $service = Service::find((int) ($state['service_id'] ?? 0));
+            $service = $this->findWhatsappService((int) $company['company_id'], (int) ($state['service_id'] ?? 0));
             $professional = Professional::find((int) ($state['professional_id'] ?? 0));
             $unit = Unit::find((int) ($state['unit_id'] ?? 0));
             $scheduledAt = isset($state['scheduled_at']) ? Carbon::parse((string) $state['scheduled_at']) : null;
@@ -250,6 +258,98 @@ class WhatsappAutomationWebhookController extends Controller
         $communication->sendWhatsappMessage($sessionUuid, $phone, $text);
     }
 
+    private function cancelFlow(CommunicationClient $communication, int $companyId, string $stateKey, string $sessionUuid, string $phone): JsonResponse
+    {
+        $this->saveState($companyId, $stateKey, ['step' => 'start']);
+        $this->send($communication, $sessionUuid, $phone, 'Atendimento encerrado. Quando quiser iniciar novamente, envie uma nova mensagem.');
+
+        return response()->json(['ok' => true, 'cancelled' => true]);
+    }
+
+    private function extractSessionUuid(array $payload): string
+    {
+        foreach ([
+            'session.uuid',
+            'session_uuid',
+            'sessionUuid',
+            'session.id',
+            'instance.uuid',
+            'instance.session_uuid',
+            'instance.sessionUuid',
+            'instanceUuid',
+            'data.session.uuid',
+            'data.session_uuid',
+            'data.sessionUuid',
+        ] as $key) {
+            $value = trim((string) data_get($payload, $key, ''));
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '';
+    }
+
+    private function extractPhone(array $payload): string
+    {
+        foreach ([
+            'message.phone_number',
+            'phone_number',
+            'message.from',
+            'message.sender',
+            'message.remoteJid',
+            'message.remote_jid',
+            'message.key.remoteJid',
+            'key.remoteJid',
+            'data.phone_number',
+            'data.from',
+            'data.sender',
+            'data.remoteJid',
+            'data.key.remoteJid',
+            'from',
+            'sender',
+            'remoteJid',
+            'remote_jid',
+        ] as $key) {
+            $value = trim((string) data_get($payload, $key, ''));
+            $digits = preg_replace('/\D+/', '', $value) ?: '';
+            if ($digits !== '') {
+                return $digits;
+            }
+        }
+
+        return '';
+    }
+
+    private function extractText(array $payload): string
+    {
+        foreach ([
+            'message.body',
+            'message.text',
+            'message.conversation',
+            'message.extendedTextMessage.text',
+            'message.message.conversation',
+            'message.message.extendedTextMessage.text',
+            'body',
+            'text',
+            'data.body',
+            'data.text',
+            'data.message.body',
+            'data.message.text',
+            'data.message.conversation',
+            'data.message.extendedTextMessage.text',
+            'data.message.message.conversation',
+            'data.message.message.extendedTextMessage.text',
+        ] as $key) {
+            $value = trim((string) data_get($payload, $key, ''));
+            if ($value !== '') {
+                return $value;
+            }
+        }
+
+        return '';
+    }
+
     private function resolveCompanyBySessionUuid(string $uuid): ?array
     {
         $rows = CompanySetting::query()
@@ -272,9 +372,25 @@ class WhatsappAutomationWebhookController extends Controller
         return Service::query()
             ->whereIn('clinic_id', $clinicIds)
             ->where('active', true)
+            ->where('whatsapp_booking_enabled', true)
             ->orderBy('name')
-            ->limit(9)
             ->get(['id', 'name']);
+    }
+
+    private function findWhatsappService(int $companyId, int $serviceId): ?Service
+    {
+        if ($serviceId <= 0) {
+            return null;
+        }
+
+        $clinicIds = Clinic::query()->where('company_id', $companyId)->pluck('id');
+
+        return Service::query()
+            ->whereIn('clinic_id', $clinicIds)
+            ->where('active', true)
+            ->where('whatsapp_booking_enabled', true)
+            ->whereKey($serviceId)
+            ->first();
     }
 
     private function professionalsForService(int $companyId, Service $service)
@@ -290,7 +406,6 @@ class WhatsappAutomationWebhookController extends Controller
                     ->where('professional_service.active', true);
             })
             ->orderBy('display_name')
-            ->limit(9)
             ->get(['id', 'display_name']);
     }
 
@@ -473,6 +588,13 @@ class WhatsappAutomationWebhookController extends Controller
     {
         $value = trim(mb_strtolower($value));
         return in_array($value, ['nao', 'não', 'n', 'cancelar', 'no'], true);
+    }
+
+    private function isCancelCommand(string $value): bool
+    {
+        $value = trim(mb_strtolower($value));
+
+        return in_array($value, ['cancelar', 'cancela', 'sair', 'encerrar', 'parar', 'fim'], true);
     }
 
     private function createPatientForFlow(int $companyId, string $name, string $phone): Patient

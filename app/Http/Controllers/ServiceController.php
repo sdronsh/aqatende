@@ -42,6 +42,7 @@ class ServiceController extends Controller
             'price_cents' => ['required_without:price', 'nullable', 'integer', 'min:0'],
             'active' => ['boolean'],
             'shared_service' => ['boolean'],
+            'whatsapp_booking_enabled' => ['boolean'],
         ]);
 
         $companyId = $request->session()->get('active_company_id');
@@ -52,6 +53,7 @@ class ServiceController extends Controller
         $data['price_cents'] = $this->resolvePriceCents($data);
         $data['active'] = (bool) ($data['active'] ?? false);
         $data['shared_service'] = (bool) ($data['shared_service'] ?? false);
+        $data['whatsapp_booking_enabled'] = (bool) ($data['whatsapp_booking_enabled'] ?? false);
         unset($data['price']);
 
         return Service::create($data);
@@ -68,6 +70,7 @@ class ServiceController extends Controller
             'price_cents' => ['required_without:price', 'nullable', 'integer', 'min:0'],
             'active' => ['boolean'],
             'shared_service' => ['boolean'],
+            'whatsapp_booking_enabled' => ['boolean'],
         ]);
 
         $data['price_cents'] = $this->resolvePriceCents($data);
@@ -76,6 +79,9 @@ class ServiceController extends Controller
         }
         if (array_key_exists('shared_service', $data)) {
             $data['shared_service'] = (bool) $data['shared_service'];
+        }
+        if (array_key_exists('whatsapp_booking_enabled', $data)) {
+            $data['whatsapp_booking_enabled'] = (bool) $data['whatsapp_booking_enabled'];
         }
         unset($data['price']);
 

@@ -78,6 +78,16 @@
         </label>
     </div>
     <div class="md:col-span-4">
+        @php $whatsappBookingEnabled = old('whatsapp_booking_enabled', $service->whatsapp_booking_enabled ?? false); @endphp
+        <label class="inline-flex items-start gap-2 text-sm text-gray-600 mt-6">
+            <input type="checkbox" name="whatsapp_booking_enabled" value="1" class="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" @checked($whatsappBookingEnabled) />
+            <span>
+                <span class="font-medium text-gray-700">Permitir agendamento via WhatsApp</span>
+                <span class="block text-xs text-gray-500">Quando desmarcado, este servico nao aparece no fluxo automatico.</span>
+            </span>
+        </label>
+    </div>
+    <div class="md:col-span-4">
         @php $isPackage = old('is_package', $service->is_package ?? false); @endphp
         <label class="inline-flex items-start gap-2 text-sm text-gray-600 mt-6">
             <input type="checkbox" name="is_package" value="1" class="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" @checked($isPackage) />
