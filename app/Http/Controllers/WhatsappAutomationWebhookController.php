@@ -56,6 +56,12 @@ class WhatsappAutomationWebhookController extends Controller
         }
 
         if (($state['step'] ?? 'start') === 'start') {
+            if ($this->isGreetingCommand($lower)) {
+                $this->send($communication, $sessionUuid, $phone, $this->welcomeMessage($automation));
+                $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
+                return response()->json(['ok' => true]);
+            }
+
             if (! $this->isStartCommand($lower)) {
                 $this->send($communication, $sessionUuid, $phone, $this->welcomeMessage($automation));
                 $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
@@ -642,18 +648,28 @@ class WhatsappAutomationWebhookController extends Controller
         $value = trim(mb_strtolower($value));
 
         return str_contains($value, 'agendar')
+            || str_contains($value, 'agendamento')
             || str_contains($value, 'horario')
             || str_contains($value, 'horário')
-            || in_array($value, ['1', 'oi', 'ola', 'olá', 'bom dia', 'boa tarde', 'boa noite'], true);
+            || $value === '1';
+    }
+
+    private function isGreetingCommand(string $value): bool
+    {
+        $value = trim(mb_strtolower($value));
+
+        return in_array($value, ['oi', 'ola', 'olá', 'bom dia', 'boa tarde', 'boa noite'], true);
     }
 
     private function welcomeMessage(array $automation): string
     {
         $message = trim((string) data_get($automation, 'templates.welcome', ''));
 
-        return $message !== ''
+        $message = $message !== ''
             ? str_replace('{nome}', 'cliente', $message)
             : "Oi! Responda *agendar* para iniciar seu agendamento.";
+
+        return rtrim($message)."\n\nSe quiser iniciar um agendamento basta nos enviar a palavra *agendar* a qualquer momento.";
     }
 
     private function createPatientForFlow(int $companyId, string $name, string $phone): Patient
