@@ -28,6 +28,7 @@
             ['label' => 'Fluxo de Caixa', 'route' => 'finance.cashflow.index', 'permission' => 'financeiro.fluxo_caixa.view', 'icon' => 'M4 17h4l3-10 3 10h6M5 7h3M16 7h3M17.5 5.5 19 7l-1.5 1.5M6.5 5.5 5 7l1.5 1.5'],
             ['label' => 'Contas Bancarias', 'route' => 'finance.accounts.index', 'permission' => 'financeiro.contas_bancarias.view', 'icon' => 'M4 10h16M6 10v8M10 10v8M14 10v8M18 10v8M3 18h18M4 7l8-4 8 4z'],
             ['label' => 'Categorias', 'route' => 'finance.categories.index', 'permission' => 'financeiro.categorias.view', 'icon' => 'M4 7h7v7H4zM13 7h7v7h-7zM4 16h7v4H4zM13 16h7v4h-7z'],
+            ['label' => 'Desempenho', 'route' => 'finance.performance.index', 'permission' => 'financeiro.relatorios.view', 'icon' => 'M4 19V5M8 17v-6M12 17V8M16 17v-4M20 17V7M4 19h17'],
             ['label' => 'Relatorios', 'route' => 'finance.reports', 'permission' => 'financeiro.relatorios.view', 'icon' => 'M5 19V5M5 19h14M9 16v-5M13 16V8M17 16v-8'],
         ],
         'seguranca' => [

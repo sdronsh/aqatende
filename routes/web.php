@@ -250,6 +250,8 @@ Route::middleware('auth')->group(function () {
 
         Route::get('/fluxo-caixa', [\App\Http\Controllers\FinanceCashflowController::class, 'index'])
             ->name('cashflow.index');
+        Route::get('/desempenho', [\App\Http\Controllers\FinancePerformanceController::class, 'index'])
+            ->name('performance.index');
     });
     Route::get('/financeiro/relatorios', [\App\Http\Controllers\ReportsController::class, 'index'])
         ->middleware('permission:financeiro.relatorios.view')

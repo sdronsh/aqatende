@@ -1,6 +1,7 @@
 @php
     $pageTitle = $pageTitle ?? 'Agenda';
     $lockProfessionalFilter = $lockProfessionalFilter ?? false;
+    $ptDate = fn ($value) => $value->copy()->locale('pt_BR');
 @endphp
 
 <x-app-layout>
@@ -19,11 +20,11 @@
                         <div class="text-xs uppercase text-gray-400">{{ ucfirst($viewMode) }}</div>
                         <div class="truncate text-sm font-semibold text-gray-800">
                             @if ($viewMode === 'month')
-                                {{ $date->translatedFormat('F Y') }}
+                                {{ $ptDate($date)->translatedFormat('F Y') }}
                             @elseif ($viewMode === 'week')
                                 Semana de {{ $date->copy()->startOfWeek(\Illuminate\Support\Carbon::MONDAY)->format('d/m') }}
                             @else
-                                {{ $date->translatedFormat('d \\d\\e F Y') }}
+                                {{ $ptDate($date)->translatedFormat('d \\d\\e F Y') }}
                             @endif
                         </div>
                     </div>
@@ -194,7 +195,7 @@
                             $dayAppointments = $appointmentsByDay->get($dayKey, collect());
                         @endphp
                         <div class="rounded-lg border border-gray-200 bg-white p-3">
-                            <div class="text-xs uppercase text-gray-400">{{ $day->translatedFormat('D') }}</div>
+                            <div class="text-xs uppercase text-gray-400">{{ $ptDate($day)->translatedFormat('D') }}</div>
                             <div class="text-sm font-semibold text-gray-800">{{ $day->format('d/m') }}</div>
                             <div class="mt-2 space-y-2">
                                 @forelse ($dayAppointments as $appointment)
@@ -249,7 +250,7 @@
                     @endphp
                     <div class="space-y-4">
                         <div class="rounded-lg border border-gray-200 bg-white p-4">
-                            <div class="text-sm font-semibold text-gray-800">{{ $date->translatedFormat('F Y') }}</div>
+                            <div class="text-sm font-semibold text-gray-800">{{ $ptDate($date)->translatedFormat('F Y') }}</div>
                             <div class="mt-3 grid gap-1 text-[11px] text-gray-400" style="grid-template-columns: repeat(7, minmax(0, 1fr));">
                                 @foreach ($weekLabels as $label)
                                     <div class="text-center font-semibold uppercase">{{ $label }}</div>

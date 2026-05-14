@@ -56,7 +56,74 @@ class WhatsappAutomationWebhookController extends Controller
             $state = ['step' => 'start'];
         }
 
+        if (($state['step'] ?? null) === 'open_appointment_options') {
+            $appointment = $this->findOpenAppointmentForPatient((int) $company['company_id'], $patient, (int) ($state['appointment_id'] ?? 0));
+            if (! $appointment) {
+                $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
+                $this->send($communication, $sessionUuid, $phone, 'Nao encontrei mais esse agendamento em aberto. Envie *agendar* para iniciar um novo atendimento.');
+                return response()->json(['ok' => true]);
+            }
+
+            if (trim($lower) === '1') {
+                $this->saveState((int) $company['company_id'], $stateKey, [
+                    'step' => 'confirm_open_appointment_cancel',
+                    'appointment_id' => $appointment->id,
+                ]);
+                $this->send($communication, $sessionUuid, $phone, $this->appointmentCancellationConfirmationMessage($appointment));
+                return response()->json(['ok' => true]);
+            }
+
+            if (trim($lower) === '2' || $this->isStartCommand($lower) || str_contains($lower, 'novo')) {
+                return $this->startBookingFlow($communication, (int) $company['company_id'], $stateKey, $sessionUuid, $phone);
+            }
+
+            if (trim($lower) === '3') {
+                return $this->cancelFlow($communication, (int) $company['company_id'], $stateKey, $sessionUuid, $phone);
+            }
+
+            $this->send($communication, $sessionUuid, $phone, "Opcao invalida. Responda:\n1 - Cancelar este agendamento\n2 - Solicitar um novo agendamento\n3 - Encerrar contato via WhatsApp");
+            return response()->json(['ok' => true]);
+        }
+
+        if (($state['step'] ?? null) === 'confirm_open_appointment_cancel') {
+            $appointment = $this->findOpenAppointmentForPatient((int) $company['company_id'], $patient, (int) ($state['appointment_id'] ?? 0));
+            if (! $appointment) {
+                $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
+                $this->send($communication, $sessionUuid, $phone, 'Nao encontrei mais esse agendamento em aberto.');
+                return response()->json(['ok' => true]);
+            }
+
+            if ($this->isAffirmative($lower)) {
+                $this->cancelAppointmentFromWhatsapp($appointment);
+                $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
+                $this->send($communication, $sessionUuid, $phone, "Agendamento cancelado com sucesso.\n\nSe quiser iniciar um novo agendamento, envie *agendar*.");
+                return response()->json(['ok' => true, 'appointment_cancelled' => true, 'appointment_id' => $appointment->id]);
+            }
+
+            if ($lower === 'voltar' || $this->isNegative($lower)) {
+                $this->saveState((int) $company['company_id'], $stateKey, [
+                    'step' => 'open_appointment_options',
+                    'appointment_id' => $appointment->id,
+                ]);
+                $this->send($communication, $sessionUuid, $phone, $this->openAppointmentMessage($appointment, $patient));
+                return response()->json(['ok' => true]);
+            }
+
+            $this->send($communication, $sessionUuid, $phone, $this->appointmentCancellationConfirmationMessage($appointment));
+            return response()->json(['ok' => true]);
+        }
+
         if (($state['step'] ?? 'start') === 'start') {
+            $openAppointment = $this->findOpenAppointmentForPatient((int) $company['company_id'], $patient);
+            if ($openAppointment) {
+                $this->send($communication, $sessionUuid, $phone, $this->openAppointmentMessage($openAppointment, $patient));
+                $this->saveState((int) $company['company_id'], $stateKey, [
+                    'step' => 'open_appointment_options',
+                    'appointment_id' => $openAppointment->id,
+                ]);
+                return response()->json(['ok' => true]);
+            }
+
             if ($this->isGreetingCommand($lower)) {
                 $this->send($communication, $sessionUuid, $phone, $this->welcomeMessage($automation, $patient));
                 $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
@@ -69,23 +136,7 @@ class WhatsappAutomationWebhookController extends Controller
                 return response()->json(['ok' => true]);
             }
 
-            $services = $this->servicesForCompany((int) $company['company_id']);
-            if ($services->isEmpty()) {
-                $this->send($communication, $sessionUuid, $phone, 'No momento nao ha servicos habilitados para agendamento via WhatsApp.');
-                return response()->json(['ok' => true]);
-            }
-
-            $lines = ["Perfeito. Escolha o servico (responda com o numero):"];
-            foreach ($services as $idx => $service) {
-                $lines[] = ($idx + 1).'. '.$service->name;
-            }
-            $lines[] = ($services->count() + 1).'. Cancelar atendimento';
-            $this->send($communication, $sessionUuid, $phone, implode("\n", $lines));
-            $this->saveState((int) $company['company_id'], $stateKey, [
-                'step' => 'service',
-                'services' => $services->pluck('id')->all(),
-            ]);
-            return response()->json(['ok' => true]);
+            return $this->startBookingFlow($communication, (int) $company['company_id'], $stateKey, $sessionUuid, $phone);
         }
 
         if (($state['step'] ?? null) === 'service') {
@@ -276,6 +327,91 @@ class WhatsappAutomationWebhookController extends Controller
         $this->send($communication, $sessionUuid, $phone, 'Atendimento encerrado. Quando quiser iniciar novamente, envie uma nova mensagem.');
 
         return response()->json(['ok' => true, 'cancelled' => true]);
+    }
+
+    private function startBookingFlow(CommunicationClient $communication, int $companyId, string $stateKey, string $sessionUuid, string $phone): JsonResponse
+    {
+        $services = $this->servicesForCompany($companyId);
+        if ($services->isEmpty()) {
+            $this->send($communication, $sessionUuid, $phone, 'No momento nao ha servicos habilitados para agendamento via WhatsApp.');
+            return response()->json(['ok' => true]);
+        }
+
+        $lines = ["Perfeito. Escolha o servico (responda com o numero):"];
+        foreach ($services as $idx => $service) {
+            $lines[] = ($idx + 1).'. '.$service->name;
+        }
+        $lines[] = ($services->count() + 1).'. Cancelar atendimento';
+
+        $this->send($communication, $sessionUuid, $phone, implode("\n", $lines));
+        $this->saveState($companyId, $stateKey, [
+            'step' => 'service',
+            'services' => $services->pluck('id')->all(),
+        ]);
+
+        return response()->json(['ok' => true]);
+    }
+
+    private function findOpenAppointmentForPatient(int $companyId, ?Patient $patient, ?int $appointmentId = null): ?Appointment
+    {
+        if (! $patient) {
+            return null;
+        }
+
+        $clinicIds = Clinic::query()->where('company_id', $companyId)->pluck('id');
+
+        return Appointment::query()
+            ->with(['service', 'services', 'professional', 'unit'])
+            ->whereIn('clinic_id', $clinicIds)
+            ->where('patient_id', $patient->id)
+            ->whereIn('status', ['agendado', 'scheduled'])
+            ->where('scheduled_at', '>=', now())
+            ->when($appointmentId, fn ($query) => $query->whereKey($appointmentId))
+            ->orderBy('scheduled_at')
+            ->first();
+    }
+
+    private function openAppointmentMessage(Appointment $appointment, ?Patient $patient): string
+    {
+        $scheduledAt = $appointment->scheduled_at;
+        $clientName = $this->patientGreetingName($patient);
+        $serviceName = $appointment->serviceNames();
+        $professionalName = $appointment->professional?->display_name ?? 'Profissional a definir';
+        $unitName = $appointment->unit?->name ?? 'Unidade a definir';
+        $date = $scheduledAt?->format('d/m/Y') ?? '-';
+        $time = $scheduledAt?->format('H:i') ?? '-';
+
+        return "Olá {$clientName}. Encontrei um agendamento em aberto para você:\n\n"
+            ."Serviço: {$serviceName}\n"
+            ."Profissional: {$professionalName}\n"
+            ."Unidade: {$unitName}\n"
+            ."Data: {$date} às {$time}\n\n"
+            ."Como deseja continuar?\n"
+            ."1 - Cancelar este agendamento\n"
+            ."2 - Solicitar um novo agendamento\n"
+            ."3 - Encerrar contato via WhatsApp";
+    }
+
+    private function appointmentCancellationConfirmationMessage(Appointment $appointment): string
+    {
+        $scheduledAt = $appointment->scheduled_at;
+        $date = $scheduledAt?->format('d/m/Y') ?? '-';
+        $time = $scheduledAt?->format('H:i') ?? '-';
+
+        return "Para confirmar o cancelamento do agendamento de {$date} às {$time}, responda *SIM*.\n\nSe quiser voltar, responda *VOLTAR*.";
+    }
+
+    private function cancelAppointmentFromWhatsapp(Appointment $appointment): void
+    {
+        $appointment->update([
+            'status' => 'cancelado',
+            'cancelled_at' => now(),
+            'cancellation_reason' => 'Cancelado pelo cliente via WhatsApp.',
+        ]);
+
+        foreach ($appointment->services()->pluck('services.id') as $serviceId) {
+            $appointment->services()->updateExistingPivot($serviceId, ['status' => 'cancelado']);
+        }
     }
 
     private function extractSessionUuid(array $payload): string
