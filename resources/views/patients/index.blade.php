@@ -29,7 +29,7 @@
         }
     </style>
 
-    <div class="flex max-h-[calc(100vh-9rem)] flex-col overflow-hidden rounded-xl border border-gray-200 bg-white shadow-theme-sm">
+    <div class="flex flex-col overflow-visible rounded-xl border border-gray-200 bg-white shadow-theme-sm md:max-h-[calc(100vh-9rem)] md:overflow-hidden">
         <div class="sticky top-0 z-10 flex shrink-0 flex-wrap items-center justify-between gap-3 border-b border-gray-200 bg-white px-6 py-4">
             <div class="text-sm font-medium text-gray-700">Lista de Clientes</div>
             <form method="GET" action="{{ route('patients.index') }}" class="flex w-full max-w-3xl flex-wrap items-center gap-2">
@@ -44,7 +44,7 @@
                 <button class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-theme-xs hover:bg-gray-50" type="submit">Buscar</button>
             </form>
         </div>
-        <div class="responsive-table-wrapper flex-1 overflow-auto">
+        <div class="responsive-table-wrapper min-h-0 flex-1 overflow-visible md:overflow-auto">
             <table class="responsive-table min-w-full border-separate border border-gray-200 [border-spacing:0] text-sm">
                 <thead class="bg-gray-50">
                     <tr class="text-left text-xs font-semibold uppercase text-gray-500">
