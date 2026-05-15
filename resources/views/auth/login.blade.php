@@ -7,6 +7,56 @@
     @endphp
 
     <style>
+        .pwa-standalone .pwa-login-only .login-marketing,
+        .pwa-standalone .pwa-login-only .login-footer,
+        .pwa-standalone .pwa-login-only .login-cancel-link {
+            display: none !important;
+        }
+
+        .pwa-standalone .pwa-login-only .login-shell {
+            align-items: center;
+            justify-content: center;
+            max-width: none;
+            padding: 1.5rem;
+        }
+
+        .pwa-standalone .pwa-login-only .login-grid {
+            display: flex;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .pwa-standalone .pwa-login-only .login-card-section {
+            width: 100%;
+            justify-content: center;
+        }
+
+        @media (display-mode: standalone) {
+            .pwa-login-only .login-marketing,
+            .pwa-login-only .login-footer,
+            .pwa-login-only .login-cancel-link {
+                display: none !important;
+            }
+
+            .pwa-login-only .login-shell {
+                align-items: center;
+                justify-content: center;
+                max-width: none;
+                padding: 1.5rem;
+            }
+
+            .pwa-login-only .login-grid {
+                display: flex;
+                width: 100%;
+                justify-content: center;
+            }
+
+            .pwa-login-only .login-card-section {
+                width: 100%;
+                justify-content: center;
+            }
+        }
+
         @media (max-height: 800px) {
             .login-shell { padding-top: 1.5rem; padding-bottom: 1.5rem; }
             .login-hero h1 { font-size: 2rem; }
@@ -18,10 +68,16 @@
         }
     </style>
 
-    <div class="min-h-screen" style="background: radial-gradient(circle at top left, #fbecf8, #fdf7fc 42%, #ffffff 86%);">
+    <script>
+        if (window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true) {
+            document.documentElement.classList.add('pwa-standalone');
+        }
+    </script>
+
+    <div class="pwa-login-only min-h-screen" style="background: radial-gradient(circle at top left, #fbecf8, #fdf7fc 42%, #ffffff 86%);">
         <div class="login-shell mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8 lg:py-12">
-            <div class="grid items-center gap-10 lg:grid-cols-2">
-                <section>
+            <div class="login-grid grid items-center gap-10 lg:grid-cols-2">
+                <section class="login-marketing">
                     <div class="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-brand-700">
                         Plataforma AQAtende
                     </div>
@@ -57,7 +113,7 @@
                     </div>
                 </section>
 
-                <section class="relative flex justify-center lg:justify-end">
+                <section class="login-card-section relative flex justify-center lg:justify-end">
                     <div class="login-card w-full max-w-md rounded-[28px] p-10 shadow-[0_24px_60px_-30px_rgba(75,15,99,0.38)]" style="background: radial-gradient(circle at top left, #fbecf8, #fdf7fc 42%, #ffffff 86%);">
                         <div class="mb-6 flex justify-center">
                             <img class="login-logo h-40 w-40 md:h-48 md:w-48" src="{{ asset('logo.png') }}" alt="AQAtende" />
@@ -102,7 +158,7 @@
                                     </a>
                                 @endif
                                 <div class="flex items-center gap-2">
-                                    <a class="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-theme-xs hover:bg-gray-50" href="{{ url('/') }}">Cancelar</a>
+                                    <a class="login-cancel-link rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-theme-xs hover:bg-gray-50" href="{{ url('/') }}">Cancelar</a>
                                     <x-primary-button>
                                         Entrar
                                     </x-primary-button>

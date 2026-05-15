@@ -77,6 +77,10 @@ const isIosDevice = () => {
     return /iPhone|iPad|iPod/i.test(navigator.userAgent);
 };
 
+const hasPwaInstallPrompt = () => {
+    return Boolean(document.querySelector('[data-pwa-install-prompt]'));
+};
+
 const pwaInstallDismissed = () => {
     return sessionStorage.getItem(pwaInstallDismissedKey) === '1';
 };
@@ -123,6 +127,10 @@ const showPwaInstallPrompt = (mode = 'native') => {
 };
 
 window.addEventListener('beforeinstallprompt', (event) => {
+    if (!hasPwaInstallPrompt() || isPwaStandalone() || !isMobileDevice() || pwaInstallDismissed()) {
+        return;
+    }
+
     event.preventDefault();
     deferredPwaInstallPrompt = event;
     showPwaInstallPrompt('native');
@@ -243,17 +251,6 @@ window.addEventListener('load', () => {
         }
     });
 
-    if (isIosDevice()) {
-        showPwaInstallPrompt('ios');
-    } else {
-        showPwaInstallPrompt(deferredPwaInstallPrompt ? 'native' : 'preparing');
-        window.setTimeout(() => {
-            if (!deferredPwaInstallPrompt) {
-                showPwaInstallPrompt('manual');
-            }
-        }, 2500);
-    }
-
     offlineDismissButton?.addEventListener('click', () => {
         offlineDismissed = true;
         hideElement(offlineBanner);
@@ -284,10 +281,4 @@ window.addEventListener('load', () => {
     });
 
     updateConnectionStatus();
-});
-
-window.addEventListener('aqatende:pwa-ready', () => {
-    if (!isIosDevice() && !deferredPwaInstallPrompt) {
-        showPwaInstallPrompt('preparing');
-    }
 });
