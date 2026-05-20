@@ -62,6 +62,7 @@
                 <a class="hover:text-white" href="#recursos">Recursos</a>
                 <a class="hover:text-white" href="#fluxo">Fluxo</a>
                 <a class="hover:text-white" href="#planos">Planos</a>
+                <a class="hover:text-white" href="#ajuda">Ajuda</a>
                 <a class="hover:text-white" href="#contato">Contato</a>
             </nav>
             <div class="flex items-center gap-2 text-sm">
@@ -309,6 +310,110 @@
                             Entre em contato
                         </a>
                         <div class="mt-3 text-sm font-medium text-brand-800">(31) 99372-3008</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section id="ajuda" class="px-5 py-20 md:py-28">
+            <div class="mx-auto max-w-7xl">
+                <div class="grid gap-12 lg:grid-cols-[.85fr_1.15fr]">
+                    <div>
+                        <p class="text-xs font-bold uppercase tracking-[0.3em] text-brand-600">Ajuda e primeiros passos</p>
+                        <h2 class="mt-5 text-3xl font-semibold leading-tight md:text-4xl">Um guia rapido para operar sem depender do suporte.</h2>
+                        <p class="mt-5 text-lg leading-8 text-gray-600">
+                            Consulte os caminhos principais do sistema e as duvidas mais comuns sobre agenda, fila, clientes, profissionais, financeiro e WhatsApp.
+                        </p>
+                        <div class="mt-8 space-y-3 text-sm text-gray-600">
+                            @foreach ([
+                                ['1', 'Cadastre servicos e profissionais', 'Defina duracao, valor, comissao e quais profissionais executam cada servico.'],
+                                ['2', 'Organize a rotina de atendimento', 'Use agenda para horarios marcados e fila para encaixes ou chegada espontanea.'],
+                                ['3', 'Feche o atendimento', 'Ao finalizar, registre o pagamento para alimentar contas a receber, caixa e comissoes.'],
+                                ['4', 'Acompanhe o financeiro', 'Use os relatórios e o fluxo de caixa para conferir entradas, saidas e repasses.'],
+                            ] as [$number, $title, $text])
+                                <div class="flex gap-4 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-xs">
+                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-50 text-sm font-bold text-brand-700">{{ $number }}</div>
+                                    <div>
+                                        <div class="font-semibold text-gray-900">{{ $title }}</div>
+                                        <p class="mt-1 leading-6">{{ $text }}</p>
+                                    </div>
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="rounded-2xl border border-gray-200 bg-gray-50 p-5 md:p-6">
+                            <h3 class="text-xl font-semibold text-gray-900">Principais duvidas</h3>
+                            <div class="mt-5 divide-y divide-gray-200 rounded-xl border border-gray-200 bg-white">
+                                @foreach ([
+                                    ['Como crio um agendamento?', 'Acesse Agenda ou Agendamentos, escolha cliente, servico, profissional, unidade, data e horario. O sistema respeita a agenda do profissional e registra o atendimento.'],
+                                    ['Quando uso fila e quando uso agenda?', 'Use agenda para horarios marcados. Use fila para atendimento por ordem de chegada, encaixes ou quando o cliente ja esta na unidade aguardando.'],
+                                    ['Como configuro os profissionais?', 'Cadastre o profissional, vincule unidades e servicos, defina se ele esta ativo e configure comissao por percentual ou valor fixo quando necessario.'],
+                                    ['Como o financeiro e gerado?', 'Ao criar ou finalizar atendimentos, o AQAtende cria contas a receber e movimentacoes relacionadas. No fechamento do atendimento, informe a forma de pagamento.'],
+                                    ['Como funcionam as comissoes?', 'A comissao pode ser configurada no profissional ou por servico. Ao finalizar o atendimento, o sistema calcula o valor do profissional e o valor do salao.'],
+                                    ['Como envio link de agendamento para um cliente?', 'No cadastro do cliente, use Gerar link de agendamento. Com WhatsApp ativo, o cliente tambem pode pedir horarios disponiveis pelo bot.'],
+                                    ['O cliente pode agendar pelo WhatsApp?', 'Sim. Com o modulo habilitado, ele pode enviar agendar para seguir o fluxo automatico ou disponivel para receber um link com horarios abertos.'],
+                                    ['Como evito choque de horario?', 'Configure os horarios dos profissionais e use a agenda do sistema. O bot e o link publico validam disponibilidade antes de criar o agendamento.'],
+                                    ['O que fazer se um cliente desistir?', 'Abra o agendamento e cancele, informando o motivo quando aplicavel. O horario volta a ficar livre conforme as regras da agenda.'],
+                                    ['Como vejo o resultado do dia?', 'Use o dashboard, fluxo de caixa e relatorios financeiros para acompanhar atendimentos, entradas, contas e comissoes.'],
+                                ] as [$question, $answer])
+                                    <details class="group p-4 open:bg-brand-50/40">
+                                        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-gray-900">
+                                            <span>{{ $question }}</span>
+                                            <span class="text-lg text-brand-600 group-open:rotate-45">+</span>
+                                        </summary>
+                                        <p class="mt-3 text-sm leading-6 text-gray-600">{{ $answer }}</p>
+                                    </details>
+                                @endforeach
+                            </div>
+                        </div>
+
+                        <div class="mt-6 rounded-2xl border border-brand-100 bg-brand-50 p-5 md:p-6">
+                            <div class="flex flex-wrap items-start justify-between gap-4">
+                                <div>
+                                    <p class="text-xs font-bold uppercase tracking-[0.24em] text-brand-700">WhatsApp</p>
+                                    <h3 class="mt-2 text-xl font-semibold text-gray-900">Configuracao do atendimento automatico</h3>
+                                </div>
+                                <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-brand-700">Modulo adicional</span>
+                            </div>
+
+                            <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                                @foreach ([
+                                    ['1', 'Conecte a sessao', 'Acesse Configuracoes > WhatsApp > Conexao e gere QR Code ou codigo de pareamento.'],
+                                    ['2', 'Ative o bot', 'Na aba Fluxo de agendamento, marque o bot como ativo e salve as configuracoes.'],
+                                    ['3', 'Defina o limite da agenda', 'Informe por quantos meses o cliente pode agendar automaticamente, como 3 meses.'],
+                                    ['4', 'Libere os servicos', 'Em Servicos, marque quais procedimentos podem aparecer no agendamento via WhatsApp.'],
+                                    ['5', 'Teste os comandos', 'Envie agendar para o fluxo automatico ou disponivel para receber o link de horarios.'],
+                                    ['6', 'Monitore a conexao', 'Se desconectar, volte em Conexao para atualizar status, gerar novo codigo ou reiniciar a sessao.'],
+                                ] as [$number, $title, $text])
+                                    <div class="rounded-xl border border-brand-100 bg-white p-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-brand-500 text-xs font-bold text-white">{{ $number }}</div>
+                                            <div class="text-sm font-semibold text-gray-900">{{ $title }}</div>
+                                        </div>
+                                        <p class="mt-3 text-sm leading-6 text-gray-600">{{ $text }}</p>
+                                    </div>
+                                @endforeach
+                            </div>
+
+                            <div class="mt-5 divide-y divide-brand-100 rounded-xl border border-brand-100 bg-white">
+                                @foreach ([
+                                    ['Qual a diferenca entre agendar e disponivel?', 'Agendar conduz o cliente pelo atendimento automatico, perguntando servico, profissional e horario. Disponivel envia um link para ele escolher entre os horarios abertos.'],
+                                    ['O que fazer se o WhatsApp parar de responder?', 'Confira a aba Conexao, atualize o status e, se necessario, reinicie a sessao para gerar um novo QR Code ou codigo de pareamento.'],
+                                    ['Por que um servico nao aparece no WhatsApp?', 'Verifique se o servico esta ativo, se esta liberado para agendamento via WhatsApp e se existe profissional ativo vinculado a ele.'],
+                                    ['Como evitar agendamento muito distante?', 'Use o campo de abertura da agenda automatica em meses na aba Fluxo de agendamento. O bot bloqueia datas fora desse limite.'],
+                                ] as [$question, $answer])
+                                    <details class="group p-4 open:bg-brand-50/50">
+                                        <summary class="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-gray-900">
+                                            <span>{{ $question }}</span>
+                                            <span class="text-lg text-brand-600 group-open:rotate-45">+</span>
+                                        </summary>
+                                        <p class="mt-3 text-sm leading-6 text-gray-600">{{ $answer }}</p>
+                                    </details>
+                                @endforeach
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
