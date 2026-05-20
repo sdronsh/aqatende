@@ -214,9 +214,20 @@ class WhatsappAutomationWebhookController extends Controller
                 return response()->json(['ok' => true]);
             }
 
-            $scheduledAt = $this->parseDateTime($text);
-            if (! $scheduledAt || $scheduledAt->isPast()) {
+            $bookingWindowMonths = $this->bookingWindowMonths($automation);
+            $scheduledAt = $this->parseDateTime($text, $bookingWindowMonths);
+            if (! $scheduledAt) {
                 $this->send($communication, $sessionUuid, $phone, 'Data/hora invalida. Use *DD/MM HH:MM* (ex: 15/05 14:30).');
+                return response()->json(['ok' => true]);
+            }
+
+            if ($scheduledAt->isPast()) {
+                $this->send($communication, $sessionUuid, $phone, 'Essa data/hora ja passou. Envie uma nova data futura no formato *DD/MM HH:MM*.');
+                return response()->json(['ok' => true]);
+            }
+
+            if ($this->isOutsideBookingWindow($scheduledAt, $bookingWindowMonths)) {
+                $this->send($communication, $sessionUuid, $phone, "A agenda automatica permite horarios em ate {$bookingWindowMonths} mes(es) a partir de hoje. Envie outro horario no formato *DD/MM HH:MM*.");
                 return response()->json(['ok' => true]);
             }
 
@@ -227,7 +238,7 @@ class WhatsappAutomationWebhookController extends Controller
             }
 
             if (! $this->isProfessionalAvailable($professional->id, $unit->id, $scheduledAt, (int) ($service->duration_minutes ?: 30))) {
-                $this->send($communication, $sessionUuid, $phone, 'Horario indisponivel. Envie outro horario no formato *DD/MM HH:MM*.');
+                $this->send($communication, $sessionUuid, $phone, 'Esse horario ja esta ocupado ou indisponivel. Por favor, envie outro horario no formato *DD/MM HH:MM*.');
                 return response()->json(['ok' => true]);
             }
 
@@ -295,6 +306,27 @@ class WhatsappAutomationWebhookController extends Controller
             if (! $service || ! $professional || ! $unit || ! $scheduledAt) {
                 $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
                 $this->send($communication, $sessionUuid, $phone, 'Nao consegui concluir. Envie *agendar* para recomecar.');
+                return response()->json(['ok' => true]);
+            }
+
+            $bookingWindowMonths = $this->bookingWindowMonths($automation);
+            if ($scheduledAt->isPast() || $this->isOutsideBookingWindow($scheduledAt, $bookingWindowMonths)) {
+                $this->saveState((int) $company['company_id'], $stateKey, [
+                    'step' => 'datetime',
+                    'service_id' => $service->id,
+                    'professional_id' => $professional->id,
+                ]);
+                $this->send($communication, $sessionUuid, $phone, "Esse horario nao esta mais dentro da janela de agendamento automatico. Envie outro horario em ate {$bookingWindowMonths} mes(es), no formato *DD/MM HH:MM*.");
+                return response()->json(['ok' => true]);
+            }
+
+            if (! $this->isProfessionalAvailable($professional->id, $unit->id, $scheduledAt, (int) ($service->duration_minutes ?: 30))) {
+                $this->saveState((int) $company['company_id'], $stateKey, [
+                    'step' => 'datetime',
+                    'service_id' => $service->id,
+                    'professional_id' => $professional->id,
+                ]);
+                $this->send($communication, $sessionUuid, $phone, 'Esse horario ja esta ocupado ou indisponivel. Por favor, envie outro horario no formato *DD/MM HH:MM*.');
                 return response()->json(['ok' => true]);
             }
 
@@ -720,7 +752,7 @@ class WhatsappAutomationWebhookController extends Controller
         return array_keys($set);
     }
 
-    private function parseDateTime(string $text): ?Carbon
+    private function parseDateTime(string $text, int $bookingWindowMonths): ?Carbon
     {
         if (! preg_match('/^\s*(\d{2})\/(\d{2})\s+(\d{2}):(\d{2})\s*$/', $text, $matches)) {
             return null;
@@ -729,21 +761,48 @@ class WhatsappAutomationWebhookController extends Controller
         $timezone = (string) config('aqamed.whatsapp.timezone', 'America/Sao_Paulo');
         $now = now($timezone);
         $year = $now->year;
-        $candidate = Carbon::createFromFormat(
-            'd/m/Y H:i',
-            "{$matches[1]}/{$matches[2]}/{$year} {$matches[3]}:{$matches[4]}",
-            $timezone
-        );
+        $candidate = $this->createDateTimeFromParts($matches, $year, $timezone);
+        if (! $candidate) {
+            return null;
+        }
 
         if ($candidate->isPast()) {
-            $candidate = Carbon::createFromFormat(
-                'd/m/Y H:i',
-                "{$matches[1]}/{$matches[2]}/".($year + 1)." {$matches[3]}:{$matches[4]}",
-                $timezone
-            );
+            $nextYearCandidate = $this->createDateTimeFromParts($matches, $year + 1, $timezone);
+            if ($nextYearCandidate && ! $this->isOutsideBookingWindow($nextYearCandidate, $bookingWindowMonths)) {
+                return $nextYearCandidate;
+            }
         }
 
         return $candidate;
+    }
+
+    private function createDateTimeFromParts(array $matches, int $year, string $timezone): ?Carbon
+    {
+        $dateTime = "{$matches[1]}/{$matches[2]}/{$year} {$matches[3]}:{$matches[4]}";
+        try {
+            $candidate = Carbon::createFromFormat('d/m/Y H:i', $dateTime, $timezone);
+        } catch (\Throwable) {
+            return null;
+        }
+
+        if (! $candidate || $candidate->format('d/m/Y H:i') !== $dateTime) {
+            return null;
+        }
+
+        return $candidate;
+    }
+
+    private function bookingWindowMonths(array $automation): int
+    {
+        return min(max((int) data_get($automation, 'flow.booking_window_months', 3), 1), 12);
+    }
+
+    private function isOutsideBookingWindow(Carbon $scheduledAt, int $bookingWindowMonths): bool
+    {
+        $timezone = (string) config('aqamed.whatsapp.timezone', 'America/Sao_Paulo');
+        $limit = now($timezone)->addMonthsNoOverflow($bookingWindowMonths)->endOfDay();
+
+        return $scheduledAt->greaterThan($limit);
     }
 
     private function loadState(int $companyId, string $key): array

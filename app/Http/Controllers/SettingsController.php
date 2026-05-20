@@ -96,6 +96,7 @@ class SettingsController extends Controller
             'send_to_inactive' => ['nullable', 'boolean'],
             'bot_enabled' => ['nullable', 'boolean'],
             'bot_allow_any_professional' => ['nullable', 'boolean'],
+            'booking_window_months' => ['nullable', 'integer', 'min:1', 'max:12'],
             'bot_confirmation_template' => ['nullable', 'string', 'max:280'],
             'template_welcome' => ['nullable', 'string', 'max:2000'],
             'template_inactive' => ['nullable', 'string', 'max:2000'],
@@ -125,6 +126,7 @@ class SettingsController extends Controller
             $payload['flow'] = array_replace($payload['flow'] ?? [], [
                 'bot_enabled' => (bool) ($data['bot_enabled'] ?? false),
                 'bot_allow_any_professional' => (bool) ($data['bot_allow_any_professional'] ?? true),
+                'booking_window_months' => (int) ($data['booking_window_months'] ?? 3),
                 'bot_confirmation_template' => (string) ($data['bot_confirmation_template'] ?? ''),
             ]);
         }
@@ -413,6 +415,7 @@ class SettingsController extends Controller
             'flow' => [
                 'bot_enabled' => false,
                 'bot_allow_any_professional' => true,
+                'booking_window_months' => 3,
                 'bot_confirmation_template' => 'Perfeito, {nome}. Seu horario foi confirmado para {data_hora}.',
             ],
             'rules' => [

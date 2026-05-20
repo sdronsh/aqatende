@@ -132,6 +132,12 @@
                     </label>
 
                     <div>
+                        <label for="booking_window_months" class="mb-1 block text-xs font-semibold uppercase text-gray-500">Abertura da agenda automatica em meses</label>
+                        <input id="booking_window_months" name="booking_window_months" type="number" min="1" max="12" value="{{ old('booking_window_months', data_get($automation, 'flow.booking_window_months', 3)) }}" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 sm:w-48">
+                        <p class="mt-1 text-xs text-gray-500">O bot so aceita horarios entre agora e o limite informado.</p>
+                    </div>
+
+                    <div>
                         <label for="bot_confirmation_template" class="mb-1 block text-xs font-semibold uppercase text-gray-500">Template de confirmacao</label>
                         <textarea id="bot_confirmation_template" name="bot_confirmation_template" rows="3" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700">{{ old('bot_confirmation_template', data_get($automation, 'flow.bot_confirmation_template')) }}</textarea>
                     </div>
