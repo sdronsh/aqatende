@@ -52,7 +52,7 @@ class LoginRequest extends FormRequest
                 RateLimiter::hit($this->throttleKey());
 
                 throw ValidationException::withMessages([
-                    'username' => trans('auth.failed'),
+                    'username' => $this->authFailedMessage(),
                 ]);
             }
         } else {
@@ -82,7 +82,7 @@ class LoginRequest extends FormRequest
                 RateLimiter::hit($this->throttleKey());
 
                 throw ValidationException::withMessages([
-                    'username' => trans('auth.failed'),
+                    'username' => $this->authFailedMessage(),
                 ]);
             }
 
@@ -108,10 +108,7 @@ class LoginRequest extends FormRequest
         $seconds = RateLimiter::availableIn($this->throttleKey());
 
         throw ValidationException::withMessages([
-            'username' => trans('auth.throttle', [
-                'seconds' => $seconds,
-                'minutes' => ceil($seconds / 60),
-            ]),
+            'username' => $this->authThrottleMessage($seconds),
         ]);
     }
 
@@ -129,5 +126,26 @@ class LoginRequest extends FormRequest
     private function normalizeCnpj(string $value): string
     {
         return preg_replace('/\D/', '', $value) ?? '';
+    }
+
+    private function authFailedMessage(): string
+    {
+        $message = trans('auth.failed');
+
+        return $message === 'auth.failed'
+            ? 'As credenciais informadas nao conferem.'
+            : $message;
+    }
+
+    private function authThrottleMessage(int $seconds): string
+    {
+        $message = trans('auth.throttle', [
+            'seconds' => $seconds,
+            'minutes' => ceil($seconds / 60),
+        ]);
+
+        return $message === 'auth.throttle'
+            ? "Muitas tentativas de acesso. Tente novamente em {$seconds} segundos."
+            : $message;
     }
 }
