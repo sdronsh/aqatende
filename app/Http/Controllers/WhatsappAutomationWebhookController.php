@@ -6,6 +6,7 @@ use App\Models\Appointment;
 use App\Models\Clinic;
 use App\Models\CompanySetting;
 use App\Models\Patient;
+use App\Models\PatientBookingLink;
 use App\Models\Professional;
 use App\Models\Schedule;
 use App\Models\Service;
@@ -14,6 +15,7 @@ use App\Services\Communication\CommunicationClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class WhatsappAutomationWebhookController extends Controller
 {
@@ -54,6 +56,10 @@ class WhatsappAutomationWebhookController extends Controller
 
         if ($lower === 'menu' || $lower === 'reiniciar') {
             $state = ['step' => 'start'];
+        }
+
+        if ($this->isAvailabilityLinkCommand($lower)) {
+            return $this->sendAvailabilityLinkFlow($communication, (int) $company['company_id'], $stateKey, $sessionUuid, $phone, $patient);
         }
 
         if (($state['step'] ?? null) === 'open_appointment_options') {
@@ -272,6 +278,22 @@ class WhatsappAutomationWebhookController extends Controller
             return response()->json(['ok' => true, 'appointment_id' => $appointment->id]);
         }
 
+        if (($state['step'] ?? null) === 'collect_booking_link_guest_name') {
+            $name = trim($text);
+            if (mb_strlen($name) < 3) {
+                $this->send($communication, $sessionUuid, $phone, "Nome muito curto. Informe seu nome completo.\nDigite *cancelar* para encerrar.");
+                return response()->json(['ok' => true]);
+            }
+
+            $patient = $this->createPatientForFlow((int) $company['company_id'], $name, $phone);
+            $link = $this->createBookingLinkForPatient((int) $company['company_id'], $patient);
+
+            $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
+            $this->send($communication, $sessionUuid, $phone, "Cadastro concluido. Acesse o link abaixo para escolher um horario disponivel:\n{$link}");
+
+            return response()->json(['ok' => true, 'patient_id' => $patient->id]);
+        }
+
         if (($state['step'] ?? null) === 'confirm_guest_create') {
             if ($this->isAffirmative($lower)) {
                 $this->saveState((int) $company['company_id'], $stateKey, array_merge($state, [
@@ -382,6 +404,22 @@ class WhatsappAutomationWebhookController extends Controller
         ]);
 
         return response()->json(['ok' => true]);
+    }
+
+    private function sendAvailabilityLinkFlow(CommunicationClient $communication, int $companyId, string $stateKey, string $sessionUuid, string $phone, ?Patient $patient): JsonResponse
+    {
+        if (! $patient) {
+            $this->saveState($companyId, $stateKey, ['step' => 'collect_booking_link_guest_name']);
+            $this->send($communication, $sessionUuid, $phone, "Para enviar o link de horarios disponiveis, informe seu nome completo.\nDigite *cancelar* para encerrar.");
+
+            return response()->json(['ok' => true]);
+        }
+
+        $link = $this->createBookingLinkForPatient($companyId, $patient);
+        $this->saveState($companyId, $stateKey, ['step' => 'start']);
+        $this->send($communication, $sessionUuid, $phone, "Acesse o link abaixo para escolher um horario disponivel:\n{$link}");
+
+        return response()->json(['ok' => true, 'patient_id' => $patient->id]);
     }
 
     private function findOpenAppointmentForPatient(int $companyId, ?Patient $patient, ?int $appointmentId = null): ?Appointment
@@ -861,6 +899,13 @@ class WhatsappAutomationWebhookController extends Controller
             || $value === '1';
     }
 
+    private function isAvailabilityLinkCommand(string $value): bool
+    {
+        $value = trim(mb_strtolower($value));
+
+        return in_array($value, ['disponivel', 'disponível', 'disponibilidade', 'horarios disponiveis', 'horários disponíveis'], true);
+    }
+
     private function isGreetingCommand(string $value): bool
     {
         $value = trim(mb_strtolower($value));
@@ -875,9 +920,9 @@ class WhatsappAutomationWebhookController extends Controller
 
         $message = $message !== ''
             ? str_replace(['{cliente}', '{nome}'], $clientName, $message)
-            : "Oi! Responda *agendar* para iniciar seu agendamento.";
+            : "Oi! Responda *agendar* para iniciar seu agendamento pelo atendimento automatico.\nOu responda *disponivel* para receber um link com os horarios disponiveis.";
 
-        return rtrim($message)."\n\nSe quiser iniciar um agendamento basta nos enviar a palavra *agendar* a qualquer momento.";
+        return rtrim($message)."\n\nEnvie *agendar* para seguir pelo atendimento automatico ou *disponivel* para receber um link com os horarios disponiveis.";
     }
 
     private function patientGreetingName(?Patient $patient): string
@@ -976,5 +1021,18 @@ class WhatsappAutomationWebhookController extends Controller
             'price_cents' => (int) ($service->price_cents ?? 0),
             'payment_status' => 'pending',
         ]);
+    }
+
+    private function createBookingLinkForPatient(int $companyId, Patient $patient): string
+    {
+        $bookingLink = PatientBookingLink::create([
+            'company_id' => $companyId,
+            'patient_id' => $patient->id,
+            'created_by' => null,
+            'token' => Str::random(48),
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        return route('public.booking.show', $bookingLink->token);
     }
 }

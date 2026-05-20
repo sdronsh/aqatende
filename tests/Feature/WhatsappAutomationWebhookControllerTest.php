@@ -7,6 +7,7 @@ use App\Models\Clinic;
 use App\Models\Company;
 use App\Models\CompanySetting;
 use App\Models\Patient;
+use App\Models\PatientBookingLink;
 use App\Models\Professional;
 use App\Models\Service;
 use App\Models\Unit;
@@ -79,6 +80,58 @@ class WhatsappAutomationWebhookControllerTest extends TestCase
         $this->assertDatabaseMissing('appointments', [
             'scheduled_at' => '2027-05-15 17:00:00',
         ]);
+    }
+
+    public function test_existing_patient_receives_public_booking_link_from_available_command(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-05-20 10:00:00', 'America/Sao_Paulo'));
+        $context = $this->createWhatsappBookingContext();
+
+        $sentMessages = [];
+        $this->fakeCommunicationClient($sentMessages);
+
+        $this->postJson('/api/whatsapp/webhook', $this->webhookPayload($context, 'disponivel'))
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $bookingLink = PatientBookingLink::firstOrFail();
+
+        $this->assertSame($context['company']->id, $bookingLink->company_id);
+        $this->assertSame($context['patient']->id, $bookingLink->patient_id);
+        $this->assertStringContainsString(route('public.booking.show', $bookingLink->token), $sentMessages[0] ?? '');
+        $this->assertDatabaseHas('company_settings', [
+            'company_id' => $context['company']->id,
+            'key' => 'whatsapp_flow_state_5599999999999',
+            'value' => json_encode(['step' => 'start']),
+        ]);
+    }
+
+    public function test_unknown_patient_informs_name_before_receiving_public_booking_link(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-05-20 10:00:00', 'America/Sao_Paulo'));
+        $context = $this->createWhatsappBookingContext();
+        $context['patient']->delete();
+
+        $sentMessages = [];
+        $this->fakeCommunicationClient($sentMessages);
+
+        $this->postJson('/api/whatsapp/webhook', $this->webhookPayload($context, 'disponivel'))
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $this->assertSame(0, PatientBookingLink::count());
+        $this->assertStringContainsString('informe seu nome completo', $sentMessages[0] ?? '');
+
+        $this->postJson('/api/whatsapp/webhook', $this->webhookPayload($context, 'Cliente Novo'))
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $patient = Patient::where('full_name', 'Cliente Novo')->firstOrFail();
+        $bookingLink = PatientBookingLink::firstOrFail();
+
+        $this->assertSame($patient->id, $bookingLink->patient_id);
+        $this->assertTrue($patient->companies()->whereKey($context['company']->id)->exists());
+        $this->assertStringContainsString(route('public.booking.show', $bookingLink->token), $sentMessages[1] ?? '');
     }
 
     protected function tearDown(): void
