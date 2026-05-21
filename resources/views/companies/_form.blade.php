@@ -2,7 +2,9 @@
     $input = 'w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10';
     $cnpjValue = old('cnpj', $company->cnpj ?? '');
     $cnpjDigits = preg_replace('/\D/', '', (string) $cnpjValue);
-    if (strlen($cnpjDigits) === 14) {
+    if (strlen($cnpjDigits) === 11) {
+        $cnpjValue = substr($cnpjDigits, 0, 3).'.'.substr($cnpjDigits, 3, 3).'.'.substr($cnpjDigits, 6, 3).'-'.substr($cnpjDigits, 9, 2);
+    } elseif (strlen($cnpjDigits) === 14) {
         $cnpjValue = substr($cnpjDigits, 0, 2).'.'.substr($cnpjDigits, 2, 3).'.'.substr($cnpjDigits, 5, 3).'/'.substr($cnpjDigits, 8, 4).'-'.substr($cnpjDigits, 12, 2);
     }
 @endphp

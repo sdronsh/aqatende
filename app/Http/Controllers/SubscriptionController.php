@@ -32,7 +32,17 @@ class SubscriptionController extends Controller
         $planData = $this->resolvePlan($plan);
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'cnpj' => ['required', 'string', 'max:30'],
+            'cnpj' => [
+                'required',
+                'string',
+                'max:30',
+                function (string $attribute, mixed $value, \Closure $fail): void {
+                    $digits = preg_replace('/\D/', '', (string) $value) ?? '';
+                    if (! in_array(strlen($digits), [11, 14], true)) {
+                        $fail('Informe um CPF ou CNPJ válido.');
+                    }
+                },
+            ],
             'email' => ['required', 'email', 'max:255'],
             'phone' => ['nullable', 'string', 'max:30'],
             'contact_name' => ['required', 'string', 'max:255'],
@@ -46,6 +56,7 @@ class SubscriptionController extends Controller
             'address_city' => ['nullable', 'string', 'max:120'],
             'address_state' => ['nullable', 'string', 'size:2'],
         ]);
+        $data['cnpj'] = preg_replace('/\D/', '', (string) $data['cnpj']) ?? '';
 
         $baseUrl = (string) config('aqamed.license.api_url');
         $endpoint = (string) config('aqamed.license.companies_endpoint', '/api/companies');
@@ -301,7 +312,7 @@ class SubscriptionController extends Controller
 
         return redirect()
             ->route('login', ['mode' => 'company'])
-            ->with('status', 'Empresa criada no AQAtende. Acesse com o CNPJ e o usuario administrativo cadastrado.');
+            ->with('status', 'Empresa criada no AQAtende. Acesse com o CNPJ ou CPF e o usuario administrativo cadastrado.');
     }
 
     private function resolvePlan(string $plan): array
@@ -437,7 +448,7 @@ class SubscriptionController extends Controller
             $field === 'plan_name' => 'nome do plano',
             $field === 'plan_code' => 'codigo do plano',
             $field === 'name' => 'nome da empresa',
-            $field === 'cnpj' => 'CNPJ',
+            $field === 'cnpj' => 'CNPJ ou CPF',
             $field === 'email' => 'e-mail da empresa',
             $field === 'contact_name' => 'nome do responsavel',
             $field === 'contact_email' => 'e-mail do responsavel',

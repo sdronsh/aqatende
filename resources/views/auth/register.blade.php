@@ -16,7 +16,7 @@
 
         <div>
         <label class="mb-1 block text-sm font-medium text-gray-700" for="company_code">CNPJ ou CPF</label>
-        <input id="company_code" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" type="text" name="company_code" value="{{ old('company_code') }}" data-mask="cnpj" required autocomplete="organization" />
+        <input id="company_code" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" type="text" name="company_code" value="{{ old('company_code') }}" data-mask="cnpj" required autocomplete="organization" placeholder="00.000.000/0000-00 ou 000.000.000-00" />
             <x-input-error :messages="$errors->get('company_code')" class="mt-1" />
         </div>
 

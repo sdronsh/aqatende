@@ -156,8 +156,8 @@
                                 <input id="name" name="name" value="{{ old('name') }}" required>
                             </div>
                             <div class="subscription-field span-5">
-                                <label for="cnpj">CNPJ</label>
-                                <input id="cnpj" name="cnpj" value="{{ old('cnpj') }}" placeholder="00.000.000/0000-00" required>
+                                <label for="cnpj">CNPJ ou CPF</label>
+                                <input id="cnpj" name="cnpj" value="{{ old('cnpj') }}" placeholder="00.000.000/0000-00 ou 000.000.000-00" data-mask="cpf-cnpj" required>
                             </div>
                             <div class="subscription-field span-7">
                                 <label for="email">E-mail financeiro</label>
@@ -230,5 +230,29 @@
             </div>
         </div>
     </main>
+    <script>
+        const formatCpfCnpj = (value) => {
+            const digits = value.replace(/\D/g, '').slice(0, 14);
+            if (digits.length <= 11) {
+                if (digits.length <= 3) return digits;
+                if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+                if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+                return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9, 11)}`;
+            }
+
+            if (digits.length <= 2) return digits;
+            if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
+            if (digits.length <= 8) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
+            if (digits.length <= 12) return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
+            return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12, 14)}`;
+        };
+
+        document.querySelectorAll('[data-mask="cpf-cnpj"]').forEach((input) => {
+            input.value = formatCpfCnpj(input.value);
+            input.addEventListener('input', () => {
+                input.value = formatCpfCnpj(input.value);
+            });
+        });
+    </script>
 </body>
 </html>

@@ -14,6 +14,9 @@
     @php
         $formatCnpj = function ($value) {
             $digits = preg_replace('/\D/', '', (string) $value);
+            if (strlen($digits) === 11) {
+                return substr($digits, 0, 3).'.'.substr($digits, 3, 3).'.'.substr($digits, 6, 3).'-'.substr($digits, 9, 2);
+            }
             if (strlen($digits) !== 14) {
                 return $value;
             }
@@ -23,7 +26,7 @@
 
     <div class="mb-4 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm">
         <form method="GET" class="flex flex-wrap items-center gap-2">
-            <input class="w-full flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" type="text" name="search" value="{{ request('search') }}" placeholder="Buscar por nome, CNPJ ou email" />
+            <input class="w-full flex-1 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" type="text" name="search" value="{{ request('search') }}" placeholder="Buscar por nome, CNPJ/CPF ou email" />
             <select class="rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" name="per_page">
                 @php $selectedPerPage = $perPage ?? request('per_page', '10'); @endphp
                 <option value="10" @selected($selectedPerPage === '10')>10</option>
@@ -41,7 +44,7 @@
                 <thead class="bg-gray-50">
                     <tr class="text-left text-xs font-semibold uppercase text-gray-500">
                         <th class="border border-gray-200 px-3 py-2">Nome</th>
-                        <th class="border border-gray-200 px-3 py-2">CNPJ</th>
+                        <th class="border border-gray-200 px-3 py-2">CNPJ/CPF</th>
                         <th class="border border-gray-200 px-3 py-2">Email</th>
                         <th class="border border-gray-200 px-3 py-2">Telefone</th>
                         <th class="border border-gray-200 px-3 py-2 text-center">Acoes</th>
