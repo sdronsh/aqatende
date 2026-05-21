@@ -894,6 +894,7 @@ class WhatsappAutomationWebhookController extends Controller
 
         return str_contains($value, 'agendar')
             || str_contains($value, 'agendamento')
+            || $value === 'agenda'
             || str_contains($value, 'horario')
             || str_contains($value, 'horário')
             || $value === '1';

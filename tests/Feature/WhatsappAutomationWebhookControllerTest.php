@@ -106,6 +106,25 @@ class WhatsappAutomationWebhookControllerTest extends TestCase
         ]);
     }
 
+    public function test_agenda_word_starts_whatsapp_booking_flow(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-05-20 10:00:00', 'America/Sao_Paulo'));
+        $context = $this->createWhatsappBookingContext();
+
+        $sentMessages = [];
+        $this->fakeCommunicationClient($sentMessages);
+
+        $this->postJson('/api/whatsapp/webhook', $this->webhookPayload($context, 'agenda'))
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $this->assertStringContainsString('Escolha o servico', $sentMessages[0] ?? '');
+        $this->assertDatabaseHas('company_settings', [
+            'company_id' => $context['company']->id,
+            'key' => 'whatsapp_flow_state_5599999999999',
+        ]);
+    }
+
     public function test_unknown_patient_informs_name_before_receiving_public_booking_link(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-05-20 10:00:00', 'America/Sao_Paulo'));
