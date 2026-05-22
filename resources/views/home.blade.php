@@ -3,8 +3,8 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="AQAtende: sistema de atendimento para saloes com agenda, fila, profissionais, clientes e financeiro.">
-    <title>AQAtende | Sistema de Atendimento para Saloes</title>
+    <meta name="description" content="AQAtende: sistema para profissionais e negócios de atendimento com agenda, fila, clientes e financeiro.">
+    <title>AQAtende | Sistema para Profissionais e Negócios de Atendimento</title>
     <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
     @include('partials.pwa-meta')
     @if (config('services.google_analytics.measurement_id'))
@@ -75,9 +75,9 @@
         <section class="landing-hero min-h-screen overflow-hidden pt-24 text-white">
             <div class="mx-auto grid min-h-[calc(100vh-6rem)] max-w-7xl items-center gap-12 px-5 py-16 lg:grid-cols-[1.1fr_.9fr]">
                 <div class="landing-square">
-                    <p class="mb-7 text-xs font-bold uppercase tracking-[0.32em] text-white/70">Sistema de atendimento para saloes</p>
+                    <p class="mb-7 text-xs font-bold uppercase tracking-[0.32em] text-white/70">Sistema para profissionais e negócios de atendimento</p>
                     <h1 class="max-w-3xl text-4xl font-semibold leading-tight md:text-6xl">
-                        Agenda, fila e financeiro no mesmo ritmo do seu salao.
+                        Agenda, fila e financeiro no mesmo ritmo do seu atendimento.
                     </h1>
                     <p class="mt-6 max-w-2xl text-lg leading-8 text-white/78">
                         O AQAtende organiza atendimentos marcados, encaixes, profissionais, clientes, comissoes e caixa em uma experiencia simples para operar todos os dias.
@@ -161,7 +161,7 @@
                         <p class="text-xs font-bold uppercase tracking-[0.3em] text-brand-600">Operacao hibrida</p>
                         <h2 class="mt-5 text-3xl font-semibold leading-tight md:text-4xl">Atenda por horario marcado e por ordem de chegada.</h2>
                         <p class="mt-5 text-lg leading-8 text-gray-600">
-                            Saloes alternam agenda, encaixes, atrasos e profissionais livres. O AQAtende foi pensado para esse fluxo: o cliente entra na fila, o profissional assume, o servico termina e o financeiro nasce automaticamente.
+                            Profissionais e negócios de atendimento alternam agenda, encaixes, atrasos e horários livres. O AQAtende foi pensado para esse fluxo: o cliente entra na fila, o profissional assume, o servico termina e o financeiro nasce automaticamente.
                         </p>
                         <div class="mt-8 grid gap-4 sm:grid-cols-2">
                             <div class="rounded-xl border border-gray-200 p-5">
@@ -192,7 +192,7 @@
                         ['1', 'Cliente chega', 'Cadastre ou encontre o cliente e coloque na agenda ou na fila.'],
                         ['2', 'Profissional assume', 'O sistema sugere profissionais ativos que atendem o servico.'],
                         ['3', 'Servico finaliza', 'Registre pagamento, valor ajustado e metodo usado.'],
-                        ['4', 'Financeiro nasce', 'Comissao e valor do salao ficam prontos para relatorios.'],
+                        ['4', 'Financeiro nasce', 'Comissao e valor do negocio ficam prontos para relatorios.'],
                     ] as [$number, $title, $text])
                         <div class="rounded-xl bg-white p-6 shadow-theme-xs">
                             <div class="flex h-10 w-10 items-center justify-center rounded-full bg-brand-500 text-sm font-bold text-white">{{ $number }}</div>
@@ -351,7 +351,7 @@
                                     ['Quando uso fila e quando uso agenda?', 'Use agenda para horarios marcados. Use fila para atendimento por ordem de chegada, encaixes ou quando o cliente ja esta na unidade aguardando.'],
                                     ['Como configuro os profissionais?', 'Cadastre o profissional, vincule unidades e servicos, defina se ele esta ativo e configure comissao por percentual ou valor fixo quando necessario.'],
                                     ['Como o financeiro e gerado?', 'Ao criar ou finalizar atendimentos, o AQAtende cria contas a receber e movimentacoes relacionadas. No fechamento do atendimento, informe a forma de pagamento.'],
-                                    ['Como funcionam as comissoes?', 'A comissao pode ser configurada no profissional ou por servico. Ao finalizar o atendimento, o sistema calcula o valor do profissional e o valor do salao.'],
+                                    ['Como funcionam as comissoes?', 'A comissao pode ser configurada no profissional ou por servico. Ao finalizar o atendimento, o sistema calcula o valor do profissional e o valor do negocio.'],
                                     ['Como envio link de agendamento para um cliente?', 'No cadastro do cliente, use Gerar link de agendamento. Com WhatsApp ativo, o cliente tambem pode pedir horarios disponiveis pelo bot.'],
                                     ['O cliente pode agendar pelo WhatsApp?', 'Sim. Com o modulo habilitado, ele pode enviar agendar para seguir o fluxo automatico ou disponivel para receber um link com horarios abertos.'],
                                     ['Como evito choque de horario?', 'Configure os horarios dos profissionais e use a agenda do sistema. O bot e o link publico validam disponibilidade antes de criar o agendamento.'],
@@ -437,7 +437,7 @@
                 <img class="h-12 w-12 object-contain" src="{{ asset('logo.png') }}" alt="AQAtende">
                 <div>
                     <div class="text-sm font-semibold uppercase tracking-[0.24em]">AQAtende</div>
-                    <div class="text-xs text-white/55">Sistema de atendimento para saloes</div>
+                    <div class="text-xs text-white/55">Sistema para profissionais e negócios de atendimento</div>
                 </div>
             </div>
             <div class="text-sm text-white/55">Agenda · Fila · Profissionais · Financeiro</div>

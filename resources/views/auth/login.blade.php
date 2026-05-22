@@ -88,7 +88,7 @@
                         </h1>
                         <p class="mt-4 max-w-2xl text-base text-gray-600">
                             Centralize agenda, fila de atendimento, clientes e financeiro em um só lugar. O AQAtende entrega
-                            controle operacional para salões que trabalham com horário marcado e encaixes.
+                            controle operacional para profissionais e negócios que trabalham com horário marcado e encaixes.
                         </p>
                     </div>
 
@@ -109,7 +109,7 @@
 
                     <div class="mt-8 flex items-center gap-3 text-sm text-gray-500">
                         <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-brand-600">✓</span>
-                        Plataforma segura, pronta para operação multiempresa e gestão diária do salão.
+                        Plataforma segura, pronta para operação multiempresa e gestão diária do atendimento.
                     </div>
                 </section>
 
@@ -170,7 +170,7 @@
             </div>
 
             <footer class="login-footer mt-8 text-xs text-gray-500">
-                AQAtende • Gestão integrada para salões • Todos os direitos reservados.
+                AQAtende • Gestão integrada para profissionais e negócios de atendimento • Todos os direitos reservados.
             </footer>
         </div>
     </div>

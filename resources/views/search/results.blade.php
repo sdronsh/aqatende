@@ -101,7 +101,7 @@
                             <div class="flex items-center justify-between">
                                 <div>
                                     <p class="text-xs font-bold uppercase tracking-[0.24em] text-brand-600">Unidades</p>
-                                    <h2 class="mt-2 text-xl font-semibold text-gray-900">Empresas e saloes</h2>
+                                    <h2 class="mt-2 text-xl font-semibold text-gray-900">Empresas e negócios de atendimento</h2>
                                 </div>
                                 <span class="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">{{ $clinics->count() }} encontradas</span>
                             </div>
@@ -110,7 +110,7 @@
                                     @php $unit = $clinic->units->first(); @endphp
                                     <div class="rounded-2xl border border-gray-200 bg-gray-50 p-5">
                                         <div class="text-sm font-semibold text-gray-900">{{ $clinic->name }}</div>
-                                        <div class="mt-1 text-xs text-gray-500">{{ $clinic->trade_name ?: 'Salao' }}</div>
+                                        <div class="mt-1 text-xs text-gray-500">{{ $clinic->trade_name ?: 'Negócio de atendimento' }}</div>
                                         @if ($unit)
                                             <div class="mt-3 text-xs text-gray-500">{{ $unit->city }} / {{ $unit->state }}</div>
                                         @endif
@@ -130,7 +130,7 @@
 
     <footer class="bg-[#180225] px-5 py-8 text-white">
         <div class="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-4">
-            <div class="text-sm text-white/60">AQAtende · Sistema de atendimento para saloes</div>
+            <div class="text-sm text-white/60">AQAtende · Sistema para profissionais e negócios de atendimento</div>
             <a class="text-sm font-semibold text-white" href="{{ url('/') }}">Voltar para a home</a>
         </div>
     </footer>

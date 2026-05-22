@@ -4,7 +4,7 @@
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <meta name="csrf-token" content="{{ csrf_token() }}">
-        <meta name="description" content="Sistema completo para gestão de salões: agenda, fila, clientes, profissionais e financeiro.">
+        <meta name="description" content="Sistema completo para profissionais e negócios de atendimento: agenda, fila, clientes e financeiro.">
 
         <title>{{ config('app.name', 'Laravel') }}</title>
         <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">

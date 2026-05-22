@@ -72,46 +72,52 @@
         $billingAccessText = $billingHasAccess === null ? 'Indisponivel' : ($billingHasAccess === false ? 'Bloqueado' : 'Liberado');
     @endphp
 
-    <div class="space-y-4">
-        <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-theme-sm">
-            <div class="text-sm font-semibold text-gray-800">{{ $company->name }}</div>
+    <div class="max-w-full space-y-4 overflow-hidden">
+        <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm sm:p-6">
+            <div class="break-words text-sm font-semibold text-gray-800">{{ $company->name }}</div>
             <div class="mt-1 text-xs text-gray-500">CNPJ: {{ $cnpjFormatted }}</div>
         </div>
 
         @if (! $license)
-            <div class="rounded-xl border border-warning-200 bg-warning-50 p-4 text-sm text-warning-800 shadow-theme-sm">
+            <div class="rounded-xl border border-warning-200 bg-warning-50 p-4 text-sm leading-6 text-warning-800 shadow-theme-sm">
                 Nao foi possivel consultar os dados da licenca no momento. Verifique conectividade com a API de licencas e o CNPJ da empresa ativa.
             </div>
         @else
-            <div class="grid gap-4 md:grid-cols-12">
-                <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm md:col-span-6">
+            <div class="grid min-w-0 gap-4 md:grid-cols-12">
+                <div class="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm md:col-span-6">
                     <div class="text-xs uppercase text-gray-400">Licenca</div>
                     <div class="mt-2 text-sm text-gray-600">Status</div>
-                    <div class="mt-1 inline-flex rounded-full px-2 py-1 text-xs font-semibold {{ $licenseChip }}">{{ $statusLabel }}</div>
+                    <div class="mt-1 inline-flex max-w-full rounded-full px-2 py-1 text-xs font-semibold {{ $licenseChip }}">
+                        <span class="truncate">{{ $statusLabel }}</span>
+                    </div>
 
                     <div class="mt-4 text-sm text-gray-600">Acesso ao sistema</div>
-                    <div class="mt-1 inline-flex rounded-full px-2 py-1 text-xs font-semibold {{ $accessChip }}">
-                        {{ $accessText }}
+                    <div class="mt-1 inline-flex max-w-full rounded-full px-2 py-1 text-xs font-semibold {{ $accessChip }}">
+                        <span class="truncate">{{ $accessText }}</span>
                     </div>
                 </div>
 
-                <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm md:col-span-6">
+                <div class="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm md:col-span-6">
                     <div class="text-xs uppercase text-gray-400">Financeiro</div>
                     <div class="mt-2 text-sm text-gray-600">Status de cobranca</div>
-                    <div class="mt-1 inline-flex rounded-full px-2 py-1 text-xs font-semibold {{ $billingChip }}">{{ $billingStatusLabel }}</div>
+                    <div class="mt-1 inline-flex max-w-full rounded-full px-2 py-1 text-xs font-semibold {{ $billingChip }}">
+                        <span class="truncate">{{ $billingStatusLabel }}</span>
+                    </div>
 
                     <div class="mt-4 text-sm text-gray-600">Acesso por financeiro</div>
-                    <div class="mt-1 inline-flex rounded-full px-2 py-1 text-xs font-semibold {{ $billingAccessChip }}">
-                        {{ $billingAccessText }}
+                    <div class="mt-1 inline-flex max-w-full rounded-full px-2 py-1 text-xs font-semibold {{ $billingAccessChip }}">
+                        <span class="truncate">{{ $billingAccessText }}</span>
                     </div>
                 </div>
 
-                <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm md:col-span-12">
-                    <div class="flex flex-wrap items-start justify-between gap-4">
-                        <div>
+                <div class="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm md:col-span-12">
+                    <div class="grid gap-4 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-start">
+                        <div class="min-w-0">
                             <div class="text-xs uppercase text-gray-400">Mensalidade</div>
-                            <div class="mt-2 inline-flex rounded-full px-2 py-1 text-xs font-semibold {{ $monthlyChip }}">{{ $monthlyStatusText }}</div>
-                            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div class="mt-2 inline-flex max-w-full rounded-full px-2 py-1 text-xs font-semibold {{ $monthlyChip }}">
+                                <span class="truncate">{{ $monthlyStatusText }}</span>
+                            </div>
+                            <div class="mt-4 grid min-w-0 gap-3 sm:grid-cols-2">
                                 <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
                                     <div class="text-xs text-gray-500">Vencimento</div>
                                     <div class="mt-1 text-lg font-semibold text-gray-800">
@@ -123,10 +129,10 @@
                                 </div>
                                 <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
                                     <div class="text-xs text-gray-500">Valor</div>
-                                    <div class="mt-1 text-lg font-semibold text-gray-800">{{ $monthlyAmount }}</div>
+                                    <div class="mt-1 break-words text-lg font-semibold text-gray-800">{{ $monthlyAmount }}</div>
                                 </div>
                             </div>
-                            <div class="mt-3 text-xs text-gray-500">
+                            <div class="mt-3 text-xs leading-5 text-gray-500">
                                 @if ($hasPaymentLink)
                                     Link de pagamento recebido da API de licencas.
                                 @elseif ($hasPaymentTemplate)
@@ -136,18 +142,18 @@
                                 @endif
                             </div>
                         </div>
-                        <form method="POST" action="{{ route('settings.license.payment') }}" target="_blank">
+                        <form class="w-full lg:w-auto" method="POST" action="{{ route('settings.license.payment') }}" target="_blank">
                             @csrf
-                            <button class="inline-flex rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600" type="submit">
+                            <button class="inline-flex w-full justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600 lg:w-auto" type="submit">
                                 Gerar pagamento
                             </button>
                         </form>
                     </div>
                 </div>
 
-                <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm md:col-span-12">
+                <div class="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm md:col-span-12">
                     <div class="text-xs uppercase text-gray-400">Limites</div>
-                    <div class="mt-3 grid gap-3 md:grid-cols-3">
+                    <div class="mt-3 grid gap-3 sm:grid-cols-3">
                         <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
                             <div class="text-xs text-gray-500">Usuarios</div>
                             <div class="mt-1 text-lg font-semibold text-gray-800">{{ $license['user_limit'] ?? '-' }}</div>
@@ -164,9 +170,9 @@
                 </div>
 
                 @if (auth()->user()?->is_platform_admin)
-                    <div class="rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm md:col-span-12">
+                    <div class="min-w-0 rounded-xl border border-gray-200 bg-white p-4 shadow-theme-sm md:col-span-12">
                         <div class="text-xs uppercase text-gray-400">Dados recebidos da API</div>
-                        <pre class="mt-3 max-h-80 overflow-auto rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">{{ json_encode($license, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</pre>
+                        <pre class="mt-3 max-h-80 max-w-full overflow-auto whitespace-pre-wrap break-words rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-700">{{ json_encode($license, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) }}</pre>
                     </div>
                 @endif
             </div>

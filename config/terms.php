@@ -11,7 +11,7 @@ TERMO DE USO - AQATENDE
 Ao aceitar este Termo de Uso, a empresa e seus representantes declaram que leram, compreenderam e concordam com as regras abaixo, bem como com a Politica de Privacidade aplicavel.
 
 2. Servico
-O AQAtende disponibiliza um sistema de gestao para agendamento, fila de atendimento e rotinas administrativas de saloes. As funcionalidades podem ser atualizadas a qualquer momento para melhorias, seguranca ou adequacao legal.
+O AQAtende disponibiliza um sistema de gestao para agendamento, fila de atendimento e rotinas administrativas de profissionais e negocios de atendimento. As funcionalidades podem ser atualizadas a qualquer momento para melhorias, seguranca ou adequacao legal.
 
 3. Cadastro e responsabilidade
 O responsavel pela empresa declara possuir poderes para contratar em nome da empresa e manter seus dados atualizados. O uso do sistema por usuarios da empresa e de responsabilidade da empresa.
