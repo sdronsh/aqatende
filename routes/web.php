@@ -264,7 +264,7 @@ Route::middleware('auth')->group(function () {
         Route::get('/licenca', [\App\Http\Controllers\SettingsController::class, 'license'])
             ->middleware('permission:configuracoes.logo.view')
             ->name('license');
-        Route::post('/licenca/pagamento', [\App\Http\Controllers\SettingsController::class, 'generateLicensePayment'])
+        Route::match(['get', 'post'], '/licenca/pagamento', [\App\Http\Controllers\SettingsController::class, 'generateLicensePayment'])
             ->middleware('permission:configuracoes.logo.view')
             ->name('license.payment');
 

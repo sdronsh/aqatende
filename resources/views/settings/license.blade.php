@@ -142,12 +142,9 @@
                                 @endif
                             </div>
                         </div>
-                        <form class="w-full lg:w-auto" method="POST" action="{{ route('settings.license.payment') }}" target="_blank">
-                            @csrf
-                            <button class="inline-flex w-full justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600 lg:w-auto" type="submit">
-                                Gerar pagamento
-                            </button>
-                        </form>
+                        <a class="inline-flex w-full justify-center rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600 lg:w-auto" href="{{ route('settings.license.payment') }}">
+                            Gerar pagamento
+                        </a>
                     </div>
                 </div>
 
