@@ -245,6 +245,7 @@ class SubscriptionController extends Controller
                 'name' => $companyData['name'],
                 'legal_name' => $companyData['name'],
                 'license_code' => $pending['license_code'] ?? (string) $pending['license_id'],
+                'business_activity' => Company::defaultBusinessActivity(),
                 'email' => $companyData['email'] ?? null,
                 'phone' => $companyData['phone'] ?? null,
                 'active' => true,

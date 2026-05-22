@@ -119,7 +119,9 @@
                     </span>
                 </label>
             @empty
-                <div class="text-sm text-gray-500">Cadastre servicos simples para montar um pacote.</div>
+                <div class="text-sm leading-6 text-gray-500">
+                    Para criar um servico composto/pacote, cadastre primeiro pelo menos um servico simples. Depois, selecione os servicos simples que farao parte do pacote.
+                </div>
             @endforelse
         </div>
         <x-input-error class="mt-1" :messages="$errors->get('package_service_ids')" />

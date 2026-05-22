@@ -1,6 +1,6 @@
 <meta name="google" content="notranslate">
 <meta name="app-version" content="{{ config('app.version') }}">
-<meta name="theme-color" content="#a81d8e">
+<meta name="theme-color" content="{{ $themeColor ?? '#a81d8e' }}">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="AQAtende">

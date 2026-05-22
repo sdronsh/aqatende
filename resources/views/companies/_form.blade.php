@@ -34,6 +34,18 @@
         <input class="{{ $input }}" id="license_code" name="license_code" value="{{ old('license_code', $company->license_code ?? '') }}" />
         <x-input-error class="mt-1" :messages="$errors->get('license_code')" />
     </div>
+    @if (auth()->user()?->is_platform_admin)
+        <div class="md:col-span-4">
+            <label class="mb-1 block text-sm font-medium text-gray-700" for="business_activity">Ramo de atividade</label>
+            @php $businessActivity = old('business_activity', $company->business_activity ?? \App\Models\Company::defaultBusinessActivity()); @endphp
+            <select class="{{ $input }}" id="business_activity" name="business_activity" required>
+                @foreach (\App\Models\Company::businessActivityOptions() as $value => $label)
+                    <option value="{{ $value }}" @selected($businessActivity === $value)>{{ $label }}</option>
+                @endforeach
+            </select>
+            <x-input-error class="mt-1" :messages="$errors->get('business_activity')" />
+        </div>
+    @endif
     <div class="md:col-span-4">
         <label class="mb-1 block text-sm font-medium text-gray-700" for="email">Email</label>
         <input class="{{ $input }}" id="email" name="email" value="{{ old('email', $company->email ?? '') }}" />

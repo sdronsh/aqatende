@@ -97,7 +97,7 @@ class ServiceWebController extends Controller
             'is_package' => ['nullable', 'boolean'],
             'package_service_ids' => ['required_if:is_package,1', 'array', 'min:1'],
             'package_service_ids.*' => ['integer', 'exists:services,id'],
-        ]);
+        ], $this->packageValidationMessages());
 
         if (! Clinic::where('company_id', $companyId)->whereKey($data['clinic_id'])->exists()) {
             abort(403);
@@ -122,7 +122,7 @@ class ServiceWebController extends Controller
         $packageServiceIds = $this->resolvePackageServiceIds($data, $companyId, (int) $data['clinic_id']);
         if ($data['is_package'] && empty($packageServiceIds)) {
             return back()->withErrors([
-                'package_service_ids' => 'Selecione pelo menos um servico interno para montar o pacote.',
+                'package_service_ids' => $this->packageServicesRequiredMessage(),
             ])->withInput();
         }
         unset($data['price'], $data['package_service_ids']);
@@ -181,7 +181,7 @@ class ServiceWebController extends Controller
             'is_package' => ['nullable', 'boolean'],
             'package_service_ids' => ['required_if:is_package,1', 'array', 'min:1'],
             'package_service_ids.*' => ['integer', 'exists:services,id'],
-        ]);
+        ], $this->packageValidationMessages());
 
         if (! Clinic::where('company_id', $companyId)->whereKey($data['clinic_id'])->exists()) {
             abort(403);
@@ -206,7 +206,7 @@ class ServiceWebController extends Controller
         $packageServiceIds = $this->resolvePackageServiceIds($data, $companyId, (int) $data['clinic_id'], (int) $service->id);
         if ($data['is_package'] && empty($packageServiceIds)) {
             return back()->withErrors([
-                'package_service_ids' => 'Selecione pelo menos um servico interno para montar o pacote.',
+                'package_service_ids' => $this->packageServicesRequiredMessage(),
             ])->withInput();
         }
         unset($data['price'], $data['package_service_ids']);
@@ -242,6 +242,20 @@ class ServiceWebController extends Controller
         }
 
         return 0;
+    }
+
+    private function packageValidationMessages(): array
+    {
+        return [
+            'package_service_ids.required_if' => $this->packageServicesRequiredMessage(),
+            'package_service_ids.array' => $this->packageServicesRequiredMessage(),
+            'package_service_ids.min' => $this->packageServicesRequiredMessage(),
+        ];
+    }
+
+    private function packageServicesRequiredMessage(): string
+    {
+        return 'Para criar um servico composto/pacote, cadastre primeiro pelo menos um servico simples. Depois, selecione os servicos simples que farao parte do pacote.';
     }
 
     private function resolvePackageServiceIds(array $data, int $companyId, int $clinicId, ?int $serviceId = null): array
