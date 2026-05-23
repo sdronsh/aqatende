@@ -7,8 +7,8 @@
   "display": "standalone",
   "orientation": "portrait-primary",
   "background_color": "#ffffff",
-  "theme_color": "#a81d8e",
-  "categories": ["business", "productivity", "medical"],
+  "theme_color": "#256d7f",
+  "categories": ["business", "productivity"],
   "icons": [
     {
       "src": "/icons/icon-192.png",

@@ -60,6 +60,49 @@
             border-color: #b12ca0;
             box-shadow: 0 0 0 4px rgba(177, 44, 160, .12);
         }
+        .business-activity-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+        }
+        .business-activity-option {
+            position: relative;
+            display: block;
+        }
+        .business-activity-option input {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .business-activity-card {
+            min-height: 112px;
+            border: 1px solid #d0d5dd;
+            border-radius: 14px;
+            background: #fff;
+            padding: 14px;
+            color: #344054;
+            box-shadow: 0 1px 2px rgba(16, 24, 40, .05);
+            transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+        }
+        .business-activity-card svg {
+            color: var(--activity-color);
+        }
+        .business-activity-option input:checked + .business-activity-card {
+            border-color: var(--activity-color);
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--activity-color) 16%, transparent);
+        }
+        .business-activity-option:hover .business-activity-card {
+            transform: translateY(-1px);
+            border-color: var(--activity-color);
+        }
+        @media (max-width: 720px) {
+            .business-activity-grid {
+                grid-template-columns: 1fr;
+            }
+            .business-activity-card {
+                min-height: auto;
+            }
+        }
         .span-2 { grid-column: span 2 / span 2; }
         .span-3 { grid-column: span 3 / span 3; }
         .span-4 { grid-column: span 4 / span 4; }
@@ -148,6 +191,39 @@
 
                 <form method="POST" action="{{ route('subscriptions.store', $plan['slug']) }}" class="rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-sm md:p-6">
                     @csrf
+                    @php
+                        $activityCards = [
+                            'salao_barbearia' => ['#a81d8e', 'M4 18c4-1 8-5 10-10M14 8l6-4M7 21l4-4M5 5l14 14'],
+                            'pet_shop' => ['#b86b16', 'M6 19c1.5-3 4-5 6-5s4.5 2 6 5M8 9a2 2 0 1 0-4 0 2 2 0 0 0 4 0M20 9a2 2 0 1 0-4 0 2 2 0 0 0 4 0M10 6a2 2 0 1 0 4 0 2 2 0 0 0-4 0'],
+                            'estetica_tatuagem' => ['#3f3f46', 'M4 20l6-6M14 4l6 6M13 5l6 6-8 8H5v-6l8-8z'],
+                            'automotivo' => ['#2563eb', 'M5 16l1.5-5h11L19 16M7 16h10M7 19h.01M17 19h.01M4 16h16v4H4z'],
+                            'aulas_treinamentos' => ['#0f9f8f', 'M4 6h16M4 10h16M7 14h10M9 18h6M6 22h12M8 2h8'],
+                            'outros' => ['#256d7f', 'M4 7h7v7H4zM13 7h7v7h-7zM4 16h7v4H4zM13 16h7v4h-7z'],
+                        ];
+                        $selectedBusinessActivity = old('business_activity', \App\Models\Company::defaultBusinessActivity());
+                    @endphp
+                    <div class="subscription-section">
+                        <h2 class="subscription-section-title">Ramo de atividade</h2>
+                        <p class="mb-4 text-sm leading-6 text-gray-500">
+                            Selecione o ramo para preparar a identidade visual e os destaques iniciais do sistema.
+                        </p>
+                        <div class="business-activity-grid">
+                            @foreach ($businessActivities as $value => $label)
+                                @php [$color, $icon] = $activityCards[$value] ?? $activityCards['outros']; @endphp
+                                <label class="business-activity-option" style="--activity-color: {{ $color }}">
+                                    <input type="radio" name="business_activity" value="{{ $value }}" @checked($selectedBusinessActivity === $value) required>
+                                    <span class="business-activity-card">
+                                        <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            <path d="{{ $icon }}" />
+                                        </svg>
+                                        <span class="mt-3 block text-sm font-semibold text-gray-900">{{ $label }}</span>
+                                    </span>
+                                </label>
+                            @endforeach
+                        </div>
+                        <x-input-error class="mt-2" :messages="$errors->get('business_activity')" />
+                    </div>
+
                     <div class="subscription-section">
                         <h2 class="subscription-section-title">Dados da empresa</h2>
                         <div class="subscription-grid">

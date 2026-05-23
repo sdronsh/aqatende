@@ -12,6 +12,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
 class SubscriptionController extends Controller
@@ -24,14 +25,17 @@ class SubscriptionController extends Controller
 
         return view('subscriptions.create', [
             'plan' => $planData,
+            'businessActivities' => Company::businessActivityOptions(),
         ]);
     }
 
     public function store(Request $request, string $plan): RedirectResponse
     {
         $planData = $this->resolvePlan($plan);
+        $businessActivityOptions = array_keys(Company::businessActivityOptions());
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
+            'business_activity' => ['required', 'string', Rule::in($businessActivityOptions)],
             'cnpj' => [
                 'required',
                 'string',
@@ -57,6 +61,8 @@ class SubscriptionController extends Controller
             'address_state' => ['nullable', 'string', 'size:2'],
         ]);
         $data['cnpj'] = preg_replace('/\D/', '', (string) $data['cnpj']) ?? '';
+        $licenseCompanyData = $data;
+        unset($licenseCompanyData['business_activity']);
 
         $baseUrl = (string) config('aqamed.license.api_url');
         $endpoint = (string) config('aqamed.license.companies_endpoint', '/api/companies');
@@ -69,7 +75,7 @@ class SubscriptionController extends Controller
                 ->withErrors(['plan' => 'API de licencas nao configurada. Verifique LICENSES_API_URL, LICENSES_API_TOKEN e APP_ID.']);
         }
 
-        $payload = array_merge($data, [
+        $payload = array_merge($licenseCompanyData, [
             'system_id' => (int) $systemId,
             'user_limit' => $planData['professional_limit'],
             'professional_limit' => $planData['professional_limit'],
@@ -245,7 +251,7 @@ class SubscriptionController extends Controller
                 'name' => $companyData['name'],
                 'legal_name' => $companyData['name'],
                 'license_code' => $pending['license_code'] ?? (string) $pending['license_id'],
-                'business_activity' => Company::defaultBusinessActivity(),
+                'business_activity' => $companyData['business_activity'] ?? Company::defaultBusinessActivity(),
                 'email' => $companyData['email'] ?? null,
                 'phone' => $companyData['phone'] ?? null,
                 'active' => true,
