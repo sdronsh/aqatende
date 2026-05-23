@@ -57,17 +57,49 @@
             outline: none;
         }
         .subscription-field input:focus {
-            border-color: #b12ca0;
-            box-shadow: 0 0 0 4px rgba(177, 44, 160, .12);
+            border-color: #256d7f;
+            box-shadow: 0 0 0 4px rgba(37, 109, 127, .14);
+        }
+        .subscription-step[hidden] {
+            display: none;
+        }
+        .subscription-step-head {
+            margin-bottom: 22px;
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+        }
+        .subscription-eyebrow {
+            margin-bottom: 8px;
+            font-size: 12px;
+            font-weight: 800;
+            letter-spacing: .22em;
+            text-transform: uppercase;
+            color: #256d7f;
+        }
+        .subscription-step-title {
+            font-size: clamp(24px, 3vw, 34px);
+            font-weight: 750;
+            line-height: 1.12;
+            color: #101828;
+        }
+        .subscription-step-copy {
+            margin-top: 10px;
+            max-width: 680px;
+            color: #475467;
+            font-size: 15px;
+            line-height: 1.7;
         }
         .business-activity-grid {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
+            gap: 14px;
         }
         .business-activity-option {
             position: relative;
             display: block;
+            min-width: 0;
         }
         .business-activity-option input {
             position: absolute;
@@ -75,25 +107,84 @@
             pointer-events: none;
         }
         .business-activity-card {
-            min-height: 112px;
+            display: flex;
+            min-height: 150px;
+            height: 100%;
+            flex-direction: column;
+            justify-content: space-between;
             border: 1px solid #d0d5dd;
-            border-radius: 14px;
+            border-radius: 16px;
             background: #fff;
-            padding: 14px;
+            padding: 18px;
             color: #344054;
             box-shadow: 0 1px 2px rgba(16, 24, 40, .05);
-            transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease;
+            transition: border-color .18s ease, box-shadow .18s ease, transform .18s ease, background .18s ease;
         }
         .business-activity-card svg {
             color: var(--activity-color);
+            flex: 0 0 auto;
         }
         .business-activity-option input:checked + .business-activity-card {
             border-color: var(--activity-color);
-            box-shadow: 0 0 0 4px color-mix(in srgb, var(--activity-color) 16%, transparent);
+            background: color-mix(in srgb, var(--activity-color) 6%, #fff);
+            box-shadow: 0 0 0 4px color-mix(in srgb, var(--activity-color) 15%, transparent);
         }
         .business-activity-option:hover .business-activity-card {
             transform: translateY(-1px);
             border-color: var(--activity-color);
+        }
+        .business-activity-title {
+            display: block;
+            color: #101828;
+            font-size: 15px;
+            font-weight: 750;
+            line-height: 1.35;
+        }
+        .business-activity-copy {
+            margin-top: 6px;
+            display: block;
+            color: #667085;
+            font-size: 13px;
+            line-height: 1.45;
+        }
+        .subscription-actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: flex-end;
+            gap: 12px;
+            border-top: 1px solid #eaecf0;
+            padding-top: 20px;
+            margin-top: 24px;
+        }
+        .subscription-btn-primary,
+        .subscription-btn-secondary {
+            display: inline-flex;
+            min-height: 42px;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            padding: 10px 18px;
+            font-size: 14px;
+            font-weight: 750;
+            transition: background .18s ease, border-color .18s ease, color .18s ease, transform .18s ease;
+        }
+        .subscription-btn-primary {
+            border: 1px solid #256d7f;
+            background: #256d7f;
+            color: #fff;
+        }
+        .subscription-btn-primary:hover {
+            background: #1f5b6a;
+            border-color: #1f5b6a;
+        }
+        .subscription-btn-secondary {
+            border: 1px solid #d0d5dd;
+            background: #fff;
+            color: #344054;
+        }
+        .subscription-btn-secondary:hover {
+            background: #f8fafc;
+            border-color: #b8c1cc;
         }
         @media (max-width: 720px) {
             .business-activity-grid {
@@ -101,6 +192,7 @@
             }
             .business-activity-card {
                 min-height: auto;
+                gap: 18px;
             }
         }
         .span-2 { grid-column: span 2 / span 2; }
@@ -116,9 +208,22 @@
                 grid-template-columns: 1fr;
             }
         }
+        @media (max-width: 840px) {
+            .business-activity-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+        }
+        @media (max-width: 480px) {
+            .business-activity-grid {
+                grid-template-columns: 1fr;
+            }
+        }
         @media (max-width: 720px) {
             .subscription-grid {
                 grid-template-columns: 1fr;
+            }
+            .subscription-step-head {
+                display: block;
             }
             .span-2,
             .span-3,
@@ -138,8 +243,7 @@
         <div class="mx-auto max-w-6xl">
             <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
                 <a href="{{ url('/#planos') }}" class="flex items-center gap-3">
-                    <img class="h-12 w-12 object-contain" src="{{ asset('logo.png') }}" alt="AQAtende">
-                    <span class="text-sm font-semibold uppercase tracking-[0.24em] text-brand-700">AQAtende</span>
+                    <img class="h-12 w-auto object-contain" src="{{ asset('brand/logo-horizontal-light.png') }}" alt="AQAtende">
                 </a>
                 <a class="rounded-full border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-theme-xs hover:bg-gray-100" href="{{ url('/#planos') }}">Voltar aos planos</a>
             </div>
@@ -166,14 +270,14 @@
 
             <div class="subscription-shell">
                 <aside class="rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-sm">
-                    <div class="text-xs font-bold uppercase tracking-[0.24em] text-brand-600">Plano selecionado</div>
+                    <div class="subscription-eyebrow">Plano selecionado</div>
                     <h1 class="mt-4 text-2xl font-semibold text-gray-900">{{ $plan['name'] }}</h1>
                     <div class="mt-4 text-4xl font-semibold text-gray-900">R$ {{ number_format($plan['amount'], 2, ',', '.') }}</div>
                     <div class="mt-1 text-sm font-medium text-gray-500">mensal</div>
                     <div class="mt-6 space-y-3 text-sm text-gray-600">
                         <div class="flex justify-between gap-4 border-b border-gray-100 pb-3">
                             <span>Profissionais</span>
-                            <strong class="text-gray-800">{{ $plan['professional_limit'] ? 'Ate '.$plan['professional_limit'] : 'Sem limite' }}</strong>
+                            <strong class="text-gray-800">{{ $plan['professional_limit'] ? 'Até '.$plan['professional_limit'] : 'Sem limite' }}</strong>
                         </div>
                         <div class="flex justify-between gap-4 border-b border-gray-100 pb-3">
                             <span>Empresas</span>
@@ -185,7 +289,7 @@
                         </div>
                     </div>
                     <p class="mt-6 text-sm leading-6 text-gray-500">
-                        Esses dados serao enviados automaticamente para o sistema de licencas. Na proxima etapa voce define o vencimento da assinatura.
+                        Esses dados serão enviados automaticamente para o sistema de licenças. Na próxima etapa você define o vencimento da assinatura.
                     </p>
                 </aside>
 
@@ -193,35 +297,98 @@
                     @csrf
                     @php
                         $activityCards = [
-                            'salao_barbearia' => ['#a81d8e', 'M4 18c4-1 8-5 10-10M14 8l6-4M7 21l4-4M5 5l14 14'],
-                            'pet_shop' => ['#b86b16', 'M6 19c1.5-3 4-5 6-5s4.5 2 6 5M8 9a2 2 0 1 0-4 0 2 2 0 0 0 4 0M20 9a2 2 0 1 0-4 0 2 2 0 0 0 4 0M10 6a2 2 0 1 0 4 0 2 2 0 0 0-4 0'],
-                            'estetica_tatuagem' => ['#3f3f46', 'M4 20l6-6M14 4l6 6M13 5l6 6-8 8H5v-6l8-8z'],
-                            'automotivo' => ['#2563eb', 'M5 16l1.5-5h11L19 16M7 16h10M7 19h.01M17 19h.01M4 16h16v4H4z'],
-                            'aulas_treinamentos' => ['#0f9f8f', 'M4 6h16M4 10h16M7 14h10M9 18h6M6 22h12M8 2h8'],
-                            'outros' => ['#256d7f', 'M4 7h7v7H4zM13 7h7v7h-7zM4 16h7v4H4zM13 16h7v4h-7z'],
+                            'salao_barbearia' => ['#9b2a90', 'Atendimento, agenda e equipe para rotinas de beleza.'],
+                            'pet_shop' => ['#a96a22', 'Serviços, retornos e acompanhamento de clientes pet.'],
+                            'estetica_tatuagem' => ['#3f3f46', 'Agenda e controle para atendimentos personalizados.'],
+                            'automotivo' => ['#2563eb', 'Organização de serviços, fila e histórico de atendimento.'],
+                            'aulas_treinamentos' => ['#0f766e', 'Agenda para horarios, instrutores e atendimentos recorrentes.'],
+                            'outros' => ['#256d7f', 'Uma configuração neutra para outros negócios de atendimento.'],
                         ];
                         $selectedBusinessActivity = old('business_activity', \App\Models\Company::defaultBusinessActivity());
+                        $showDetailsStep = $errors->any() && ! $errors->has('business_activity');
                     @endphp
-                    <div class="subscription-section">
-                        <h2 class="subscription-section-title">Ramo de atividade</h2>
-                        <p class="mb-4 text-sm leading-6 text-gray-500">
-                            Selecione o ramo para preparar a identidade visual e os destaques iniciais do sistema.
-                        </p>
+                    <div class="subscription-step" data-step="activity" @if($showDetailsStep) hidden @endif>
+                        <div class="subscription-step-head">
+                            <div>
+                                <div class="subscription-eyebrow">Comece pelo ramo</div>
+                                <h1 class="subscription-step-title">Escolha o tipo de negócio.</h1>
+                                <p class="subscription-step-copy">
+                                    Essa escolha prepara a identidade visual inicial do sistema. Depois você informa os dados da empresa e segue para a assinatura.
+                                </p>
+                            </div>
+                        </div>
+
                         <div class="business-activity-grid">
                             @foreach ($businessActivities as $value => $label)
-                                @php [$color, $icon] = $activityCards[$value] ?? $activityCards['outros']; @endphp
+                                @php [$color, $description] = $activityCards[$value] ?? $activityCards['outros']; @endphp
                                 <label class="business-activity-option" style="--activity-color: {{ $color }}">
                                     <input type="radio" name="business_activity" value="{{ $value }}" @checked($selectedBusinessActivity === $value) required>
                                     <span class="business-activity-card">
-                                        <svg class="h-7 w-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                                            <path d="{{ $icon }}" />
+                                        <svg class="h-8 w-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                                            @switch($value)
+                                                @case('salao_barbearia')
+                                                    <path d="M4 18c4-1 8-5 10-10" />
+                                                    <path d="M14 8l6-4" />
+                                                    <path d="M7 21l4-4" />
+                                                    <path d="M5 5l14 14" />
+                                                    @break
+                                                @case('pet_shop')
+                                                    <path d="M6 19c1.4-3 3.8-5 6-5s4.6 2 6 5" />
+                                                    <circle cx="6" cy="9" r="2" />
+                                                    <circle cx="18" cy="9" r="2" />
+                                                    <circle cx="12" cy="6" r="2" />
+                                                    @break
+                                                @case('estetica_tatuagem')
+                                                    <path d="M4 20l6-6" />
+                                                    <path d="M14 4l6 6" />
+                                                    <path d="M13 5l6 6-8 8H5v-6l8-8z" />
+                                                    @break
+                                                @case('automotivo')
+                                                    <path d="M5 16l1.5-5h11L19 16" />
+                                                    <path d="M7 16h10" />
+                                                    <path d="M7 19h.01" />
+                                                    <path d="M17 19h.01" />
+                                                    <path d="M4 16h16v4H4z" />
+                                                    @break
+                                                @case('aulas_treinamentos')
+                                                    <path d="M4 6h16" />
+                                                    <path d="M4 10h16" />
+                                                    <path d="M7 14h10" />
+                                                    <path d="M9 18h6" />
+                                                    <path d="M8 2h8" />
+                                                    @break
+                                                @default
+                                                    <path d="M4 7h7v7H4z" />
+                                                    <path d="M13 7h7v7h-7z" />
+                                                    <path d="M4 16h7v4H4z" />
+                                                    <path d="M13 16h7v4h-7z" />
+                                            @endswitch
                                         </svg>
-                                        <span class="mt-3 block text-sm font-semibold text-gray-900">{{ $label }}</span>
+                                        <span>
+                                            <span class="business-activity-title">{{ $label }}</span>
+                                            <span class="business-activity-copy">{{ $description }}</span>
+                                        </span>
                                     </span>
                                 </label>
                             @endforeach
                         </div>
-                        <x-input-error class="mt-2" :messages="$errors->get('business_activity')" />
+                        <x-input-error class="mt-3" :messages="$errors->get('business_activity')" />
+
+                        <div class="subscription-actions">
+                            <a class="subscription-btn-secondary" href="{{ url('/#planos') }}">Voltar aos planos</a>
+                            <button class="subscription-btn-primary" type="button" data-next-step>Continuar</button>
+                        </div>
+                    </div>
+
+                    <div class="subscription-step" data-step="details" @unless($showDetailsStep) hidden @endunless>
+                    <div class="subscription-step-head">
+                        <div>
+                            <div class="subscription-eyebrow">Dados da empresa</div>
+                            <h1 class="subscription-step-title">Informe os dados para contratação.</h1>
+                            <p class="subscription-step-copy">
+                                Depois desta etapa você define o vencimento da assinatura e cadastra o usuário administrador.
+                            </p>
+                        </div>
                     </div>
 
                     <div class="subscription-section">
@@ -298,9 +465,10 @@
                         </div>
                     </div>
 
-                    <div class="mt-6 flex flex-wrap justify-end gap-3 border-t border-gray-100 pt-5">
-                        <a class="inline-flex rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-theme-xs hover:bg-gray-50" href="{{ url('/#planos') }}">Cancelar</a>
-                        <button class="inline-flex rounded-lg bg-brand-500 px-5 py-2 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-600" type="submit">Proximo</button>
+                    <div class="subscription-actions">
+                        <button class="subscription-btn-secondary" type="button" data-prev-step>Voltar</button>
+                        <button class="subscription-btn-primary" type="submit">Proximo</button>
+                    </div>
                     </div>
                 </form>
             </div>
@@ -328,6 +496,28 @@
             input.addEventListener('input', () => {
                 input.value = formatCpfCnpj(input.value);
             });
+        });
+
+        const activityStep = document.querySelector('[data-step="activity"]');
+        const detailsStep = document.querySelector('[data-step="details"]');
+        const selectedActivity = () => document.querySelector('input[name="business_activity"]:checked');
+
+        document.querySelector('[data-next-step]')?.addEventListener('click', () => {
+            if (!selectedActivity()) {
+                document.querySelector('input[name="business_activity"]')?.reportValidity();
+                return;
+            }
+
+            activityStep.hidden = true;
+            detailsStep.hidden = false;
+            document.getElementById('name')?.focus();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        document.querySelector('[data-prev-step]')?.addEventListener('click', () => {
+            detailsStep.hidden = true;
+            activityStep.hidden = false;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         });
     </script>
 </body>

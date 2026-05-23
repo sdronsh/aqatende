@@ -38,6 +38,24 @@ Route::get('/company-lookup', CompanyLookupController::class)
     ->name('company.lookup');
 Route::get('/sw.js', PwaServiceWorkerController::class)
     ->name('pwa.service-worker');
+Route::get('/.well-known/assetlinks.json', function () {
+    $fingerprint = config('twa.sha256_cert_fingerprint');
+
+    if (! config('twa.enabled') || blank($fingerprint)) {
+        return response()->json([]);
+    }
+
+    return response()->json([
+        [
+            'relation' => ['delegate_permission/common.handle_all_urls'],
+            'target' => [
+                'namespace' => 'android_app',
+                'package_name' => config('twa.package_name'),
+                'sha256_cert_fingerprints' => [$fingerprint],
+            ],
+        ],
+    ], 200, [], JSON_UNESCAPED_SLASHES);
+})->name('twa.assetlinks');
 Route::get('/agendar/{token}', [PublicBookingController::class, 'show'])
     ->name('public.booking.show');
 Route::post('/agendar/{token}', [PublicBookingController::class, 'store'])

@@ -23,6 +23,12 @@
 /storage/*.key
 /storage/pail
 /vendor
+mobile/android-twa/app/*.keystore
+mobile/android-twa/app/*.apk
+mobile/android-twa/app/*.apk.idsig
+mobile/android-twa/app/*.aab
+mobile/android-twa/app/.gradle
+mobile/android-twa/app/**/build
 Homestead.json
 Homestead.yaml
 main

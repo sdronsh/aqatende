@@ -70,9 +70,9 @@ class Company extends Model
     public static function businessActivityOptions(): array
     {
         return [
-            'salao_barbearia' => 'Salao / Barbearia',
+            'salao_barbearia' => 'Salão / Barbearia',
             'pet_shop' => 'Pet Shop',
-            'estetica_tatuagem' => 'Estetica e Tatuagem',
+            'estetica_tatuagem' => 'Estética e Tatuagem',
             'automotivo' => 'Automotivo',
             'aulas_treinamentos' => 'Aulas / Treinamentos',
             'outros' => 'Outros',

@@ -2,6 +2,7 @@
   "name": "AQAtende",
   "short_name": "AQAtende",
   "description": "Agenda, atendimento, clientes e financeiro em um app responsivo.",
+  "id": "/dashboard",
   "start_url": "/dashboard",
   "scope": "/",
   "display": "standalone",
