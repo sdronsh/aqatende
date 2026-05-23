@@ -20,8 +20,8 @@
     "path": "/home/hederson/desenv/aqatende/mobile/android-twa/app/android.keystore",
     "alias": "aqatende"
   },
-  "appVersionName": "1",
-  "appVersionCode": 1,
+  "appVersionName": "4",
+  "appVersionCode": 4,
   "shortcuts": [],
   "generatorApp": "bubblewrap-cli",
   "webManifestUrl": "https://aqatende.com.br/manifest.webmanifest",
@@ -43,5 +43,5 @@
   "fileHandlers": [],
   "launchHandlerClientMode": "",
   "displayOverride": [],
-  "appVersion": "1"
+  "appVersion": "4"
 }
