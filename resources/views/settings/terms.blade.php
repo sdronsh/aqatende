@@ -8,7 +8,7 @@
 
     <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-theme-sm space-y-6">
         <div class="text-sm text-gray-600">
-            Atualize a versao e o texto do Termo de Uso. Uma nova versao exige novo aceite das clinicas.
+            Atualize a versao e o texto do Termo de Uso. Uma nova versao exige novo aceite das empresas.
         </div>
 
         <form method="POST" action="{{ route('settings.terms.update') }}" class="space-y-4">
