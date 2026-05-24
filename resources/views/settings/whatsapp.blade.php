@@ -7,6 +7,9 @@
     </x-slot>
 
     @php
+        $activeCompanyId = session('active_company_id');
+        $showWhatsappTechnicalInfo = auth()->user()?->is_platform_admin
+            || ($activeCompanyId && auth()->user()?->isCompanyMaster((int) $activeCompanyId));
         $tabs = [
             'templates' => 'Templates',
             'campanhas' => 'Campanhas',
@@ -284,8 +287,8 @@
                 $qrCode = $session['qr_code'] ?? null;
             @endphp
 
-            <div class="grid gap-4 lg:grid-cols-12">
-                <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-theme-sm lg:col-span-7">
+            <div class="grid gap-4 @if ($showWhatsappTechnicalInfo) lg:grid-cols-12 @endif">
+                <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-theme-sm @if ($showWhatsappTechnicalInfo) lg:col-span-7 @endif">
                     <div class="text-xs uppercase text-gray-400">Conexao</div>
                     <h3 class="mt-1 text-base font-semibold text-gray-800">Sessao WhatsApp da empresa</h3>
 
@@ -369,26 +372,28 @@
                     </div>
                 </section>
 
-                <aside class="rounded-xl border border-gray-200 bg-white p-6 shadow-theme-sm lg:col-span-5">
-                    <div class="text-xs uppercase text-gray-400">Servico</div>
-                    <h3 class="mt-1 text-base font-semibold text-gray-800">AQATech Comunicacao</h3>
-                    <div class="mt-4 space-y-3 text-sm">
-                        <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                            <div class="text-xs text-gray-500">Endpoint</div>
-                            <div class="mt-1 break-all font-medium text-gray-800">{{ $apiUrl ?: 'COMMUNICATION_API_URL ausente' }}</div>
-                        </div>
-                        <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                            <div class="text-xs text-gray-500">Webhook de entrada (configurar no Comunicacao)</div>
-                            <div class="mt-1 break-all font-medium text-gray-800">{{ $webhookUrl }}</div>
-                        </div>
-                        <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
-                            <div class="text-xs text-gray-500">Token do webhook</div>
-                            <div class="mt-1 font-medium {{ $webhookTokenConfigured ? 'text-emerald-700' : 'text-warning-700' }}">
-                                {{ $webhookTokenConfigured ? 'Configurado em COMMUNICATION_WEBHOOK_TOKEN' : 'Nao configurado' }}
+                @if ($showWhatsappTechnicalInfo)
+                    <aside class="rounded-xl border border-gray-200 bg-white p-6 shadow-theme-sm lg:col-span-5">
+                        <div class="text-xs uppercase text-gray-400">Servico</div>
+                        <h3 class="mt-1 text-base font-semibold text-gray-800">AQATech Comunicacao</h3>
+                        <div class="mt-4 space-y-3 text-sm">
+                            <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                <div class="text-xs text-gray-500">Endpoint</div>
+                                <div class="mt-1 break-all font-medium text-gray-800">{{ $apiUrl ?: 'COMMUNICATION_API_URL ausente' }}</div>
+                            </div>
+                            <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                <div class="text-xs text-gray-500">Webhook de entrada (configurar no Comunicacao)</div>
+                                <div class="mt-1 break-all font-medium text-gray-800">{{ $webhookUrl }}</div>
+                            </div>
+                            <div class="rounded-lg border border-gray-100 bg-gray-50 p-3">
+                                <div class="text-xs text-gray-500">Token do webhook</div>
+                                <div class="mt-1 font-medium {{ $webhookTokenConfigured ? 'text-emerald-700' : 'text-warning-700' }}">
+                                    {{ $webhookTokenConfigured ? 'Configurado em COMMUNICATION_WEBHOOK_TOKEN' : 'Nao configurado' }}
+                                </div>
                             </div>
                         </div>
-                    </div>
-                </aside>
+                    </aside>
+                @endif
             </div>
         @endif
     </div>

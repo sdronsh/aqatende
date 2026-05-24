@@ -104,6 +104,7 @@ class PatientWebController extends Controller
             'phone' => ['nullable', 'string', 'max:30'],
             'cellphone' => ['nullable', 'string', 'max:30'],
             'whatsapp' => ['nullable', 'boolean'],
+            'whatsapp_reminders_enabled' => ['nullable', 'boolean'],
             'emergency_contact_name' => ['nullable', 'string', 'max:255'],
             'emergency_contact_phone' => ['nullable', 'string', 'max:30'],
             'emergency_contact_relationship' => ['nullable', 'string', 'max:50'],
@@ -174,6 +175,7 @@ class PatientWebController extends Controller
         ]);
 
         $data['whatsapp'] = (bool) ($data['whatsapp'] ?? false);
+        $data['whatsapp_reminders_enabled'] = (bool) ($data['whatsapp_reminders_enabled'] ?? false);
         $data['has_insurance'] = (bool) ($data['has_insurance'] ?? false);
         $data['insurance_holder'] = (bool) ($data['insurance_holder'] ?? false);
         $data['controlled_medication'] = (bool) ($data['controlled_medication'] ?? false);
@@ -253,6 +255,7 @@ class PatientWebController extends Controller
             'phone' => ['nullable', 'string', 'max:30'],
             'cellphone' => ['nullable', 'string', 'max:30'],
             'whatsapp' => ['nullable', 'boolean'],
+            'whatsapp_reminders_enabled' => ['nullable', 'boolean'],
             'emergency_contact_name' => ['nullable', 'string', 'max:255'],
             'emergency_contact_phone' => ['nullable', 'string', 'max:30'],
             'emergency_contact_relationship' => ['nullable', 'string', 'max:50'],
@@ -323,6 +326,7 @@ class PatientWebController extends Controller
         ]);
 
         $data['whatsapp'] = (bool) ($data['whatsapp'] ?? false);
+        $data['whatsapp_reminders_enabled'] = (bool) ($data['whatsapp_reminders_enabled'] ?? false);
         $data['has_insurance'] = (bool) ($data['has_insurance'] ?? false);
         $data['insurance_holder'] = (bool) ($data['insurance_holder'] ?? false);
         $data['controlled_medication'] = (bool) ($data['controlled_medication'] ?? false);

@@ -74,11 +74,21 @@
             <label class="mb-1 block text-sm font-medium text-gray-700" for="cellphone">Celular</label>
             <input class="{{ $input }}" id="cellphone" name="cellphone" value="{{ old('cellphone', $patient->cellphone ?? '') }}" data-mask="phone" inputmode="tel" autocomplete="tel" />
         </div>
-        <div class="md:col-span-4">
+        <div class="md:col-span-2">
             @php $whatsapp = old('whatsapp', $patient->whatsapp ?? false); @endphp
             <label class="mt-6 inline-flex items-center gap-2 text-sm text-gray-600">
                 <input type="checkbox" name="whatsapp" value="1" class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" @checked($whatsapp) />
                 WhatsApp
+            </label>
+        </div>
+        <div class="md:col-span-6">
+            @php $whatsappRemindersEnabled = old('whatsapp_reminders_enabled', $patient->exists ? ($patient->whatsapp_reminders_enabled ?? true) : true); @endphp
+            <label class="mt-6 inline-flex items-start gap-2 text-sm text-gray-600">
+                <input type="checkbox" name="whatsapp_reminders_enabled" value="1" class="mt-0.5 h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" @checked($whatsappRemindersEnabled) />
+                <span>
+                    <span class="font-medium text-gray-700">Recebe lembretes de WhatsApp</span>
+                    <span class="block text-xs text-gray-500">Nao enviar lembretes automaticos.</span>
+                </span>
             </label>
         </div>
         <div class="md:col-span-4">
