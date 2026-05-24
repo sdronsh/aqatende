@@ -31,6 +31,87 @@
             justify-content: center;
         }
 
+        .login-page {
+            background:
+                radial-gradient(circle at top left, rgba(37, 109, 127, .14), transparent 34%),
+                linear-gradient(135deg, #f7fbfc 0%, #ffffff 48%, #eef7f9 100%);
+        }
+
+        .login-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: .5rem;
+            border-radius: 999px;
+            border: 1px solid #b9dce4;
+            background: #eef8fa;
+            padding: .25rem .75rem;
+            color: #256d7f;
+            font-size: .75rem;
+            font-weight: 750;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+        }
+
+        .login-card {
+            border: 1px solid #d8e8ec;
+            background: rgba(255, 255, 255, .94);
+            box-shadow: 0 24px 70px -34px rgba(16, 74, 88, .46);
+        }
+
+        .login-logo {
+            height: 72px;
+            width: auto;
+            max-width: 260px;
+            object-fit: contain;
+        }
+
+        .login-feature-card {
+            border: 1px solid #d8e8ec;
+            background: rgba(255, 255, 255, .9);
+        }
+
+        .login-check {
+            background: #dff3f6;
+            color: #256d7f;
+        }
+
+        .login-card input:not([type="checkbox"]) {
+            border-color: #d0d5dd;
+        }
+
+        .login-card input:not([type="checkbox"]):focus {
+            border-color: #256d7f !important;
+            box-shadow: 0 0 0 4px rgba(37, 109, 127, .14) !important;
+        }
+
+        .login-card input[type="checkbox"] {
+            accent-color: #256d7f;
+        }
+
+        .login-submit {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: .75rem;
+            background: #256d7f;
+            padding: .5rem 1rem;
+            color: #fff;
+            font-size: .875rem;
+            font-weight: 700;
+            box-shadow: 0 10px 24px -14px rgba(37, 109, 127, .9);
+            transition: background .18s ease, box-shadow .18s ease;
+        }
+
+        .login-submit:hover {
+            background: #1f5b6a;
+            box-shadow: 0 12px 26px -14px rgba(37, 109, 127, 1);
+        }
+
+        .login-submit:focus {
+            outline: none;
+            box-shadow: 0 0 0 4px rgba(37, 109, 127, .18);
+        }
+
         @media (display-mode: standalone) {
             .pwa-login-only .login-marketing,
             .pwa-login-only .login-footer,
@@ -64,7 +145,48 @@
             .login-features { display: none; }
             .login-footer { margin-top: 1.5rem; }
             .login-card { padding: 2rem; }
-            .login-logo { width: 120px; height: 120px; }
+            .login-logo { height: 64px; max-width: 230px; }
+        }
+
+        @media (max-width: 640px) {
+            .login-shell {
+                padding-left: 1rem;
+                padding-right: 1rem;
+                padding-top: 1.25rem;
+                padding-bottom: 1.25rem;
+            }
+
+            .login-grid {
+                gap: 1.5rem;
+            }
+
+            .login-card-section {
+                order: -1;
+            }
+
+            .login-marketing {
+                padding-bottom: 1.5rem;
+            }
+
+            .login-hero h1 {
+                margin-top: 1rem;
+                font-size: 1.9rem;
+                line-height: 1.18;
+            }
+
+            .login-hero p {
+                font-size: .95rem;
+            }
+
+            .login-card {
+                border-radius: 22px;
+                padding: 1.5rem;
+            }
+
+            .login-logo {
+                height: 64px;
+                max-width: 240px;
+            }
         }
     </style>
 
@@ -74,11 +196,11 @@
         }
     </script>
 
-    <div class="pwa-login-only min-h-screen" style="background: radial-gradient(circle at top left, #fbecf8, #fdf7fc 42%, #ffffff 86%);">
+    <div class="pwa-login-only login-page min-h-screen">
         <div class="login-shell mx-auto flex min-h-screen max-w-6xl flex-col px-6 py-8 lg:py-12">
             <div class="login-grid grid items-center gap-10 lg:grid-cols-2">
                 <section class="login-marketing">
-                    <div class="inline-flex items-center gap-2 rounded-full border border-brand-200 bg-brand-50 px-3 py-1 text-xs font-semibold uppercase tracking-widest text-brand-700">
+                    <div class="login-badge">
                         Plataforma AQAtende
                     </div>
 
@@ -93,30 +215,30 @@
                     </div>
 
                     <div class="login-features mt-8 grid gap-4 sm:grid-cols-3">
-                        <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs">
+                        <div class="login-feature-card rounded-2xl p-4 shadow-theme-xs">
                             <h3 class="text-sm font-semibold text-gray-800">Agenda e fila</h3>
                             <p class="mt-2 text-xs text-gray-500">Controle horários marcados e atendimentos por ordem de chegada no mesmo fluxo.</p>
                         </div>
-                        <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs">
+                        <div class="login-feature-card rounded-2xl p-4 shadow-theme-xs">
                             <h3 class="text-sm font-semibold text-gray-800">Equipe e comissões</h3>
                             <p class="mt-2 text-xs text-gray-500">Vincule profissionais aos serviços e calcule comissões ao finalizar atendimentos.</p>
                         </div>
-                        <div class="rounded-2xl border border-gray-200 bg-white p-4 shadow-theme-xs">
+                        <div class="login-feature-card rounded-2xl p-4 shadow-theme-xs">
                             <h3 class="text-sm font-semibold text-gray-800">Financeiro e relatórios</h3>
                             <p class="mt-2 text-xs text-gray-500">Receitas, despesas e indicadores para gestão estratégica da operação.</p>
                         </div>
                     </div>
 
                     <div class="mt-8 flex items-center gap-3 text-sm text-gray-500">
-                        <span class="inline-flex h-6 w-6 items-center justify-center rounded-full bg-brand-100 text-brand-600">✓</span>
+                        <span class="login-check inline-flex h-6 w-6 items-center justify-center rounded-full">✓</span>
                         Plataforma segura, pronta para operação multiempresa e gestão diária do atendimento.
                     </div>
                 </section>
 
                 <section class="login-card-section relative flex justify-center lg:justify-end">
-                    <div class="login-card w-full max-w-md rounded-[28px] p-10 shadow-[0_24px_60px_-30px_rgba(75,15,99,0.38)]" style="background: radial-gradient(circle at top left, #fbecf8, #fdf7fc 42%, #ffffff 86%);">
+                    <div class="login-card w-full max-w-md rounded-[28px] p-10">
                         <div class="mb-6 flex justify-center">
-                            <img class="login-logo h-40 w-40 md:h-48 md:w-48" src="{{ asset('logo.png') }}" alt="AQAtende" />
+                            <img class="login-logo" src="{{ asset('brand/logo-horizontal-light.png') }}" alt="AQAtende" />
                         </div>
 
                         <form method="POST" action="{{ route('login') }}" class="space-y-4">
@@ -147,7 +269,7 @@
                             </div>
 
                             <label class="flex items-center gap-2 text-sm text-gray-600">
-                                <input id="remember_me" type="checkbox" class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500" name="remember">
+                                <input id="remember_me" type="checkbox" class="h-4 w-4 rounded border-gray-300" name="remember">
                                 Lembrar
                             </label>
 
@@ -159,9 +281,9 @@
                                 @endif
                                 <div class="flex items-center gap-2">
                                     <a class="login-cancel-link rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-theme-xs hover:bg-gray-50" href="{{ url('/') }}">Cancelar</a>
-                                    <x-primary-button>
+                                    <button class="login-submit" type="submit">
                                         Entrar
-                                    </x-primary-button>
+                                    </button>
                                 </div>
                             </div>
                         </form>

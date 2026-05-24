@@ -20,7 +20,7 @@
                 </svg>
             </button>
             <a class="flex min-w-0 items-center gap-2" href="{{ route('dashboard') }}">
-                <img class="h-9 w-9 shrink-0 rounded-full object-contain border border-brand-100 bg-white" src="{{ $companyLogo ? asset('storage/'.$companyLogo) : asset('logo.png') }}" alt="AQAtende" />
+                <img class="h-9 w-9 shrink-0 rounded-full object-contain border border-brand-100 bg-white" src="{{ $companyLogo ? asset('storage/'.$companyLogo) : asset('brand/logo-icon-square.png') }}" alt="AQAtende" />
                 <span class="truncate text-sm font-semibold text-gray-800">{{ $company?->name ?? 'AQAtende' }}</span>
             </a>
             <div class="hidden lg:block">

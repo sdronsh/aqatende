@@ -7,8 +7,8 @@
         <meta name="description" content="Sistema completo para profissionais e negócios de atendimento: agenda, fila, clientes e financeiro.">
 
         <title>{{ config('app.name', 'Laravel') }}</title>
-        <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
-        <link rel="shortcut icon" type="image/png" href="{{ asset('logo.png') }}">
+        <link rel="icon" type="image/png" href="{{ asset('icons/icon-192.png') }}">
+        <link rel="shortcut icon" type="image/png" href="{{ asset('icons/icon-192.png') }}">
         @include('partials.pwa-meta')
 
         <link rel="preconnect" href="https://fonts.bunny.net">
@@ -120,7 +120,7 @@
             <div class="min-h-screen flex items-center justify-center bg-gray-50 px-4" style="font-family: 'Manrope', sans-serif;">
                 <div class="w-full max-w-md">
                     <div class="mb-6 flex items-center justify-center">
-                        <img style="height: 220px; width: auto;" src="{{ asset('logo.png') }}" alt="AQAtende">
+                        <img style="height: 82px; width: auto; max-width: 280px; object-fit: contain;" src="{{ asset('brand/logo-horizontal-light.png') }}" alt="AQAtende">
                     </div>
                     <div class="rounded-xl border border-gray-200 bg-white p-6 shadow-theme-sm">
                         {{ $slot }}

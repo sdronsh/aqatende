@@ -53,7 +53,7 @@
 
 <aside id="sidebar" class="fixed top-0 left-0 z-9999 h-screen overflow-y-auto border-r border-gray-200 bg-white px-4 pt-4 transition-all duration-300 ease-in-out">
     <a class="pb-3 flex items-center gap-2 sidebar-title" href="{{ route('dashboard') }}">
-        <img class="h-16 w-16 rounded-full object-contain border border-brand-100 bg-white" src="{{ $companyLogo ? asset('storage/'.$companyLogo) : asset('logo.png') }}" alt="AQAtende" />
+        <img class="h-16 w-16 rounded-full object-contain border border-brand-100 bg-white" src="{{ $companyLogo ? asset('storage/'.$companyLogo) : asset('brand/logo-icon-square.png') }}" alt="AQAtende" />
         <span class="text-lg font-semibold text-gray-800">{{ $company?->name ?? 'AQAtende' }}</span>
     </a>
     <div class="flex flex-col pb-6">

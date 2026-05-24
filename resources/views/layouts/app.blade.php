@@ -14,8 +14,8 @@
         <meta name="description" content="Sistema completo para profissionais e negócios de atendimento: agenda, fila, clientes e financeiro.">
 
         <title>{{ config('app.name', 'Laravel') }}</title>
-        <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
-        <link rel="shortcut icon" type="image/png" href="{{ asset('logo.png') }}">
+        <link rel="icon" type="image/png" href="{{ asset('icons/icon-192.png') }}">
+        <link rel="shortcut icon" type="image/png" href="{{ asset('icons/icon-192.png') }}">
         @include('partials.pwa-meta', ['themeColor' => $themeColor])
 
         <!-- Fonts -->
