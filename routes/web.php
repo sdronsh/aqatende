@@ -299,6 +299,12 @@ Route::middleware('auth')->group(function () {
         Route::post('/whatsapp/configuracoes', [\App\Http\Controllers\SettingsController::class, 'updateWhatsappAutomation'])
             ->middleware(['permission:configuracoes.logo.view', 'whatsapp-module'])
             ->name('whatsapp.automation');
+        Route::post('/whatsapp/campanhas', [\App\Http\Controllers\WhatsappCampaignController::class, 'store'])
+            ->middleware(['permission:configuracoes.logo.view', 'whatsapp-module'])
+            ->name('whatsapp.campaigns.store');
+        Route::post('/whatsapp/campanhas/{campaign}/disparar', [\App\Http\Controllers\WhatsappCampaignController::class, 'send'])
+            ->middleware(['permission:configuracoes.logo.view', 'whatsapp-module'])
+            ->name('whatsapp.campaigns.send');
         Route::post('/whatsapp/qrcode', [\App\Http\Controllers\SettingsController::class, 'generateWhatsappQr'])
             ->middleware(['permission:configuracoes.logo.view', 'whatsapp-module'])
             ->name('whatsapp.qr');

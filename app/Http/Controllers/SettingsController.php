@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Company;
 use App\Models\CompanySetting;
 use App\Models\Term;
+use App\Models\WhatsappCampaign;
 use App\Services\Communication\CommunicationClient;
 use App\Services\Licenses\LicenseClient;
 use Illuminate\Http\Client\RequestException;
@@ -72,6 +73,12 @@ class SettingsController extends Controller
             $activeTab = 'templates';
         }
         $automation = $this->getWhatsappAutomationSettings($company->id);
+        $campaigns = WhatsappCampaign::query()
+            ->where('company_id', $company->id)
+            ->withCount('recipients')
+            ->latest()
+            ->take(10)
+            ->get();
         $webhookUrl = rtrim((string) config('app.url'), '/').'/api/whatsapp/webhook';
         $webhookTokenConfigured = (string) config('aqamed.communication.webhook_token', '') !== '';
 
@@ -82,6 +89,7 @@ class SettingsController extends Controller
             'session' => $session,
             'activeTab' => $activeTab,
             'automation' => $automation,
+            'campaigns' => $campaigns,
             'webhookUrl' => $webhookUrl,
             'webhookTokenConfigured' => $webhookTokenConfigured,
         ]);

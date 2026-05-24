@@ -84,32 +84,134 @@
         @endif
 
         @if ($activeTab === 'campanhas')
+            @php
+                $campaignTypeLabels = [
+                    'all' => 'Todos os clientes',
+                    'inactive' => 'Clientes sumidos',
+                    'birthday' => 'Aniversariantes de hoje',
+                ];
+                $campaignStatusLabels = [
+                    'draft' => 'Preparada',
+                    'sending' => 'Enviando',
+                    'completed' => 'Concluida',
+                    'failed' => 'Com falhas',
+                ];
+                $campaignStatusClasses = [
+                    'draft' => 'bg-warning-100 text-warning-800',
+                    'sending' => 'bg-brand-50 text-brand-700',
+                    'completed' => 'bg-emerald-100 text-emerald-800',
+                    'failed' => 'bg-error-100 text-error-700',
+                ];
+            @endphp
+
             <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-theme-sm">
-                <h3 class="text-base font-semibold text-gray-800">Campanhas</h3>
-                <p class="mt-2 text-sm text-gray-500">Defina o publico para disparo manual ou futuro agendamento automatico.</p>
+                <h3 class="text-base font-semibold text-gray-800">Disparo manual de campanhas</h3>
+                <p class="mt-2 text-sm text-gray-500">Prepare o publico, confira a quantidade de destinatarios e dispare pelo WhatsApp conectado da empresa.</p>
 
-                <form method="POST" action="{{ route('settings.whatsapp.automation') }}" class="mt-5 space-y-4">
+                <form method="POST" action="{{ route('settings.whatsapp.campaigns.store') }}" class="mt-5 space-y-4">
                     @csrf
-                    <input type="hidden" name="tab" value="campanhas">
 
-                    <label class="flex items-center gap-2 text-sm text-gray-700">
-                        <input type="checkbox" name="send_to_all" value="1" class="h-4 w-4 rounded border-gray-300 text-brand-500" @checked(old('send_to_all', data_get($automation, 'campaigns.send_to_all')))>
-                        Enviar para todos os clientes
-                    </label>
-
-                    <label class="flex items-center gap-2 text-sm text-gray-700">
-                        <input type="checkbox" name="send_to_inactive" value="1" class="h-4 w-4 rounded border-gray-300 text-brand-500" @checked(old('send_to_inactive', data_get($automation, 'campaigns.send_to_inactive', true)))>
-                        Enviar para clientes sumidos
-                    </label>
-
-                    <div>
-                        <label for="inactive_days" class="mb-1 block text-xs font-semibold uppercase text-gray-500">Dias sem comparecer</label>
-                        <input id="inactive_days" name="inactive_days" type="number" min="1" max="365" value="{{ old('inactive_days', data_get($automation, 'campaigns.inactive_days', 30)) }}" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700 sm:w-48">
+                    <div class="grid gap-4 lg:grid-cols-3">
+                        <div>
+                            <label for="campaign_name" class="mb-1 block text-xs font-semibold uppercase text-gray-500">Nome da campanha</label>
+                            <input id="campaign_name" name="name" value="{{ old('name') }}" placeholder="Ex: Clientes sumidos - Maio" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700">
+                        </div>
+                        <div>
+                            <label for="campaign_type" class="mb-1 block text-xs font-semibold uppercase text-gray-500">Publico</label>
+                            <select id="campaign_type" name="type" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700">
+                                <option value="all" @selected(old('type') === 'all')>Todos os clientes</option>
+                                <option value="inactive" @selected(old('type', 'inactive') === 'inactive')>Clientes sumidos</option>
+                                <option value="birthday" @selected(old('type') === 'birthday')>Aniversariantes de hoje</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label for="campaign_inactive_days" class="mb-1 block text-xs font-semibold uppercase text-gray-500">Dias sem comparecer</label>
+                            <input id="campaign_inactive_days" name="inactive_days" type="number" min="1" max="365" value="{{ old('inactive_days', data_get($automation, 'campaigns.inactive_days', 30)) }}" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700">
+                        </div>
                     </div>
 
-                    <button type="submit" class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">Salvar campanhas</button>
+                    <div>
+                        <label for="campaign_message" class="mb-1 block text-xs font-semibold uppercase text-gray-500">Mensagem</label>
+                        <textarea id="campaign_message" name="message" rows="4" class="w-full rounded-lg border border-gray-200 px-3 py-2 text-sm text-gray-700" placeholder="Oi, {primeiro_nome}! Sentimos sua falta. Quer agendar um novo horario?">{{ old('message', data_get($automation, 'templates.inactive')) }}</textarea>
+                        <p class="mt-1 text-xs text-gray-500">Variaveis disponiveis: <code>{nome}</code>, <code>{primeiro_nome}</code>, <code>{cliente}</code> e <code>{dias}</code>.</p>
+                    </div>
+
+                    <div class="flex flex-wrap items-center gap-3">
+                        <button type="submit" class="rounded-lg bg-brand-500 px-4 py-2 text-sm font-semibold text-white hover:bg-brand-600">
+                            Preparar campanha
+                        </button>
+                        <span class="text-xs text-gray-500">O envio so acontece depois que voce clicar em Disparar agora no historico abaixo.</span>
+                    </div>
                 </form>
             </section>
+
+            <section class="rounded-xl border border-gray-200 bg-white p-6 shadow-theme-sm">
+                <div class="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                        <h3 class="text-base font-semibold text-gray-800">Ultimas campanhas</h3>
+                        <p class="mt-1 text-sm text-gray-500">Campanhas preparadas e disparadas manualmente.</p>
+                    </div>
+                    <span class="rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-600">{{ $campaigns->count() }} registro(s)</span>
+                </div>
+
+                <div class="mt-5 overflow-x-auto">
+                    <table class="min-w-full border-collapse text-left text-sm">
+                        <thead>
+                            <tr class="border-b border-gray-100 text-xs uppercase text-gray-400">
+                                <th class="py-3 pr-4">Campanha</th>
+                                <th class="py-3 pr-4">Publico</th>
+                                <th class="py-3 pr-4">Status</th>
+                                <th class="py-3 pr-4">Envio</th>
+                                <th class="py-3 text-right">Acao</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-gray-100">
+                            @forelse ($campaigns as $campaign)
+                                <tr>
+                                    <td class="py-3 pr-4">
+                                        <div class="font-semibold text-gray-800">{{ $campaign->name }}</div>
+                                        <div class="mt-1 text-xs text-gray-500">{{ $campaign->created_at?->format('d/m/Y H:i') }}</div>
+                                    </td>
+                                    <td class="py-3 pr-4 text-gray-600">
+                                        {{ $campaignTypeLabels[$campaign->type] ?? $campaign->type }}
+                                        @if ($campaign->inactive_days)
+                                            <div class="text-xs text-gray-400">{{ $campaign->inactive_days }} dia(s) sem comparecer</div>
+                                        @endif
+                                    </td>
+                                    <td class="py-3 pr-4">
+                                        <span class="inline-flex rounded-full px-2 py-1 text-xs font-semibold {{ $campaignStatusClasses[$campaign->status] ?? 'bg-gray-100 text-gray-700' }}">
+                                            {{ $campaignStatusLabels[$campaign->status] ?? $campaign->status }}
+                                        </span>
+                                    </td>
+                                    <td class="py-3 pr-4 text-gray-600">
+                                        {{ $campaign->sent_count }}/{{ $campaign->recipients_count }} enviada(s)
+                                        @if ($campaign->failed_count > 0)
+                                            <div class="text-xs text-error-600">{{ $campaign->failed_count }} falha(s)</div>
+                                        @endif
+                                    </td>
+                                    <td class="py-3 text-right">
+                                        @if ($campaign->status === 'draft' || $campaign->status === 'failed')
+                                            <form method="POST" action="{{ route('settings.whatsapp.campaigns.send', $campaign) }}" onsubmit="return confirm('Disparar esta campanha para {{ $campaign->recipients_count }} destinatario(s)?')">
+                                                @csrf
+                                                <button type="submit" class="rounded-lg bg-brand-500 px-3 py-2 text-xs font-semibold text-white hover:bg-brand-600" @disabled(! $apiConfigured || $campaign->recipients_count < 1)>
+                                                    Disparar agora
+                                                </button>
+                                            </form>
+                                        @else
+                                            <span class="text-xs text-gray-400">Sem acao</span>
+                                        @endif
+                                    </td>
+                                </tr>
+                            @empty
+                                <tr>
+                                    <td colspan="5" class="py-6 text-center text-sm text-gray-500">Nenhuma campanha preparada ainda.</td>
+                                </tr>
+                            @endforelse
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
         @endif
 
         @if ($activeTab === 'fluxo')
