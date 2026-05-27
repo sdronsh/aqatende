@@ -177,6 +177,7 @@ class PublicBookingController extends Controller
         return view('public-booking.success', [
             'appointment' => $appointment,
             'company' => $bookingLink->company,
+            'newBookingUrl' => $this->newBookingUrlAfterSuccess($bookingLink),
         ]);
     }
 
@@ -190,6 +191,23 @@ class PublicBookingController extends Controller
         abort_unless($bookingLink->isAvailable(), 410);
 
         return $bookingLink;
+    }
+
+    private function newBookingUrlAfterSuccess(PatientBookingLink $bookingLink): string
+    {
+        if (! $bookingLink->patient_id) {
+            return route('public.booking.show', $bookingLink->token);
+        }
+
+        $newLink = PatientBookingLink::create([
+            'company_id' => $bookingLink->company_id,
+            'patient_id' => $bookingLink->patient_id,
+            'created_by' => null,
+            'token' => Str::random(48),
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        return route('public.booking.show', $newLink->token);
     }
 
     private function resolveOrCreatePatientForPublicBooking(int $companyId, string $name, string $phone): Patient

@@ -40,7 +40,32 @@
                     <span class="font-semibold text-gray-900">{{ $appointment->unit?->name }}</span>
                 </div>
             </div>
+
+            <div class="mt-6 grid gap-3 sm:grid-cols-2">
+                <a
+                    class="inline-flex items-center justify-center rounded-lg border border-brand-200 bg-white px-4 py-3 text-sm font-semibold text-brand-700 shadow-theme-xs hover:bg-brand-50"
+                    href="{{ $newBookingUrl }}"
+                >
+                    Incluir novo agendamento
+                </a>
+                <button
+                    class="inline-flex items-center justify-center rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-700"
+                    type="button"
+                    data-finish-booking
+                >
+                    Finalizar
+                </button>
+            </div>
         </section>
     </main>
+    <script>
+        document.querySelector('[data-finish-booking]')?.addEventListener('click', () => {
+            window.close();
+
+            if (!window.closed) {
+                window.location.href = 'about:blank';
+            }
+        });
+    </script>
 </body>
 </html>
