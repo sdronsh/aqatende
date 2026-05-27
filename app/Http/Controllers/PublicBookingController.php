@@ -28,11 +28,17 @@ class PublicBookingController extends Controller
         $bookingLink = $this->resolveBookingLink($token);
         $companyId = (int) $bookingLink->company_id;
         $clinicIds = Clinic::where('company_id', $companyId)->pluck('id');
+        $continuationAppointment = $this->continuationAppointment($request, $bookingLink);
         $pendingItems = $this->pendingBookingItems($request, $token);
-        $nextStartAt = $this->lastBookingItemEndsAt($pendingItems);
+        $nextStartAt = $continuationAppointment?->ends_at ?: $this->lastBookingItemEndsAt($pendingItems);
 
         $services = Service::with('packageItems')
             ->whereIn('clinic_id', $clinicIds)
+            ->when($continuationAppointment?->unit_id, function ($query) use ($continuationAppointment) {
+                $query->where(function ($inner) use ($continuationAppointment) {
+                    $inner->whereNull('unit_id')->orWhere('unit_id', $continuationAppointment->unit_id);
+                });
+            })
             ->where('active', true)
             ->orderBy('name')
             ->get();
@@ -42,9 +48,10 @@ class PublicBookingController extends Controller
             : null;
 
         $units = $this->availableUnits($clinicIds, $selectedService);
-        $selectedUnit = $request->integer('unit_id')
+        $selectedUnit = $continuationAppointment?->unit
+            ?: ($request->integer('unit_id')
             ? $units->firstWhere('id', $request->integer('unit_id'))
-            : ($units->count() === 1 ? $units->first() : null);
+            : ($units->count() === 1 ? $units->first() : null));
 
         $professionals = $selectedService
             ? $this->availableProfessionals($companyId, $selectedService, $selectedUnit)
@@ -78,6 +85,7 @@ class PublicBookingController extends Controller
             'slots' => $slots,
             'pendingItems' => $pendingItems,
             'nextStartAt' => $nextStartAt,
+            'continuationAppointment' => $continuationAppointment,
         ]);
     }
 
@@ -86,6 +94,7 @@ class PublicBookingController extends Controller
         $bookingLink = $this->resolveBookingLink($token);
         $companyId = (int) $bookingLink->company_id;
         $clinicIds = Clinic::where('company_id', $companyId)->pluck('id');
+        $continuationAppointment = $this->continuationAppointment($request, $bookingLink);
 
         $bookingAction = $request->input('booking_action', 'finish');
 
@@ -97,7 +106,7 @@ class PublicBookingController extends Controller
             'booking_action' => ['nullable', 'in:finish,add_more'],
         ];
 
-        if (! $bookingLink->patient_id && $bookingAction === 'finish') {
+        if (! $bookingLink->patient_id && ! $continuationAppointment && $bookingAction === 'finish') {
             $rules['customer_name'] = ['required', 'string', 'max:255'];
             $rules['customer_phone'] = ['nullable', 'string', 'max:30'];
         }
@@ -120,6 +129,8 @@ class PublicBookingController extends Controller
             ->whereIn('clinic_id', $clinicIds)
             ->where('active', true)
             ->firstOrFail();
+        abort_if($service->unit_id && (int) $service->unit_id !== (int) $unit->id, 422);
+        abort_if($continuationAppointment && (int) $unit->id !== (int) $continuationAppointment->unit_id, 422);
 
         $scheduledAt = Carbon::parse($scheduledAtValue);
         $date = $scheduledAt->copy()->startOfDay();
@@ -136,11 +147,21 @@ class PublicBookingController extends Controller
         }
 
         $pendingItems = $this->pendingBookingItems($request, $token);
-        $nextStartAt = $this->lastBookingItemEndsAt($pendingItems);
+        $nextStartAt = $continuationAppointment?->ends_at ?: $this->lastBookingItemEndsAt($pendingItems);
 
         $slotIsAvailable = $this->availableSlots($service, $unit, $professionals, $date, $professional, $nextStartAt)
-            ->contains(fn ($slot) => $slot['scheduled_at']->equalTo($scheduledAt) && $slot['value'] === $data['slot']);
-        abort_unless($slotIsAvailable, 422);
+            ->contains(function ($slot) use ($service, $serviceProfessionalIds, $scheduledAt, $data) {
+                if ($slot['scheduled_at']->toDateTimeString() !== $scheduledAt->toDateTimeString()) {
+                    return false;
+                }
+
+                if ($service->is_package) {
+                    return $slot['value'] === $data['slot'];
+                }
+
+                return (int) $slot['professional']->id === (int) collect($serviceProfessionalIds)->first();
+            });
+        abort_unless($slotIsAvailable, 422, 'Horario indisponivel para o servico selecionado.');
 
         $currentItems = $this->buildBookingItems($service, $unit, $professionals, $serviceProfessionalIds, $scheduledAt);
 
@@ -155,13 +176,13 @@ class PublicBookingController extends Controller
                 ->with('status', 'Servico incluido. Escolha o proximo servico para agendar em seguida.');
         }
 
-        $patient = $bookingLink->patient_id
+        $patient = $continuationAppointment?->patient ?: ($bookingLink->patient_id
             ? $bookingLink->patient
             : $this->resolveOrCreatePatientForPublicBooking(
                 $companyId,
                 (string) ($data['customer_name'] ?? ''),
                 (string) ($data['customer_phone'] ?? '')
-            );
+            ));
 
         $items = $pendingItems->merge($currentItems)->values();
         $appointment = DB::transaction(function () use ($bookingLink, $patient, $items, $data): Appointment {
@@ -173,11 +194,13 @@ class PublicBookingController extends Controller
             return $appointment->load(['patient', 'professional', 'service', 'unit', 'clinic']);
         });
         $this->clearPendingBookingItems($request, $token);
+        $this->clearContinuationAppointment($request, $bookingLink);
 
         return view('public-booking.success', [
             'appointment' => $appointment,
+            'previousAppointment' => $continuationAppointment?->load(['patient', 'professional', 'service', 'services', 'unit', 'clinic']),
             'company' => $bookingLink->company,
-            'newBookingUrl' => $this->newBookingUrlAfterSuccess($bookingLink),
+            'newBookingUrl' => $this->newBookingUrlAfterSuccess($request, $bookingLink, $appointment),
         ]);
     }
 
@@ -193,9 +216,11 @@ class PublicBookingController extends Controller
         return $bookingLink;
     }
 
-    private function newBookingUrlAfterSuccess(PatientBookingLink $bookingLink): string
+    private function newBookingUrlAfterSuccess(Request $request, PatientBookingLink $bookingLink, Appointment $appointment): string
     {
         if (! $bookingLink->patient_id) {
+            $this->storeContinuationAppointment($request, $bookingLink->token, $appointment);
+
             return route('public.booking.show', $bookingLink->token);
         }
 
@@ -206,8 +231,44 @@ class PublicBookingController extends Controller
             'token' => Str::random(48),
             'expires_at' => now()->addDays(7),
         ]);
+        $this->storeContinuationAppointment($request, $newLink->token, $appointment);
 
         return route('public.booking.show', $newLink->token);
+    }
+
+    private function continuationKey(string $token): string
+    {
+        return "public_booking_continue_after_{$token}";
+    }
+
+    private function storeContinuationAppointment(Request $request, string $token, Appointment $appointment): void
+    {
+        $request->session()->put($this->continuationKey($token), $appointment->id);
+    }
+
+    private function continuationAppointment(Request $request, PatientBookingLink $bookingLink): ?Appointment
+    {
+        $appointmentId = (int) $request->session()->get($this->continuationKey($bookingLink->token), 0);
+        if ($appointmentId <= 0) {
+            return null;
+        }
+
+        $clinicIds = Clinic::query()
+            ->where('company_id', $bookingLink->company_id)
+            ->pluck('id');
+
+        return Appointment::query()
+            ->with(['patient', 'professional', 'service', 'services', 'unit', 'clinic'])
+            ->whereKey($appointmentId)
+            ->whereIn('clinic_id', $clinicIds)
+            ->when($bookingLink->patient_id, fn ($query) => $query->where('patient_id', $bookingLink->patient_id))
+            ->whereNotIn('status', ['cancelado', 'cancelled'])
+            ->first();
+    }
+
+    private function clearContinuationAppointment(Request $request, PatientBookingLink $bookingLink): void
+    {
+        $request->session()->forget($this->continuationKey($bookingLink->token));
     }
 
     private function resolveOrCreatePatientForPublicBooking(int $companyId, string $name, string $phone): Patient
@@ -709,7 +770,7 @@ class PublicBookingController extends Controller
     private function hasConflict(int $professionalId, Carbon $slotStart, Carbon $slotEnd, Collection $appointments, Collection $blocks): bool
     {
         $appointmentConflict = $appointments
-            ->contains(function (Appointment $appointment) use ($slotStart, $slotEnd) {
+            ->contains(function (Appointment $appointment) use ($professionalId, $slotStart, $slotEnd) {
                 $services = $appointment->relationLoaded('services') ? $appointment->services : $appointment->services()->get();
                 if ($services->isNotEmpty()) {
                     return $services->contains(function (Service $service) use ($professionalId, $slotStart, $slotEnd) {

@@ -22,9 +22,13 @@
         <section class="rounded-xl border border-gray-200 bg-white p-5 shadow-theme-sm md:p-6">
             <div class="mb-5">
                 <div class="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Agendamento online</div>
-                <h2 class="mt-2 text-2xl font-semibold text-gray-900">Escolha o melhor horario</h2>
+                <h2 class="mt-2 text-2xl font-semibold text-gray-900">
+                    {{ $continuationAppointment ? 'Escolha o proximo servico' : 'Escolha o melhor horario' }}
+                </h2>
                 <p class="mt-2 text-sm leading-6 text-gray-500">
-                    @if ($bookingLink->patient)
+                    @if ($continuationAppointment)
+                        O proximo servico sera agendado automaticamente na sequencia do horario ja confirmado.
+                    @elseif ($bookingLink->patient)
                         Link gerado para {{ $bookingLink->patient?->full_name }}. Selecione servico, unidade, data e horario disponivel.
                     @else
                         Informe seus dados no final e escolha servico, unidade, data e horario disponivel.
@@ -41,6 +45,22 @@
             @if (session('status'))
                 <div class="mb-4 rounded-lg border border-success-200 bg-success-50 px-4 py-3 text-sm font-medium text-success-700">
                     {{ session('status') }}
+                </div>
+            @endif
+
+            @if ($continuationAppointment)
+                <div class="mb-5 rounded-xl border border-brand-100 bg-brand-50/60 p-4">
+                    <div class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">Agendamento ja confirmado</div>
+                    <div class="mt-3 rounded-lg border border-white/80 bg-white px-3 py-2 text-sm shadow-theme-xs">
+                        <div class="font-semibold text-gray-900">{{ $continuationAppointment->serviceNames() }}</div>
+                        <div class="mt-1 text-xs text-gray-500">
+                            {{ $continuationAppointment->scheduled_at->format('d/m H:i') }} ate {{ $continuationAppointment->ends_at?->format('H:i') }}
+                            · {{ $continuationAppointment->professional?->display_name }}
+                        </div>
+                    </div>
+                    <p class="mt-3 text-sm text-brand-800">
+                        Escolha apenas o servico adicional. Ele sera encaixado a partir de {{ $nextStartAt?->format('H:i') }}.
+                    </p>
                 </div>
             @endif
 
@@ -77,7 +97,7 @@
                     </select>
                 </div>
 
-                @if ($selectedService)
+                @if ($selectedService && ! $continuationAppointment)
                     <div>
                         <label class="mb-1 block text-sm font-medium text-gray-700" for="unit_id">Unidade</label>
                         <select id="unit_id" name="unit_id" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" onchange="this.form.submit()">
@@ -140,7 +160,7 @@
                     <input type="hidden" name="service_id" value="{{ $selectedService->id }}">
                     <input type="hidden" name="unit_id" value="{{ $selectedUnit->id }}">
 
-                    @if (! $bookingLink->patient_id)
+                    @if (! $bookingLink->patient_id && ! $continuationAppointment)
                         <div class="mb-5 rounded-lg border border-gray-100 bg-gray-50 p-4">
                             <h3 class="text-sm font-semibold text-gray-900">Seus dados</h3>
                             <p class="mt-1 text-xs text-gray-500">O telefone ajuda a localizar seu cadastro. Se preferir, informe apenas o nome.</p>
@@ -159,41 +179,69 @@
                         </div>
                     @endif
 
-                    <div class="flex items-center justify-between gap-3">
-                        <div>
-                            <h3 class="text-sm font-semibold text-gray-900">Horarios disponiveis</h3>
-                            <p class="text-xs text-gray-500">{{ $date->translatedFormat('d \\d\\e F \\d\\e Y') }}</p>
+                    @if ($continuationAppointment)
+                        @php $sequenceSlot = $slots->first(); @endphp
+                        <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
+                            <h3 class="text-sm font-semibold text-gray-900">Horario em sequencia</h3>
+                            @if ($sequenceSlot)
+                                <p class="mt-1 text-sm text-gray-600">
+                                    {{ $selectedService->name }} sera agendado em {{ $sequenceSlot['scheduled_at']->format('d/m/Y') }},
+                                    de {{ $sequenceSlot['scheduled_at']->format('H:i') }} ate {{ $sequenceSlot['ends_at']->format('H:i') }}.
+                                </p>
+                                <p class="mt-1 text-xs text-gray-500">{{ $sequenceSlot['label'] }}</p>
+                                <input type="hidden" name="slot" value="{{ $sequenceSlot['value'] }}">
+                            @else
+                                <p class="mt-1 text-sm text-gray-600">
+                                    Nao ha profissional disponivel para encaixar este servico imediatamente apos o agendamento anterior.
+                                </p>
+                            @endif
                         </div>
-                        <span class="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">{{ $slots->count() }} horarios</span>
-                    </div>
 
-                    <div class="mt-4 grid gap-2 sm:grid-cols-2">
-                        @forelse ($slots as $slot)
-                            <label class="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 px-3 py-3 text-sm hover:border-brand-300 hover:bg-brand-50">
-                                <input type="radio" name="slot" value="{{ $slot['value'] }}" required class="h-4 w-4 text-brand-600">
-                                <span>
-                                    <span class="block font-semibold text-gray-900">{{ $slot['scheduled_at']->format('H:i') }}</span>
-                                    <span class="block text-xs text-gray-500">{{ $slot['label'] }}</span>
-                                </span>
-                            </label>
-                        @empty
-                            <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500 sm:col-span-2">
-                                Nenhum horario disponivel nesta data. Escolha outro dia ou profissional.
+                        @if ($sequenceSlot)
+                            <div class="mt-5">
+                                <input type="hidden" name="booking_action" value="finish">
+                                <button class="w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-700" type="submit">
+                                    Confirmar servico em sequencia
+                                </button>
                             </div>
-                        @endforelse
-                    </div>
+                        @endif
+                    @else
+                        <div class="flex items-center justify-between gap-3">
+                            <div>
+                                <h3 class="text-sm font-semibold text-gray-900">Horarios disponiveis</h3>
+                                <p class="text-xs text-gray-500">{{ $date->translatedFormat('d \\d\\e F \\d\\e Y') }}</p>
+                            </div>
+                            <span class="rounded-full bg-brand-50 px-3 py-1 text-xs font-semibold text-brand-700">{{ $slots->count() }} horarios</span>
+                        </div>
 
-                    @if ($slots->isNotEmpty())
-                        <div class="mt-5">
-                            <label class="mb-1 block text-sm font-medium text-gray-700" for="notes">Observacao opcional</label>
-                            <textarea id="notes" name="notes" rows="3" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" placeholder="Alguma observacao para o atendimento?"></textarea>
+                        <div class="mt-4 grid gap-2 sm:grid-cols-2">
+                            @forelse ($slots as $slot)
+                                <label class="flex cursor-pointer items-center gap-3 rounded-lg border border-gray-200 px-3 py-3 text-sm hover:border-brand-300 hover:bg-brand-50">
+                                    <input type="radio" name="slot" value="{{ $slot['value'] }}" required class="h-4 w-4 text-brand-600">
+                                    <span>
+                                        <span class="block font-semibold text-gray-900">{{ $slot['scheduled_at']->format('H:i') }}</span>
+                                        <span class="block text-xs text-gray-500">{{ $slot['label'] }}</span>
+                                    </span>
+                                </label>
+                            @empty
+                                <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-6 text-center text-sm text-gray-500 sm:col-span-2">
+                                    Nenhum horario disponivel nesta data. Escolha outro dia ou profissional.
+                                </div>
+                            @endforelse
                         </div>
-                        <div class="mt-5">
-                            <input type="hidden" name="booking_action" value="finish">
-                            <button class="w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-700" type="submit">
-                                Confirmar agendamento
-                            </button>
-                        </div>
+
+                        @if ($slots->isNotEmpty())
+                            <div class="mt-5">
+                                <label class="mb-1 block text-sm font-medium text-gray-700" for="notes">Observacao opcional</label>
+                                <textarea id="notes" name="notes" rows="3" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" placeholder="Alguma observacao para o atendimento?"></textarea>
+                            </div>
+                            <div class="mt-5">
+                                <input type="hidden" name="booking_action" value="finish">
+                                <button class="w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-700" type="submit">
+                                    Confirmar agendamento
+                                </button>
+                            </div>
+                        @endif
                     @endif
                 </form>
             @endif

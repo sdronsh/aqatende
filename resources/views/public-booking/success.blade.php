@@ -22,23 +22,35 @@
                 {{ $appointment->patient?->full_name }}, seu horario foi registrado em {{ $company?->name ?? 'AQAtende' }}.
             </p>
 
-            <div class="mt-6 grid gap-2 rounded-lg bg-gray-50 p-4 text-left text-sm">
-                <div class="flex justify-between gap-3">
-                    <span class="text-gray-500">Data</span>
-                    <span class="font-semibold text-gray-900">{{ $appointment->scheduled_at->format('d/m/Y H:i') }}</span>
-                </div>
-                <div class="flex justify-between gap-3">
-                    <span class="text-gray-500">Servico</span>
-                    <span class="font-semibold text-gray-900">{{ $appointment->serviceNames() }}</span>
-                </div>
-                <div class="flex justify-between gap-3">
-                    <span class="text-gray-500">Profissional</span>
-                    <span class="font-semibold text-gray-900">{{ $appointment->professional?->display_name }}</span>
-                </div>
-                <div class="flex justify-between gap-3">
-                    <span class="text-gray-500">Unidade</span>
-                    <span class="font-semibold text-gray-900">{{ $appointment->unit?->name }}</span>
-                </div>
+            @php
+                $confirmedAppointments = collect([$previousAppointment ?? null, $appointment])->filter();
+            @endphp
+
+            <div class="mt-6 grid gap-3 rounded-lg bg-gray-50 p-4 text-left text-sm">
+                @foreach ($confirmedAppointments as $confirmedAppointment)
+                    <div class="rounded-lg border border-white bg-white p-3 shadow-theme-xs">
+                        <div class="font-semibold text-gray-900">{{ $confirmedAppointment->serviceNames() }}</div>
+                        <div class="mt-2 grid gap-1 text-xs text-gray-500">
+                            <div class="flex justify-between gap-3">
+                                <span>Horario</span>
+                                <span class="font-semibold text-gray-900">
+                                    {{ $confirmedAppointment->scheduled_at->format('d/m/Y H:i') }}
+                                    @if ($confirmedAppointment->ends_at)
+                                        ate {{ $confirmedAppointment->ends_at->format('H:i') }}
+                                    @endif
+                                </span>
+                            </div>
+                            <div class="flex justify-between gap-3">
+                                <span>Profissional</span>
+                                <span class="font-semibold text-gray-900">{{ $confirmedAppointment->professional?->display_name }}</span>
+                            </div>
+                            <div class="flex justify-between gap-3">
+                                <span>Unidade</span>
+                                <span class="font-semibold text-gray-900">{{ $confirmedAppointment->unit?->name }}</span>
+                            </div>
+                        </div>
+                    </div>
+                @endforeach
             </div>
 
             <div class="mt-6 grid gap-3 sm:grid-cols-2">
