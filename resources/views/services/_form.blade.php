@@ -111,6 +111,10 @@
                         name="package_service_ids[]"
                         value="{{ $componentService->id }}"
                         class="h-4 w-4 rounded border-gray-300 text-brand-500 focus:ring-brand-500"
+                        data-package-service
+                        data-duration="{{ (int) $componentService->duration_minutes }}"
+                        data-price-cents="{{ (int) ($componentService->price_cents ?? 0) }}"
+                        data-shared="{{ $componentService->shared_service ? '1' : '0' }}"
                         @checked($selectedPackageServiceIds->contains((int) $componentService->id))
                     />
                     <span class="min-w-0">
@@ -124,6 +128,45 @@
                 </div>
             @endforelse
         </div>
+        <p class="mt-2 text-xs text-gray-500">
+            Ao selecionar os servicos internos, o sistema sugere duracao e preco. Se houver servico compartilhado, a duracao sugerida usa o maior tempo; caso contrario, soma os tempos. Voce pode alterar duracao e preco antes de salvar.
+        </p>
         <x-input-error class="mt-1" :messages="$errors->get('package_service_ids')" />
     </div>
 </div>
+
+<script>
+    (() => {
+        const durationInput = document.getElementById('duration_minutes');
+        const priceInput = document.getElementById('price');
+        const packageToggle = document.querySelector('input[name="is_package"]');
+        const serviceChecks = Array.from(document.querySelectorAll('[data-package-service]'));
+
+        if (!durationInput || !priceInput || !packageToggle || serviceChecks.length === 0) return;
+
+        const recalculatePackageDuration = () => {
+            if (!packageToggle.checked) return;
+
+            const selected = serviceChecks.filter((input) => input.checked);
+            if (selected.length === 0) return;
+
+            const durations = selected.map((input) => Number(input.dataset.duration || 0)).filter((value) => value > 0);
+            if (durations.length === 0) return;
+
+            const hasShared = selected.some((input) => input.dataset.shared === '1');
+            const duration = hasShared
+                ? Math.max(...durations)
+                : durations.reduce((total, value) => total + value, 0);
+            const priceCents = selected.reduce((total, input) => total + Number(input.dataset.priceCents || 0), 0);
+
+            durationInput.value = duration;
+            priceInput.value = (priceCents / 100).toLocaleString('pt-BR', {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+            });
+        };
+
+        packageToggle.addEventListener('change', recalculatePackageDuration);
+        serviceChecks.forEach((input) => input.addEventListener('change', recalculatePackageDuration));
+    })();
+</script>

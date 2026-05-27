@@ -38,6 +38,32 @@
                 </div>
             @endif
 
+            @if (session('status'))
+                <div class="mb-4 rounded-lg border border-success-200 bg-success-50 px-4 py-3 text-sm font-medium text-success-700">
+                    {{ session('status') }}
+                </div>
+            @endif
+
+            @if ($pendingItems->isNotEmpty())
+                <div class="mb-5 rounded-xl border border-brand-100 bg-brand-50/60 p-4">
+                    <div class="text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">Servicos ja incluidos</div>
+                    <div class="mt-3 grid gap-2">
+                        @foreach ($pendingItems as $item)
+                            <div class="rounded-lg border border-white/80 bg-white px-3 py-2 text-sm shadow-theme-xs">
+                                <div class="font-semibold text-gray-900">{{ $item['service_name'] }}</div>
+                                <div class="mt-1 text-xs text-gray-500">
+                                    {{ $item['scheduled_at']->format('d/m H:i') }} ate {{ $item['ends_at']->format('H:i') }}
+                                    · {{ $item['professional_name'] }}
+                                </div>
+                            </div>
+                        @endforeach
+                    </div>
+                    <p class="mt-3 text-sm text-brand-800">
+                        O proximo servico sera encaixado a partir de {{ $nextStartAt?->format('d/m/Y H:i') }}.
+                    </p>
+                </div>
+            @endif
+
             <form method="GET" action="{{ route('public.booking.show', $bookingLink->token) }}" class="grid gap-4">
                 <div>
                     <label class="mb-1 block text-sm font-medium text-gray-700" for="service_id">Servico</label>
@@ -74,6 +100,7 @@
                         </div>
                     @endif
 
+                    @if (! $nextStartAt)
                     <div>
                         <div class="mb-2 text-sm font-medium text-gray-700">Data</div>
                         <div class="grid gap-2" style="grid-template-columns: repeat(4, minmax(0, 1fr));">
@@ -98,6 +125,12 @@
                             @endforeach
                         </div>
                     </div>
+                    @else
+                        <div class="rounded-lg border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-600">
+                            Como ja existe um servico incluido, o proximo horario sera automaticamente logo em seguida:
+                            <strong class="text-gray-900">{{ $nextStartAt->format('d/m/Y H:i') }}</strong>.
+                        </div>
+                    @endif
                 @endif
             </form>
 
@@ -155,9 +188,14 @@
                             <label class="mb-1 block text-sm font-medium text-gray-700" for="notes">Observacao opcional</label>
                             <textarea id="notes" name="notes" rows="3" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" placeholder="Alguma observacao para o atendimento?"></textarea>
                         </div>
-                        <button class="mt-5 w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-700" type="submit">
-                            Confirmar agendamento
-                        </button>
+                        <div class="mt-5 grid gap-3 sm:grid-cols-2">
+                            <button name="booking_action" value="finish" class="rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-700" type="submit">
+                                {{ $pendingItems->isNotEmpty() ? 'Concluir agendamento' : 'Confirmar agendamento' }}
+                            </button>
+                            <button name="booking_action" value="add_more" formnovalidate class="rounded-lg border border-brand-200 bg-white px-4 py-3 text-sm font-semibold text-brand-700 shadow-theme-xs hover:bg-brand-50" type="submit">
+                                Incluir mais um servico
+                            </button>
+                        </div>
                     @endif
                 </form>
             @endif

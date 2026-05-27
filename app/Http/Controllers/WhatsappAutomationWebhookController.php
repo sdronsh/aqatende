@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\AccountReceivable;
 use App\Models\Clinic;
 use App\Models\CompanySetting;
+use App\Models\FinancialCategory;
 use App\Models\Patient;
 use App\Models\PatientBookingLink;
 use App\Models\Professional;
@@ -15,6 +17,7 @@ use App\Services\Communication\CommunicationClient;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 
 class WhatsappAutomationWebhookController extends Controller
@@ -119,6 +122,50 @@ class WhatsappAutomationWebhookController extends Controller
             return response()->json(['ok' => true]);
         }
 
+        if (($state['step'] ?? null) === 'booking_more_options') {
+            $pendingItems = collect($state['pending_items'] ?? []);
+            if ($pendingItems->isEmpty()) {
+                $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
+                $this->send($communication, $sessionUuid, $phone, 'Nao encontrei servicos em andamento. Envie *agendar* para iniciar novamente.');
+                return response()->json(['ok' => true]);
+            }
+
+            if (trim($lower) === '1') {
+                $flowPatient = $patient ?: Patient::find((int) ($state['patient_id'] ?? 0));
+                if (! $flowPatient) {
+                    $this->saveState((int) $company['company_id'], $stateKey, array_merge($state, ['step' => 'collect_guest_name']));
+                    $this->send($communication, $sessionUuid, $phone, 'Para concluir, informe seu nome completo.');
+                    return response()->json(['ok' => true]);
+                }
+
+                $appointment = DB::transaction(fn () => $this->createAppointmentFromFlowItems(
+                    $flowPatient,
+                    $pendingItems,
+                    'whatsapp',
+                    'Agendado automaticamente via WhatsApp.'
+                ));
+
+                $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
+                $this->send($communication, $sessionUuid, $phone, $this->flowConfirmationMessage($appointment));
+
+                return response()->json(['ok' => true, 'appointment_id' => $appointment->id]);
+            }
+
+            if (trim($lower) === '2') {
+                return $this->startBookingFlow($communication, (int) $company['company_id'], $stateKey, $sessionUuid, $phone, [
+                    'pending_items' => $pendingItems->all(),
+                    'patient_id' => $state['patient_id'] ?? $patient?->id,
+                ]);
+            }
+
+            if (trim($lower) === '3') {
+                return $this->cancelFlow($communication, (int) $company['company_id'], $stateKey, $sessionUuid, $phone);
+            }
+
+            $this->send($communication, $sessionUuid, $phone, "Opcao invalida. Responda:\n1 - Concluir agendamento\n2 - Incluir mais um servico\n3 - Cancelar");
+            return response()->json(['ok' => true]);
+        }
+
         if (($state['step'] ?? 'start') === 'start') {
             $openAppointment = $this->findOpenAppointmentForPatient((int) $company['company_id'], $patient);
             if ($openAppointment) {
@@ -175,6 +222,8 @@ class WhatsappAutomationWebhookController extends Controller
                 'step' => 'professional',
                 'service_id' => $service->id,
                 'professionals' => $professionals->pluck('id')->all(),
+                'pending_items' => $state['pending_items'] ?? [],
+                'patient_id' => $state['patient_id'] ?? $patient?->id,
             ]);
             return response()->json(['ok' => true]);
         }
@@ -202,10 +251,37 @@ class WhatsappAutomationWebhookController extends Controller
                 return response()->json(['ok' => true]);
             }
 
+            $pendingItems = collect($state['pending_items'] ?? []);
+            if ($pendingItems->isNotEmpty()) {
+                $scheduledAt = Carbon::parse((string) data_get($pendingItems->last(), 'ends_at'));
+                $unit = $this->resolveUnitForServiceAndProfessional($service, $professional, (int) $company['company_id']);
+                if (! $unit) {
+                    $this->send($communication, $sessionUuid, $phone, 'Nao encontrei unidade ativa para esse servico.');
+                    return response()->json(['ok' => true]);
+                }
+
+                if (! $this->isProfessionalAvailable($professional->id, $unit->id, $scheduledAt, (int) ($service->duration_minutes ?: 30))) {
+                    $this->send($communication, $sessionUuid, $phone, 'Esse profissional nao esta disponivel no horario seguinte. Escolha outro profissional para encaixar o servico em seguida.');
+                    return response()->json(['ok' => true]);
+                }
+
+                $flowPatient = $patient ?: Patient::find((int) ($state['patient_id'] ?? 0));
+                $pendingItems->push($this->buildFlowItem($service, $professional, $unit, $scheduledAt));
+                $this->saveState((int) $company['company_id'], $stateKey, [
+                    'step' => 'booking_more_options',
+                    'pending_items' => $pendingItems->values()->all(),
+                    'patient_id' => $flowPatient?->id,
+                ]);
+                $this->send($communication, $sessionUuid, $phone, $this->bookingMoreOptionsMessage($pendingItems));
+                return response()->json(['ok' => true]);
+            }
+
             $this->saveState((int) $company['company_id'], $stateKey, [
                 'step' => 'datetime',
                 'service_id' => $service->id,
                 'professional_id' => $professional->id,
+                'pending_items' => $state['pending_items'] ?? [],
+                'patient_id' => $state['patient_id'] ?? $patient?->id,
             ]);
             $this->send($communication, $sessionUuid, $phone, "Envie a data e hora desejada no formato *DD/MM HH:MM* (ex: 15/05 14:30).\nDigite *cancelar* para encerrar.");
             return response()->json(['ok' => true]);
@@ -255,6 +331,7 @@ class WhatsappAutomationWebhookController extends Controller
                     'professional_id' => $professional->id,
                     'scheduled_at' => $scheduledAt->toIso8601String(),
                     'unit_id' => $unit->id,
+                    'pending_items' => $state['pending_items'] ?? [],
                 ]);
                 $this->send(
                     $communication,
@@ -265,17 +342,17 @@ class WhatsappAutomationWebhookController extends Controller
                 return response()->json(['ok' => true]);
             }
 
-            $appointment = $this->createAppointmentForFlow($service, $professional, $unit, $patient, $scheduledAt);
+            $pendingItems = collect($state['pending_items'] ?? []);
+            $pendingItems->push($this->buildFlowItem($service, $professional, $unit, $scheduledAt));
 
-            $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
-            $this->send(
-                $communication,
-                $sessionUuid,
-                $phone,
-                'Agendamento confirmado: '.$scheduledAt->format('d/m/Y H:i').' com '.$professional->display_name.' para '.$service->name.'.'
-            );
+            $this->saveState((int) $company['company_id'], $stateKey, [
+                'step' => 'booking_more_options',
+                'pending_items' => $pendingItems->values()->all(),
+                'patient_id' => $patient->id,
+            ]);
+            $this->send($communication, $sessionUuid, $phone, $this->bookingMoreOptionsMessage($pendingItems));
 
-            return response()->json(['ok' => true, 'appointment_id' => $appointment->id]);
+            return response()->json(['ok' => true]);
         }
 
         if (($state['step'] ?? null) === 'collect_booking_link_guest_name') {
@@ -337,6 +414,7 @@ class WhatsappAutomationWebhookController extends Controller
                     'step' => 'datetime',
                     'service_id' => $service->id,
                     'professional_id' => $professional->id,
+                    'pending_items' => $state['pending_items'] ?? [],
                 ]);
                 $this->send($communication, $sessionUuid, $phone, "Esse horario nao esta mais dentro da janela de agendamento automatico. Envie outro horario em ate {$bookingWindowMonths} mes(es), no formato *DD/MM HH:MM*.");
                 return response()->json(['ok' => true]);
@@ -347,23 +425,24 @@ class WhatsappAutomationWebhookController extends Controller
                     'step' => 'datetime',
                     'service_id' => $service->id,
                     'professional_id' => $professional->id,
+                    'pending_items' => $state['pending_items'] ?? [],
                 ]);
                 $this->send($communication, $sessionUuid, $phone, 'Esse horario ja esta ocupado ou indisponivel. Por favor, envie outro horario no formato *DD/MM HH:MM*.');
                 return response()->json(['ok' => true]);
             }
 
             $patient = $this->createPatientForFlow((int) $company['company_id'], $name, $phone);
-            $appointment = $this->createAppointmentForFlow($service, $professional, $unit, $patient, $scheduledAt);
+            $pendingItems = collect($state['pending_items'] ?? []);
+            $pendingItems->push($this->buildFlowItem($service, $professional, $unit, $scheduledAt));
 
-            $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
-            $this->send(
-                $communication,
-                $sessionUuid,
-                $phone,
-                'Cadastro concluido e agendamento confirmado: '.$scheduledAt->format('d/m/Y H:i').' com '.$professional->display_name.' para '.$service->name.'.'
-            );
+            $this->saveState((int) $company['company_id'], $stateKey, [
+                'step' => 'booking_more_options',
+                'pending_items' => $pendingItems->values()->all(),
+                'patient_id' => $patient->id,
+            ]);
+            $this->send($communication, $sessionUuid, $phone, "Cadastro concluido.\n\n".$this->bookingMoreOptionsMessage($pendingItems));
 
-            return response()->json(['ok' => true, 'appointment_id' => $appointment->id, 'patient_id' => $patient->id]);
+            return response()->json(['ok' => true, 'patient_id' => $patient->id]);
         }
 
         $this->saveState((int) $company['company_id'], $stateKey, ['step' => 'start']);
@@ -383,7 +462,7 @@ class WhatsappAutomationWebhookController extends Controller
         return response()->json(['ok' => true, 'cancelled' => true]);
     }
 
-    private function startBookingFlow(CommunicationClient $communication, int $companyId, string $stateKey, string $sessionUuid, string $phone): JsonResponse
+    private function startBookingFlow(CommunicationClient $communication, int $companyId, string $stateKey, string $sessionUuid, string $phone, array $carry = []): JsonResponse
     {
         $services = $this->servicesForCompany($companyId);
         if ($services->isEmpty()) {
@@ -398,10 +477,10 @@ class WhatsappAutomationWebhookController extends Controller
         $lines[] = ($services->count() + 1).'. Cancelar atendimento';
 
         $this->send($communication, $sessionUuid, $phone, implode("\n", $lines));
-        $this->saveState($companyId, $stateKey, [
+        $this->saveState($companyId, $stateKey, array_merge($carry, [
             'step' => 'service',
             'services' => $services->pluck('id')->all(),
-        ]);
+        ]));
 
         return response()->json(['ok' => true]);
     }
@@ -678,10 +757,13 @@ class WhatsappAutomationWebhookController extends Controller
     {
         $end = $start->copy()->addMinutes($duration);
 
-        $hasConflict = Appointment::query()
-            ->where('professional_id', $professionalId)
+        $appointments = Appointment::query()
             ->where('unit_id', $unitId)
             ->whereNotIn('status', ['cancelado', 'cancelled'])
+            ->where(function ($query) use ($professionalId) {
+                $query->where('professional_id', $professionalId)
+                    ->orWhereHas('services', fn ($serviceQuery) => $serviceQuery->where('appointment_service.professional_id', $professionalId));
+            })
             ->where(function ($query) use ($start, $end) {
                 $query->whereBetween('scheduled_at', [$start, $end->copy()->subSecond()])
                     ->orWhereBetween('ends_at', [$start->copy()->addSecond(), $end])
@@ -689,9 +771,10 @@ class WhatsappAutomationWebhookController extends Controller
                         $inner->where('scheduled_at', '<', $start)->where('ends_at', '>', $end);
                     });
             })
-            ->exists();
+            ->with('services')
+            ->get();
 
-        if ($hasConflict) {
+        if ($appointments->contains(fn (Appointment $appointment) => $this->appointmentConflictsWithProfessional($appointment, $professionalId, $start, $end))) {
             return false;
         }
 
@@ -725,6 +808,40 @@ class WhatsappAutomationWebhookController extends Controller
         }
 
         return false;
+    }
+
+    private function appointmentConflictsWithProfessional(Appointment $appointment, int $professionalId, Carbon $start, Carbon $end): bool
+    {
+        $services = $appointment->relationLoaded('services') ? $appointment->services : $appointment->services()->get();
+        if ($services->isNotEmpty()) {
+            return $services->contains(function (Service $service) use ($professionalId, $start, $end) {
+                if ((int) ($service->pivot->professional_id ?? 0) !== $professionalId) {
+                    return false;
+                }
+
+                $serviceStart = $service->pivot->scheduled_at
+                    ? Carbon::parse($service->pivot->scheduled_at)
+                    : null;
+                if (! $serviceStart) {
+                    return false;
+                }
+
+                $serviceEnd = $service->pivot->ends_at
+                    ? Carbon::parse($service->pivot->ends_at)
+                    : $serviceStart->copy()->addMinutes((int) ($service->pivot->duration_minutes ?: 30));
+
+                return $serviceStart < $end && $serviceEnd > $start;
+            });
+        }
+
+        if ((int) $appointment->professional_id !== $professionalId) {
+            return false;
+        }
+
+        $appointmentStart = $appointment->scheduled_at;
+        $appointmentEnd = $appointment->ends_at ?: $appointmentStart->copy()->addMinutes((int) ($appointment->duration_minutes ?: 30));
+
+        return $appointmentStart < $end && $appointmentEnd > $start;
     }
 
     private function resolvePatientByPhone(int $companyId, string $phone): ?Patient
@@ -1005,23 +1122,148 @@ class WhatsappAutomationWebhookController extends Controller
 
     private function createAppointmentForFlow(Service $service, Professional $professional, Unit $unit, Patient $patient, Carbon $scheduledAt): Appointment
     {
+        return $this->createAppointmentFromFlowItems(
+            $patient,
+            collect([$this->buildFlowItem($service, $professional, $unit, $scheduledAt)]),
+            'whatsapp',
+            'Agendado automaticamente via WhatsApp.'
+        );
+    }
+
+    private function buildFlowItem(Service $service, Professional $professional, Unit $unit, Carbon $scheduledAt): array
+    {
         $duration = (int) ($service->duration_minutes ?: 30);
 
-        return Appointment::create([
-            'clinic_id' => $unit->clinic_id,
-            'unit_id' => $unit->id,
-            'professional_id' => $professional->id,
-            'patient_id' => $patient->id,
-            'service_id' => $service->id,
-            'status' => 'agendado',
-            'channel' => 'whatsapp',
-            'scheduled_at' => $scheduledAt,
-            'ends_at' => $scheduledAt->copy()->addMinutes($duration),
+        return [
+            'service_id' => (int) $service->id,
+            'service_name' => (string) $service->name,
+            'unit_id' => (int) $unit->id,
+            'unit_name' => (string) $unit->name,
+            'clinic_id' => (int) $unit->clinic_id,
+            'professional_id' => (int) $professional->id,
+            'professional_name' => (string) $professional->display_name,
+            'scheduled_at' => $scheduledAt->toIso8601String(),
+            'ends_at' => $scheduledAt->copy()->addMinutes($duration)->toIso8601String(),
             'duration_minutes' => $duration,
-            'notes' => 'Agendado automaticamente via WhatsApp.',
             'price_cents' => (int) ($service->price_cents ?? 0),
+        ];
+    }
+
+    private function createAppointmentFromFlowItems(Patient $patient, \Illuminate\Support\Collection $items, string $channel, ?string $notes): Appointment
+    {
+        $items = $items->values();
+        $first = $items->first();
+        $last = $items->sortBy(fn ($item) => Carbon::parse((string) $item['ends_at'])->timestamp)->last();
+        $scheduledAt = Carbon::parse((string) $first['scheduled_at']);
+        $endsAt = Carbon::parse((string) $last['ends_at']);
+        $priceCents = (int) $items->sum('price_cents');
+        $serviceNames = $items->pluck('service_name')->unique()->join(' + ');
+
+        $appointment = Appointment::create([
+            'clinic_id' => (int) $first['clinic_id'],
+            'unit_id' => (int) $first['unit_id'],
+            'professional_id' => (int) $first['professional_id'],
+            'patient_id' => $patient->id,
+            'service_id' => (int) $first['service_id'],
+            'status' => 'agendado',
+            'channel' => $channel,
+            'scheduled_at' => $scheduledAt,
+            'ends_at' => $endsAt,
+            'duration_minutes' => max(1, $scheduledAt->diffInMinutes($endsAt)),
+            'notes' => $notes,
+            'price_cents' => $priceCents,
             'payment_status' => 'pending',
         ]);
+
+        $sync = [];
+        foreach ($items as $position => $item) {
+            $sync[(int) $item['service_id']] = [
+                'professional_id' => (int) $item['professional_id'],
+                'duration_minutes' => (int) $item['duration_minutes'],
+                'price_cents' => (int) $item['price_cents'],
+                'scheduled_at' => Carbon::parse((string) $item['scheduled_at']),
+                'ends_at' => Carbon::parse((string) $item['ends_at']),
+                'status' => 'agendado',
+                'commission_amount_cents' => 0,
+                'position' => $position,
+            ];
+        }
+        $appointment->services()->sync($sync);
+
+        AccountReceivable::firstOrCreate(
+            ['appointment_id' => $appointment->id],
+            [
+                'clinic_id' => $appointment->clinic_id,
+                'unit_id' => $appointment->unit_id,
+                'professional_id' => $appointment->professional_id,
+                'patient_id' => $appointment->patient_id,
+                'categoria_financeira_id' => $this->resolveReceivableCategoryId((int) $appointment->clinic_id),
+                'descricao' => 'Atendimento ' . $serviceNames,
+                'valor_total_cents' => $priceCents,
+                'numero_parcelas' => 1,
+                'numero_parcela' => 1,
+                'valor_parcela_cents' => $priceCents,
+                'data_emissao' => now()->toDateString(),
+                'data_vencimento' => $appointment->scheduled_at->toDateString(),
+                'status' => 'aberto',
+            ]
+        );
+
+        return $appointment->load(['patient', 'professional', 'service', 'services', 'unit']);
+    }
+
+    private function bookingMoreOptionsMessage(\Illuminate\Support\Collection $items): string
+    {
+        $last = $items->last();
+        $lines = ['Servico incluido na sequencia:'];
+        foreach ($items->values() as $index => $item) {
+            $start = Carbon::parse((string) $item['scheduled_at']);
+            $end = Carbon::parse((string) $item['ends_at']);
+            $lines[] = ($index + 1).'. '.$item['service_name'].' - '.$start->format('d/m H:i').' ate '.$end->format('H:i').' com '.$item['professional_name'];
+        }
+
+        $lines[] = '';
+        $lines[] = 'Deseja concluir o agendamento ou incluir mais um servico?';
+        $lines[] = '1 - Concluir agendamento';
+        $lines[] = '2 - Incluir mais um servico';
+        $lines[] = '3 - Cancelar';
+
+        if ($last) {
+            $lines[] = '';
+            $lines[] = 'Se incluir outro servico, ele sera encaixado a partir de '.Carbon::parse((string) $last['ends_at'])->format('H:i').'.';
+        }
+
+        return implode("\n", $lines);
+    }
+
+    private function flowConfirmationMessage(Appointment $appointment): string
+    {
+        $serviceNames = $appointment->serviceNames();
+        $date = $appointment->scheduled_at?->format('d/m/Y') ?? '-';
+        $start = $appointment->scheduled_at?->format('H:i') ?? '-';
+        $end = $appointment->ends_at?->format('H:i') ?? '-';
+
+        return "Agendamento confirmado: {$date} de {$start} ate {$end}.\nServicos: {$serviceNames}.";
+    }
+
+    private function resolveReceivableCategoryId(int $clinicId): ?int
+    {
+        $category = FinancialCategory::query()
+            ->where('clinic_id', $clinicId)
+            ->where('type', 'receber')
+            ->where(function ($query) {
+                $query->where('name', 'like', 'Atendimento%')
+                    ->orWhere('name', 'like', 'Atendimentos%')
+                    ->orWhere('name', 'like', 'Consulta%')
+                    ->orWhere('name', 'like', 'Consultas%');
+            })
+            ->first();
+
+        return $category?->id ?: FinancialCategory::query()
+            ->where('clinic_id', $clinicId)
+            ->where('type', 'receber')
+            ->orderBy('name')
+            ->value('id');
     }
 
     private function createBookingLinkForPatient(int $companyId, Patient $patient): string
