@@ -125,6 +125,72 @@ class WhatsappAutomationWebhookControllerTest extends TestCase
         ]);
     }
 
+    public function test_confirmed_open_appointment_shows_cancel_menu_on_whatsapp(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-05-20 10:00:00', 'America/Sao_Paulo'));
+        $context = $this->createWhatsappBookingContext();
+        $scheduledAt = Carbon::parse('2026-05-21 09:00:00', 'America/Sao_Paulo');
+
+        Appointment::create([
+            'clinic_id' => $context['clinic']->id,
+            'unit_id' => $context['unit']->id,
+            'professional_id' => $context['professional']->id,
+            'patient_id' => $context['patient']->id,
+            'service_id' => $context['service']->id,
+            'status' => 'confirmado',
+            'channel' => 'whatsapp',
+            'scheduled_at' => $scheduledAt,
+            'ends_at' => $scheduledAt->copy()->addMinutes(30),
+            'duration_minutes' => 30,
+            'payment_status' => 'pending',
+        ]);
+
+        $sentMessages = [];
+        $this->fakeCommunicationClient($sentMessages);
+
+        $this->postJson('/api/whatsapp/webhook', $this->webhookPayload($context, 'oi'))
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $this->assertStringContainsString('Encontrei um agendamento em aberto', $sentMessages[0] ?? '');
+        $this->assertStringContainsString('1 - Cancelar este agendamento', $sentMessages[0] ?? '');
+    }
+
+    public function test_open_appointment_menu_is_shown_even_when_previous_flow_state_is_stale(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-05-20 10:00:00', 'America/Sao_Paulo'));
+        $context = $this->createWhatsappBookingContext();
+        $scheduledAt = Carbon::parse('2026-05-21 09:00:00', 'America/Sao_Paulo');
+
+        Appointment::create([
+            'clinic_id' => $context['clinic']->id,
+            'unit_id' => $context['unit']->id,
+            'professional_id' => $context['professional']->id,
+            'patient_id' => $context['patient']->id,
+            'service_id' => $context['service']->id,
+            'status' => 'agendado',
+            'channel' => 'whatsapp',
+            'scheduled_at' => $scheduledAt,
+            'ends_at' => $scheduledAt->copy()->addMinutes(30),
+            'duration_minutes' => 30,
+            'payment_status' => 'pending',
+        ]);
+        $this->setWhatsappState($context, [
+            'step' => 'service',
+            'services' => [$context['service']->id],
+        ]);
+
+        $sentMessages = [];
+        $this->fakeCommunicationClient($sentMessages);
+
+        $this->postJson('/api/whatsapp/webhook', $this->webhookPayload($context, 'oi'))
+            ->assertOk()
+            ->assertJson(['ok' => true]);
+
+        $this->assertStringContainsString('Encontrei um agendamento em aberto', $sentMessages[0] ?? '');
+        $this->assertStringContainsString('1 - Cancelar este agendamento', $sentMessages[0] ?? '');
+    }
+
     public function test_unknown_patient_informs_name_before_receiving_public_booking_link(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-05-20 10:00:00', 'America/Sao_Paulo'));

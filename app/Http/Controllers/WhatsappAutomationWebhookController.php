@@ -65,6 +65,18 @@ class WhatsappAutomationWebhookController extends Controller
             return $this->sendAvailabilityLinkFlow($communication, (int) $company['company_id'], $stateKey, $sessionUuid, $phone, $patient);
         }
 
+        if ($this->shouldCheckOpenAppointmentBeforeFlow($lower, $state)) {
+            $openAppointment = $this->findOpenAppointmentForPatient((int) $company['company_id'], $patient);
+            if ($openAppointment) {
+                $this->send($communication, $sessionUuid, $phone, $this->openAppointmentMessage($openAppointment, $patient));
+                $this->saveState((int) $company['company_id'], $stateKey, [
+                    'step' => 'open_appointment_options',
+                    'appointment_id' => $openAppointment->id,
+                ]);
+                return response()->json(['ok' => true]);
+            }
+        }
+
         if (($state['step'] ?? null) === 'open_appointment_options') {
             $appointment = $this->findOpenAppointmentForPatient((int) $company['company_id'], $patient, (int) ($state['appointment_id'] ?? 0));
             if (! $appointment) {
@@ -513,7 +525,7 @@ class WhatsappAutomationWebhookController extends Controller
             ->with(['service', 'services', 'professional', 'unit'])
             ->whereIn('clinic_id', $clinicIds)
             ->where('patient_id', $patient->id)
-            ->whereIn('status', ['agendado', 'scheduled'])
+            ->whereIn('status', ['agendado', 'scheduled', 'confirmado', 'confirmed'])
             ->where('scheduled_at', '>=', now())
             ->when($appointmentId, fn ($query) => $query->whereKey($appointmentId))
             ->orderBy('scheduled_at')
@@ -1015,6 +1027,25 @@ class WhatsappAutomationWebhookController extends Controller
             || str_contains($value, 'horario')
             || str_contains($value, 'horário')
             || $value === '1';
+    }
+
+    private function shouldCheckOpenAppointmentBeforeFlow(string $value, array $state): bool
+    {
+        $step = $state['step'] ?? 'start';
+        if (in_array($step, ['open_appointment_options', 'confirm_open_appointment_cancel', 'booking_more_options'], true)) {
+            return false;
+        }
+
+        $value = trim(mb_strtolower($value));
+
+        return $value === 'menu'
+            || $value === 'reiniciar'
+            || $this->isGreetingCommand($value)
+            || str_contains($value, 'agendar')
+            || str_contains($value, 'agendamento')
+            || $value === 'agenda'
+            || str_contains($value, 'horario')
+            || str_contains($value, 'horário');
     }
 
     private function isAvailabilityLinkCommand(string $value): bool
