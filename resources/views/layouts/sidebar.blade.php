@@ -38,6 +38,7 @@
         'configuracoes' => [
             ['label' => 'Licenca', 'route' => 'settings.license', 'permission' => 'configuracoes.logo.view', 'icon' => 'M7 4h10v16H7zM9 8h6M9 12h6M9 16h3'],
             ['label' => 'Logo da empresa', 'route' => 'settings.logo', 'permission' => 'configuracoes.logo.view', 'icon' => 'M4 5h16v14H4zM8 13l2.5-3 2 2.5L15 9l5 7M8 8h.01'],
+            ['label' => 'Agendamento online', 'route' => 'settings.online-booking', 'permission' => 'configuracoes.logo.view', 'icon' => 'M7 3v3M17 3v3M4 8h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM8 12h8M8 16h5'],
             ['label' => 'WhatsApp', 'route' => 'settings.whatsapp', 'permission' => 'configuracoes.logo.view', 'requires_module' => 'whatsapp', 'icon' => 'M20 11.5a8 8 0 0 1-11.8 7L4 20l1.5-4.1A8 8 0 1 1 20 11.5zM9 8.5c.2 2.9 2.1 5 5 5.5l1.2-1.2c.2-.2.2-.5 0-.7l-1.1-1.1c-.2-.2-.5-.2-.7 0l-.6.6c-1-.4-1.8-1.2-2.2-2.2l.6-.6c.2-.2.2-.5 0-.7L10.1 7c-.2-.2-.5-.2-.7 0L9 7.4c-.1.2-.1.6 0 1.1z'],
             ['label' => 'Termo de uso', 'route' => 'settings.terms.edit', 'admin_only' => true, 'icon' => 'M6 4h9l3 3v13H6zM9 10h6M9 14h6M9 18h4'],
         ],

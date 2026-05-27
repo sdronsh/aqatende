@@ -5,14 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="description" content="Agendamento online AQAtende">
     <title>Agendar atendimento | AQAtende</title>
-    <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
+    <link rel="icon" type="image/png" href="{{ asset('icons/icon-192.png') }}">
     @include('partials.pwa-meta')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
 <body class="bg-gray-50 text-gray-900">
     <main class="mx-auto flex min-h-screen max-w-3xl flex-col px-4 py-6 md:py-10">
         <div class="mb-6 flex items-center gap-3">
-            <img class="h-12 w-12 rounded-full border border-brand-100 bg-white object-contain" src="{{ asset('logo.png') }}" alt="AQAtende">
+            <img class="h-12 w-12 rounded-full border border-brand-100 bg-white object-contain" src="{{ asset('brand/logo-icon-square.png') }}" alt="AQAtende">
             <div>
                 <div class="text-sm font-semibold uppercase tracking-[0.18em] text-brand-700">AQAtende</div>
                 <h1 class="text-xl font-semibold text-gray-900">{{ $bookingLink->company?->name ?? 'Agendamento' }}</h1>
@@ -24,7 +24,11 @@
                 <div class="text-xs font-semibold uppercase tracking-[0.18em] text-brand-600">Agendamento online</div>
                 <h2 class="mt-2 text-2xl font-semibold text-gray-900">Escolha o melhor horario</h2>
                 <p class="mt-2 text-sm leading-6 text-gray-500">
-                    Link gerado para {{ $bookingLink->patient?->full_name }}. Selecione servico, unidade, data e horario disponivel.
+                    @if ($bookingLink->patient)
+                        Link gerado para {{ $bookingLink->patient?->full_name }}. Selecione servico, unidade, data e horario disponivel.
+                    @else
+                        Informe seus dados no final e escolha servico, unidade, data e horario disponivel.
+                    @endif
                 </p>
             </div>
 
@@ -102,6 +106,25 @@
                     @csrf
                     <input type="hidden" name="service_id" value="{{ $selectedService->id }}">
                     <input type="hidden" name="unit_id" value="{{ $selectedUnit->id }}">
+
+                    @if (! $bookingLink->patient_id)
+                        <div class="mb-5 rounded-lg border border-gray-100 bg-gray-50 p-4">
+                            <h3 class="text-sm font-semibold text-gray-900">Seus dados</h3>
+                            <p class="mt-1 text-xs text-gray-500">O telefone ajuda a localizar seu cadastro. Se preferir, informe apenas o nome.</p>
+                            <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-gray-700" for="customer_phone">Telefone ou WhatsApp</label>
+                                    <input id="customer_phone" name="customer_phone" value="{{ old('customer_phone') }}" inputmode="tel" autocomplete="tel" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" placeholder="(31) 99999-9999">
+                                    @error('customer_phone')<div class="mt-1 text-xs text-error-600">{{ $message }}</div>@enderror
+                                </div>
+                                <div>
+                                    <label class="mb-1 block text-sm font-medium text-gray-700" for="customer_name">Nome</label>
+                                    <input id="customer_name" name="customer_name" value="{{ old('customer_name') }}" required autocomplete="name" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-3 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" placeholder="Seu nome">
+                                    @error('customer_name')<div class="mt-1 text-xs text-error-600">{{ $message }}</div>@enderror
+                                </div>
+                            </div>
+                        </div>
+                    @endif
 
                     <div class="flex items-center justify-between gap-3">
                         <div>

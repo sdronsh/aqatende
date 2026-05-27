@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Company;
 use App\Models\CompanySetting;
+use App\Models\PatientBookingLink;
 use App\Models\Term;
 use App\Models\WhatsappCampaign;
 use App\Services\Communication\CommunicationClient;
@@ -12,6 +13,7 @@ use Illuminate\Http\Client\RequestException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 use Throwable;
 
@@ -60,6 +62,40 @@ class SettingsController extends Controller
             'company' => $company,
             'logoPath' => $this->getSetting($company->id, 'logo_path'),
         ]);
+    }
+
+    public function onlineBooking(Request $request): View
+    {
+        $company = $this->getCompany($request);
+        $bookingLink = $this->getOrCreateCompanyBookingLink($company->id, $request->user()?->id);
+
+        return view('settings/online-booking', [
+            'company' => $company,
+            'bookingLink' => $bookingLink,
+            'bookingUrl' => route('public.booking.show', $bookingLink->token),
+        ]);
+    }
+
+    public function regenerateOnlineBookingLink(Request $request): RedirectResponse
+    {
+        $company = $this->getCompany($request);
+
+        PatientBookingLink::query()
+            ->where('company_id', $company->id)
+            ->whereNull('patient_id')
+            ->whereNull('used_at')
+            ->update(['used_at' => now()]);
+
+        PatientBookingLink::create([
+            'company_id' => $company->id,
+            'patient_id' => null,
+            'created_by' => $request->user()?->id,
+            'token' => Str::random(48),
+            'expires_at' => null,
+        ]);
+
+        return redirect()->route('settings.online-booking')
+            ->with('status', 'Link de agendamento online renovado.');
     }
 
     public function whatsapp(Request $request, CommunicationClient $communication): View
@@ -215,9 +251,19 @@ class SettingsController extends Controller
             $this->storeWhatsappSessionSnapshot($company->id, $session);
 
             return redirect()->route('settings.whatsapp', ['tab' => $tab])->with('status', 'Status atualizado.');
+        } catch (RequestException $exception) {
+            if ($exception->response?->status() === 404) {
+                $this->storeSetting($company->id, 'whatsapp_session', null);
+
+                return redirect()->route('settings.whatsapp', ['tab' => $tab])
+                    ->withErrors(['whatsapp' => 'A sessao WhatsApp salva nao foi encontrada no servico de comunicacao. Ela foi removida desta empresa. Gere um novo codigo ou QR Code para conectar novamente.']);
+            }
+
+            return redirect()->route('settings.whatsapp', ['tab' => $tab])
+                ->withErrors(['whatsapp' => 'Nao foi possivel atualizar o status da sessao WhatsApp. Tente novamente em instantes.']);
         } catch (Throwable $exception) {
             return redirect()->route('settings.whatsapp', ['tab' => $tab])
-                ->withErrors(['whatsapp' => 'Nao foi possivel atualizar o status: '.$exception->getMessage()]);
+                ->withErrors(['whatsapp' => 'Nao foi possivel atualizar o status da sessao WhatsApp. Tente novamente em instantes.']);
         }
     }
 
@@ -405,6 +451,32 @@ class SettingsController extends Controller
     private function storeWhatsappSessionSnapshot(int $companyId, array $session): void
     {
         $this->storeSetting($companyId, 'whatsapp_session', json_encode($session));
+    }
+
+    private function getOrCreateCompanyBookingLink(int $companyId, ?int $userId): PatientBookingLink
+    {
+        $bookingLink = PatientBookingLink::query()
+            ->where('company_id', $companyId)
+            ->whereNull('patient_id')
+            ->whereNull('used_at')
+            ->where(function ($query) {
+                $query->whereNull('expires_at')
+                    ->orWhere('expires_at', '>', now());
+            })
+            ->latest()
+            ->first();
+
+        if ($bookingLink) {
+            return $bookingLink;
+        }
+
+        return PatientBookingLink::create([
+            'company_id' => $companyId,
+            'patient_id' => null,
+            'created_by' => $userId,
+            'token' => Str::random(48),
+            'expires_at' => null,
+        ]);
     }
 
     private function getWhatsappAutomationSettings(int $companyId): array

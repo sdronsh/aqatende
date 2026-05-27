@@ -6,6 +6,7 @@ use App\Models\AccountReceivable;
 use App\Models\Appointment;
 use App\Models\Clinic;
 use App\Models\FinancialCategory;
+use App\Models\Patient;
 use App\Models\PatientBookingLink;
 use App\Models\Professional;
 use App\Models\Schedule;
@@ -16,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\View\View;
 
 class PublicBookingController extends Controller
@@ -79,11 +81,20 @@ class PublicBookingController extends Controller
         $companyId = (int) $bookingLink->company_id;
         $clinicIds = Clinic::where('company_id', $companyId)->pluck('id');
 
-        $data = $request->validate([
+        $rules = [
             'service_id' => ['required', 'integer', 'exists:services,id'],
             'unit_id' => ['required', 'integer', 'exists:units,id'],
             'slot' => ['required', 'string'],
             'notes' => ['nullable', 'string', 'max:1000'],
+        ];
+
+        if (! $bookingLink->patient_id) {
+            $rules['customer_name'] = ['required', 'string', 'max:255'];
+            $rules['customer_phone'] = ['nullable', 'string', 'max:30'];
+        }
+
+        $data = $request->validate($rules, [
+            'customer_name.required' => 'Informe seu nome para concluir o agendamento.',
         ]);
 
         [$slotProfessionalValue, $scheduledAtValue] = array_pad(explode('|', $data['slot'], 2), 2, null);
@@ -119,7 +130,15 @@ class PublicBookingController extends Controller
             ->contains(fn ($slot) => $slot['scheduled_at']->equalTo($scheduledAt) && $slot['value'] === $data['slot']);
         abort_unless($slotIsAvailable, 422);
 
-        $appointment = DB::transaction(function () use ($bookingLink, $service, $unit, $professionals, $serviceProfessionalIds, $scheduledAt, $data): Appointment {
+        $patient = $bookingLink->patient_id
+            ? $bookingLink->patient
+            : $this->resolveOrCreatePatientForPublicBooking(
+                $companyId,
+                (string) ($data['customer_name'] ?? ''),
+                (string) ($data['customer_phone'] ?? '')
+            );
+
+        $appointment = DB::transaction(function () use ($bookingLink, $patient, $service, $unit, $professionals, $serviceProfessionalIds, $scheduledAt, $data): Appointment {
             $duration = (int) ($service->duration_minutes ?: 30);
             $endsAt = $scheduledAt->copy()->addMinutes($duration);
             $primaryProfessionalId = (int) collect($serviceProfessionalIds)->first();
@@ -128,7 +147,7 @@ class PublicBookingController extends Controller
                 'clinic_id' => $unit->clinic_id,
                 'unit_id' => $unit->id,
                 'professional_id' => $primaryProfessionalId,
-                'patient_id' => $bookingLink->patient_id,
+                'patient_id' => $patient->id,
                 'service_id' => $service->id,
                 'status' => 'agendado',
                 'channel' => 'public_link',
@@ -175,7 +194,9 @@ class PublicBookingController extends Controller
                 ]
             );
 
-            $bookingLink->update(['used_at' => now()]);
+            if ($bookingLink->patient_id) {
+                $bookingLink->update(['used_at' => now()]);
+            }
 
             return $appointment->load(['patient', 'professional', 'service', 'unit', 'clinic']);
         });
@@ -196,6 +217,69 @@ class PublicBookingController extends Controller
         abort_unless($bookingLink->isAvailable(), 410);
 
         return $bookingLink;
+    }
+
+    private function resolveOrCreatePatientForPublicBooking(int $companyId, string $name, string $phone): Patient
+    {
+        $name = trim($name);
+        $formattedPhone = $this->formatBrazilPhone($phone);
+        $digits = preg_replace('/\D+/', '', $formattedPhone) ?: '';
+
+        if ($digits !== '') {
+            $patient = Patient::query()
+                ->whereHas('companies', fn ($query) => $query->whereKey($companyId))
+                ->where(function ($query) use ($digits) {
+                    $query->whereRaw("REPLACE(REPLACE(REPLACE(REPLACE(phone, '(', ''), ')', ''), '-', ''), ' ', '') = ?", [$digits])
+                        ->orWhereRaw("REPLACE(REPLACE(REPLACE(REPLACE(cellphone, '(', ''), ')', ''), '-', ''), ' ', '') = ?", [$digits]);
+                })
+                ->orderBy('id')
+                ->first();
+
+            if ($patient) {
+                return $patient;
+            }
+        }
+
+        $normalizedName = Str::of($name)->lower()->squish()->toString();
+        $patient = Patient::query()
+            ->whereHas('companies', fn ($query) => $query->whereKey($companyId))
+            ->get()
+            ->first(fn (Patient $patient) => Str::of((string) $patient->full_name)->lower()->squish()->toString() === $normalizedName);
+
+        if ($patient) {
+            return $patient;
+        }
+
+        $patient = Patient::create([
+            'full_name' => $name,
+            'phone' => $formattedPhone ?: null,
+            'cellphone' => $formattedPhone ?: null,
+            'whatsapp' => $formattedPhone !== '',
+            'whatsapp_reminders_enabled' => $formattedPhone !== '',
+            'status' => 'ativo',
+            'created_by_name' => 'Agendamento online',
+        ]);
+        $patient->companies()->syncWithoutDetaching([$companyId]);
+
+        return $patient;
+    }
+
+    private function formatBrazilPhone(string $value): string
+    {
+        $digits = preg_replace('/\D+/', '', $value) ?: '';
+        if (str_starts_with($digits, '55') && strlen($digits) > 11) {
+            $digits = substr($digits, 2);
+        }
+
+        if (strlen($digits) === 11) {
+            return sprintf('(%s) %s-%s', substr($digits, 0, 2), substr($digits, 2, 5), substr($digits, 7, 4));
+        }
+
+        if (strlen($digits) === 10) {
+            return sprintf('(%s) %s-%s', substr($digits, 0, 2), substr($digits, 2, 4), substr($digits, 6, 4));
+        }
+
+        return '';
     }
 
     private function availableUnits(Collection $clinicIds, ?Service $service): Collection

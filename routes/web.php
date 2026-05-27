@@ -293,6 +293,13 @@ Route::middleware('auth')->group(function () {
             ->middleware('permission:configuracoes.logo.update')
             ->name('logo.update');
 
+        Route::get('/agendamento-online', [\App\Http\Controllers\SettingsController::class, 'onlineBooking'])
+            ->middleware('permission:configuracoes.logo.view')
+            ->name('online-booking');
+        Route::post('/agendamento-online/renovar-link', [\App\Http\Controllers\SettingsController::class, 'regenerateOnlineBookingLink'])
+            ->middleware('permission:configuracoes.logo.view')
+            ->name('online-booking.regenerate');
+
         Route::get('/whatsapp', [\App\Http\Controllers\SettingsController::class, 'whatsapp'])
             ->middleware(['permission:configuracoes.logo.view', 'whatsapp-module'])
             ->name('whatsapp');
