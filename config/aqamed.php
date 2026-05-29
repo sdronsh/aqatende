@@ -9,6 +9,9 @@ return [
         // Allow a professional to edit appointments from other professionals.
         'allow_professional_cross_edit' => true,
     ],
+    'booking' => [
+        'timezone' => env('BOOKING_TIMEZONE', 'America/Sao_Paulo'),
+    ],
     'license' => [
         'api_url' => env('LICENSES_API_URL'),
         'api_token' => env('LICENSES_API_TOKEN'),

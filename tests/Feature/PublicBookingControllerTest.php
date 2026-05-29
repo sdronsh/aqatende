@@ -8,6 +8,7 @@ use App\Models\Company;
 use App\Models\Patient;
 use App\Models\PatientBookingLink;
 use App\Models\Professional;
+use App\Models\Schedule;
 use App\Models\Service;
 use App\Models\Unit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -73,6 +74,49 @@ class PublicBookingControllerTest extends TestCase
             ->assertSee('10:00');
 
         $this->assertSame(2, Appointment::count());
+    }
+
+    public function test_public_booking_uses_booking_timezone_when_listing_today_slots(): void
+    {
+        config([
+            'app.timezone' => 'UTC',
+            'aqamed.booking.timezone' => 'America/Sao_Paulo',
+        ]);
+        Carbon::setTestNow(Carbon::parse('2026-05-29 16:18:00', 'UTC'));
+        $context = $this->createPublicBookingContext();
+
+        PatientBookingLink::create([
+            'company_id' => $context['company']->id,
+            'patient_id' => $context['patient']->id,
+            'token' => $token = Str::random(48),
+            'expires_at' => now()->addDays(7),
+        ]);
+        Schedule::create([
+            'professional_id' => $context['professional']->id,
+            'unit_id' => $context['unit']->id,
+            'weekday' => 5,
+            'start_time' => '08:40',
+            'end_time' => '13:00',
+            'is_active' => true,
+        ]);
+        Schedule::create([
+            'professional_id' => $context['professional']->id,
+            'unit_id' => $context['unit']->id,
+            'weekday' => 5,
+            'start_time' => '13:01',
+            'end_time' => '20:00',
+            'is_active' => true,
+        ]);
+
+        $this->get(route('public.booking.show', [
+            'token' => $token,
+            'service_id' => $context['secondService']->id,
+            'unit_id' => $context['unit']->id,
+            'date' => '2026-05-29',
+        ]))->assertOk()
+            ->assertSee('13:31')
+            ->assertSee('14:01')
+            ->assertSee('19:01');
     }
 
     protected function tearDown(): void

@@ -2,6 +2,32 @@
     $pageTitle = $pageTitle ?? 'Agenda';
     $lockProfessionalFilter = $lockProfessionalFilter ?? false;
     $ptDate = fn ($value) => $value->copy()->locale('pt_BR');
+    $formatPatientPhone = function (?string $value): string {
+        $digits = preg_replace('/\D+/', '', (string) $value) ?: '';
+        if (str_starts_with($digits, '55') && strlen($digits) > 11) {
+            $digits = substr($digits, 2);
+        }
+
+        if (strlen($digits) === 11) {
+            return sprintf('(%s) %s-%s', substr($digits, 0, 2), substr($digits, 2, 5), substr($digits, 7, 4));
+        }
+
+        if (strlen($digits) === 10) {
+            return sprintf('(%s) %s-%s', substr($digits, 0, 2), substr($digits, 2, 4), substr($digits, 6, 4));
+        }
+
+        return trim((string) $value);
+    };
+    $patientLabel = function ($patient) use ($formatPatientPhone): string {
+        if (! $patient) {
+            return 'Cliente';
+        }
+
+        $name = trim((string) ($patient->full_name ?? '')) ?: 'Cliente';
+        $phone = $formatPatientPhone(($patient->cellphone ?? '') ?: ($patient->phone ?? ''));
+
+        return $phone !== '' ? "{$name} - {$phone}" : $name;
+    };
 @endphp
 
 <x-app-layout>
@@ -226,7 +252,7 @@
                                     @endphp
                                     <a class="block rounded-md border px-2 py-1 text-xs {{ $chipClass }} hover:ring-2 hover:ring-brand-500/30" href="{{ $cardUrl }}" title="Abrir {{ $isAttendanceView ? 'atendimento' : 'agendamento' }}">
                                         <div class="font-semibold">{{ $appointment->scheduled_at->format('H:i') }}</div>
-                                        <div class="truncate">{{ $appointment->patient?->full_name ?? 'Cliente' }}</div>
+                                        <div class="truncate">{{ $patientLabel($appointment->patient) }}</div>
                                         <div class="truncate text-[11px] text-gray-500">{{ $appointment->professional?->display_name ?? 'Profissional' }}</div>
                                         <div class="truncate text-[11px] text-gray-500">{{ $appointment->serviceNames() }}</div>
                                     </a>
@@ -336,7 +362,7 @@
                                         <a class="flex items-center gap-2 rounded border px-2 py-1 text-[11px] {{ $chipClass }} hover:ring-2 hover:ring-brand-500/30" href="{{ $cardUrl }}" title="Abrir {{ $isAttendanceView ? 'atendimento' : 'agendamento' }}">
                                             <span class="h-1.5 w-1.5 rounded-full {{ $dotClass }}"></span>
                                             <span class="font-semibold">{{ $appointment->scheduled_at->format('H:i') }}</span>
-                                            <span class="truncate">{{ $appointment->patient?->full_name ?? 'Cliente' }}</span>
+                                            <span class="truncate">{{ $patientLabel($appointment->patient) }}</span>
                                             <span class="truncate text-[10px] text-gray-500">{{ $appointment->professional?->display_name ?? 'Profissional' }}</span>
                                         </a>
                                     @endforeach

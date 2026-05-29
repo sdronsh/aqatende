@@ -60,13 +60,14 @@ class PublicBookingController extends Controller
             ? $professionals->firstWhere('id', $request->integer('professional_id'))
             : null;
 
-        $dateValue = $nextStartAt?->toDateString() ?: $request->string('date', now()->addDay()->toDateString())->toString();
-        $date = Carbon::parse($dateValue)->startOfDay();
-        if ($date->isBefore(now()->startOfDay())) {
-            $date = now()->addDay()->startOfDay();
+        $now = $this->bookingNow();
+        $dateValue = $nextStartAt?->toDateString() ?: $request->string('date', $now->copy()->addDay()->toDateString())->toString();
+        $date = Carbon::parse($dateValue, $this->bookingTimezone())->startOfDay();
+        if ($date->isBefore($now->copy()->startOfDay())) {
+            $date = $now->copy()->addDay()->startOfDay();
         }
         $availableDays = collect(range(0, 13))
-            ->map(fn ($offset) => now()->startOfDay()->addDays($offset));
+            ->map(fn ($offset) => $now->copy()->startOfDay()->addDays($offset));
 
         $slots = ($selectedService && $selectedUnit)
             ? $this->availableSlots($selectedService, $selectedUnit, $professionals, $date, $selectedProfessional, $nextStartAt)
@@ -132,7 +133,7 @@ class PublicBookingController extends Controller
         abort_if($service->unit_id && (int) $service->unit_id !== (int) $unit->id, 422);
         abort_if($continuationAppointment && (int) $unit->id !== (int) $continuationAppointment->unit_id, 422);
 
-        $scheduledAt = Carbon::parse($scheduledAtValue);
+        $scheduledAt = Carbon::parse($scheduledAtValue, $this->bookingTimezone());
         $date = $scheduledAt->copy()->startOfDay();
         $professionals = $this->availableProfessionals($companyId, $service, $unit);
         $professional = null;
@@ -214,6 +215,21 @@ class PublicBookingController extends Controller
         abort_unless($bookingLink->isAvailable(), 410);
 
         return $bookingLink;
+    }
+
+    private function bookingTimezone(): string
+    {
+        return (string) config('aqamed.booking.timezone', 'America/Sao_Paulo');
+    }
+
+    private function bookingNow(): Carbon
+    {
+        return now($this->bookingTimezone());
+    }
+
+    private function slotIsAfterNow(Carbon $slotStart): bool
+    {
+        return $slotStart->greaterThan($this->bookingNow());
     }
 
     private function newBookingUrlAfterSuccess(Request $request, PatientBookingLink $bookingLink, Appointment $appointment): string
@@ -596,7 +612,7 @@ class PublicBookingController extends Controller
                     $slotStart = $forcedStart->copy();
                     $slotEnd = $slotStart->copy()->addMinutes($duration);
                     if (
-                        $slotStart->isFuture()
+                        $this->slotIsAfterNow($slotStart)
                         && $this->scheduleAllows($professional->id, $unit->id, $slotStart, $slotEnd)
                         && ! $this->hasConflict($professional->id, $slotStart, $slotEnd, $appointments, $blocks)
                     ) {
@@ -640,7 +656,7 @@ class PublicBookingController extends Controller
                         $slotStart = $cursor->copy();
                         $slotEnd = $slotStart->copy()->addMinutes($duration);
 
-                        if ($slotStart->isFuture() && ! $this->hasConflict($professional->id, $slotStart, $slotEnd, $appointments, $blocks)) {
+                        if ($this->slotIsAfterNow($slotStart) && ! $this->hasConflict($professional->id, $slotStart, $slotEnd, $appointments, $blocks)) {
                             $slots[] = [
                                 'professional' => $professional,
                                 'scheduled_at' => $slotStart,
@@ -729,7 +745,7 @@ class PublicBookingController extends Controller
             $slotStart = $cursor->copy();
             $assignments = [];
 
-            if ($slotStart->isFuture()) {
+            if ($this->slotIsAfterNow($slotStart)) {
                 foreach ($services as $component) {
                     $componentDuration = (int) ($component->duration_minutes ?: $duration);
                     $slotEnd = $slotStart->copy()->addMinutes($componentDuration);

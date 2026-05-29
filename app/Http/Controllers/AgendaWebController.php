@@ -551,7 +551,7 @@ class AgendaWebController extends Controller
             'type' => 'appointment',
             'id' => $appointment->id,
             'channel' => $appointment->channel,
-            'title' => $appointment->patient?->full_name ?? 'Cliente',
+            'title' => $this->patientLabelWithPhone($appointment->patient),
             'subtitle' => $appointment->service?->name ?? 'Atendimento',
             'professional' => $appointment->professional?->display_name,
             'time' => $start->format('H:i').' - '.$end->format('H:i'),
@@ -609,7 +609,7 @@ class AgendaWebController extends Controller
             'type' => 'appointment',
             'id' => $appointment->id.'-'.$service->id,
             'channel' => $appointment->channel,
-            'title' => $appointment->patient?->full_name ?? 'Cliente',
+            'title' => $this->patientLabelWithPhone($appointment->patient),
             'subtitle' => $service->name,
             'professional' => Professional::find($service->pivot->professional_id)?->display_name,
             'time' => $start->format('H:i').' - '.$end->format('H:i'),
@@ -816,5 +816,35 @@ class AgendaWebController extends Controller
             'events' => $events,
             'laneCount' => $laneCount,
         ];
+    }
+
+    protected function patientLabelWithPhone($patient): string
+    {
+        if (! $patient) {
+            return 'Cliente';
+        }
+
+        $name = trim((string) ($patient->full_name ?? '')) ?: 'Cliente';
+        $phone = $this->formatPatientPhone((string) (($patient->cellphone ?? '') ?: ($patient->phone ?? '')));
+
+        return $phone !== '' ? "{$name} - {$phone}" : $name;
+    }
+
+    private function formatPatientPhone(string $value): string
+    {
+        $digits = preg_replace('/\D+/', '', $value) ?: '';
+        if (str_starts_with($digits, '55') && strlen($digits) > 11) {
+            $digits = substr($digits, 2);
+        }
+
+        if (strlen($digits) === 11) {
+            return sprintf('(%s) %s-%s', substr($digits, 0, 2), substr($digits, 2, 5), substr($digits, 7, 4));
+        }
+
+        if (strlen($digits) === 10) {
+            return sprintf('(%s) %s-%s', substr($digits, 0, 2), substr($digits, 2, 4), substr($digits, 6, 4));
+        }
+
+        return $value !== '' ? $value : '';
     }
 }
