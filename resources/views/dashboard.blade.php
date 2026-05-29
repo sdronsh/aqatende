@@ -23,6 +23,24 @@
 
     @php
         $formatMoney = fn ($cents) => 'R$ ' . number_format(($cents ?? 0) / 100, 2, ',', '.');
+        $formatPatientPhone = function (?string $value): string {
+            $digits = preg_replace('/\D+/', '', (string) $value) ?: '';
+            if (str_starts_with($digits, '55') && strlen($digits) > 11) {
+                $digits = substr($digits, 2);
+            }
+
+            if (strlen($digits) === 11) {
+                return sprintf('(%s) %s-%s', substr($digits, 0, 2), substr($digits, 2, 5), substr($digits, 7, 4));
+            }
+
+            if (strlen($digits) === 10) {
+                return sprintf('(%s) %s-%s', substr($digits, 0, 2), substr($digits, 2, 4), substr($digits, 6, 4));
+            }
+
+            return trim((string) $value);
+        };
+        $patientName = fn ($patient) => trim((string) ($patient?->full_name ?? '')) ?: 'Cliente';
+        $patientPhone = fn ($patient) => $formatPatientPhone(($patient?->cellphone ?? '') ?: ($patient?->phone ?? ''));
         $companyId = session('active_company_id');
         $user = auth()->user();
         $can = fn ($permission) => $user?->is_platform_admin || ($companyId && $user?->hasCompanyPermission($companyId, $permission));
@@ -207,9 +225,12 @@
                                 @endif
                             </div>
                             <div class="min-w-0">
-                                <div class="flex flex-wrap items-center gap-2">
-                                    <a class="truncate text-sm font-semibold text-gray-900 hover:text-brand-700" href="{{ $appointmentUrl }}">
-                                        {{ $appointment->patient?->full_name ?? 'Cliente' }}
+                                <div class="flex flex-wrap items-start gap-2">
+                                    <a class="min-w-0 max-w-full text-sm font-semibold text-gray-900 hover:text-brand-700" href="{{ $appointmentUrl }}">
+                                        <span class="block truncate">{{ $patientName($appointment->patient) }}</span>
+                                        @if ($patientPhone($appointment->patient))
+                                            <span class="mt-0.5 block truncate text-xs font-medium text-gray-500">{{ $patientPhone($appointment->patient) }}</span>
+                                        @endif
                                     </a>
                                     <span class="rounded-full border px-2 py-0.5 text-[11px] font-semibold {{ $statusClass }}">{{ $statusLabel }}</span>
                                 </div>
