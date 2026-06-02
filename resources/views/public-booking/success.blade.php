@@ -70,13 +70,48 @@
             </div>
         </section>
     </main>
+    <dialog id="booking-finished-dialog" class="m-auto w-[calc(100%-2rem)] max-w-md rounded-xl border border-gray-200 p-0 shadow-theme-lg">
+        <div class="p-5 text-center">
+            <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-success-50 text-success-700">
+                <svg class="h-6 w-6" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 1 0 0-16 8 8 0 0 0 0 16Zm3.78-9.22a.75.75 0 0 0-1.06-1.06L9 11.44 7.28 9.72a.75.75 0 0 0-1.06 1.06l2.25 2.25a.75.75 0 0 0 1.06 0l4.25-4.25Z" clip-rule="evenodd" />
+                </svg>
+            </div>
+            <h2 class="mt-4 text-lg font-semibold text-gray-900">Agendamento realizado</h2>
+            <p class="mt-2 text-sm leading-6 text-gray-500">
+                Seu agendamento foi confirmado com sucesso.
+            </p>
+            <button
+                class="mt-5 w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-700"
+                type="button"
+                data-close-after-message
+            >
+                OK
+            </button>
+        </div>
+    </dialog>
     <script>
-        document.querySelector('[data-finish-booking]')?.addEventListener('click', () => {
+        const closeBookingWindow = () => {
             window.close();
 
             if (!window.closed) {
                 window.location.href = 'about:blank';
             }
+        };
+
+        const finishedDialog = document.getElementById('booking-finished-dialog');
+
+        document.querySelector('[data-finish-booking]')?.addEventListener('click', () => {
+            if (finishedDialog?.showModal) {
+                finishedDialog.showModal();
+                return;
+            }
+
+            closeBookingWindow();
+        });
+
+        document.querySelector('[data-close-after-message]')?.addEventListener('click', () => {
+            closeBookingWindow();
         });
     </script>
 </body>

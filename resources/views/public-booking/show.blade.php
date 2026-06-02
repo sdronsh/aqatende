@@ -9,8 +9,15 @@
     @include('partials.pwa-meta')
     @vite(['resources/css/app.css', 'resources/js/app.js'])
 </head>
+@php
+    $sequenceSlot = $continuationAppointment && $selectedService && $selectedUnit ? $slots->first() : null;
+    $hasConfirmAction = $selectedService && $selectedUnit && (
+        ($continuationAppointment && $sequenceSlot)
+        || (! $continuationAppointment && $slots->isNotEmpty())
+    );
+@endphp
 <body class="bg-gray-50 text-gray-900">
-    <main class="mx-auto flex min-h-screen max-w-3xl flex-col px-4 py-6 md:py-10">
+    <main class="mx-auto flex min-h-screen max-w-3xl flex-col px-4 py-6 {{ $hasConfirmAction ? 'pb-28' : '' }} md:py-10 md:pb-10">
         <div class="mb-6 flex items-center gap-3">
             <img class="h-12 w-12 rounded-full border border-brand-100 bg-white object-contain" src="{{ asset('brand/logo-icon-square.png') }}" alt="AQAtende">
             <div>
@@ -155,7 +162,7 @@
             </form>
 
             @if ($selectedService && $selectedUnit)
-                <form method="POST" action="{{ route('public.booking.store', $bookingLink->token) }}" class="mt-6 border-t border-gray-100 pt-5">
+                <form id="public-booking-confirm-form" method="POST" action="{{ route('public.booking.store', $bookingLink->token) }}" class="mt-6 border-t border-gray-100 pt-5">
                     @csrf
                     <input type="hidden" name="service_id" value="{{ $selectedService->id }}">
                     <input type="hidden" name="unit_id" value="{{ $selectedUnit->id }}">
@@ -180,7 +187,6 @@
                     @endif
 
                     @if ($continuationAppointment)
-                        @php $sequenceSlot = $slots->first(); @endphp
                         <div class="rounded-xl border border-gray-200 bg-gray-50 p-4">
                             <h3 class="text-sm font-semibold text-gray-900">Horario em sequencia</h3>
                             @if ($sequenceSlot)
@@ -198,7 +204,7 @@
                         </div>
 
                         @if ($sequenceSlot)
-                            <div class="mt-5">
+                            <div class="mt-5 hidden md:block">
                                 <input type="hidden" name="booking_action" value="finish">
                                 <button class="w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-700" type="submit">
                                     Confirmar servico em sequencia
@@ -235,7 +241,7 @@
                                 <label class="mb-1 block text-sm font-medium text-gray-700" for="notes">Observacao opcional</label>
                                 <textarea id="notes" name="notes" rows="3" class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" placeholder="Alguma observacao para o atendimento?"></textarea>
                             </div>
-                            <div class="mt-5">
+                            <div class="mt-5 hidden md:block">
                                 <input type="hidden" name="booking_action" value="finish">
                                 <button class="w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-700" type="submit">
                                     Confirmar agendamento
@@ -247,5 +253,18 @@
             @endif
         </section>
     </main>
+    @if ($hasConfirmAction)
+        <div class="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.10)] backdrop-blur md:hidden">
+            <div class="mx-auto max-w-3xl">
+                <button
+                    class="w-full rounded-lg bg-brand-600 px-4 py-3 text-sm font-semibold text-white shadow-theme-xs hover:bg-brand-700 focus:outline-none focus:ring-3 focus:ring-brand-500/20"
+                    type="submit"
+                    form="public-booking-confirm-form"
+                >
+                    {{ $continuationAppointment ? 'Confirmar servico em sequencia' : 'Confirmar agendamento' }}
+                </button>
+            </div>
+        </div>
+    @endif
 </body>
 </html>
