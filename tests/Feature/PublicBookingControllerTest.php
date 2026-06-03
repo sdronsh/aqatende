@@ -119,6 +119,66 @@ class PublicBookingControllerTest extends TestCase
             ->assertSee('19:01');
     }
 
+    public function test_public_booking_uses_15_minute_slots_and_hides_conflicts(): void
+    {
+        config(['aqamed.booking.timezone' => 'America/Sao_Paulo']);
+        Carbon::setTestNow(Carbon::parse('2026-06-02 21:20:00', 'America/Sao_Paulo'));
+        $context = $this->createPublicBookingContext();
+
+        PatientBookingLink::create([
+            'company_id' => $context['company']->id,
+            'patient_id' => $context['patient']->id,
+            'token' => $token = Str::random(48),
+            'expires_at' => now()->addDays(7),
+        ]);
+        Schedule::create([
+            'professional_id' => $context['professional']->id,
+            'unit_id' => $context['unit']->id,
+            'weekday' => 2,
+            'start_time' => '21:30',
+            'end_time' => '23:59',
+            'is_active' => true,
+        ]);
+        $start = Carbon::parse('2026-06-02 22:00:00', 'America/Sao_Paulo');
+        $appointment = Appointment::create([
+            'clinic_id' => $context['clinic']->id,
+            'unit_id' => $context['unit']->id,
+            'professional_id' => $context['professional']->id,
+            'patient_id' => $context['patient']->id,
+            'service_id' => $context['secondService']->id,
+            'status' => 'agendado',
+            'channel' => 'manual',
+            'scheduled_at' => $start,
+            'ends_at' => $start->copy()->addMinutes(40),
+            'duration_minutes' => 40,
+        ]);
+        $appointment->services()->attach($context['secondService']->id, [
+            'professional_id' => $context['professional']->id,
+            'scheduled_at' => $start,
+            'ends_at' => $start->copy()->addMinutes(40),
+            'duration_minutes' => 40,
+            'status' => 'agendado',
+            'price_cents' => 5000,
+            'position' => 0,
+        ]);
+
+        $response = $this->get(route('public.booking.show', [
+            'token' => $token,
+            'service_id' => $context['secondService']->id,
+            'unit_id' => $context['unit']->id,
+            'professional_id' => $context['professional']->id,
+            'date' => '2026-06-02',
+        ]));
+
+        $response->assertOk()
+            ->assertSee('21:30')
+            ->assertSee('22:45')
+            ->assertDontSee('21:45')
+            ->assertDontSee('22:00')
+            ->assertDontSee('22:15')
+            ->assertDontSee('22:30');
+    }
+
     protected function tearDown(): void
     {
         Carbon::setTestNow();

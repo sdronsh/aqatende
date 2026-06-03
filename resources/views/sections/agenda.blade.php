@@ -382,6 +382,7 @@
     <dialog id="appointment-modal" class="m-auto max-h-[90vh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-xl border border-gray-200 p-0 shadow-theme-lg">
         <form method="POST" action="{{ route('appointments.store') }}" class="flex flex-col gap-4 p-4 sm:p-5">
             @csrf
+            <input type="hidden" name="status" value="agendado">
             <div class="flex items-center justify-between">
                 <h3 class="text-lg font-semibold text-gray-800">Novo agendamento</h3>
                 <button type="button" class="text-gray-500 hover:text-gray-700" data-close-modal>&times;</button>

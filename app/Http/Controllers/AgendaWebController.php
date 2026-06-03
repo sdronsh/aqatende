@@ -70,7 +70,8 @@ class AgendaWebController extends Controller
         }
 
         $appointmentsQuery = Appointment::with(['patient', 'professional', 'service', 'services', 'unit', 'clinic'])
-            ->whereBetween('scheduled_at', [$start, $end]);
+            ->whereBetween('scheduled_at', [$start, $end])
+            ->whereNotIn('status', $this->cancelledAppointmentStatuses());
 
         if ($companyId) {
             $appointmentsQuery->whereIn('clinic_id', $clinicIds);
@@ -634,6 +635,11 @@ class AgendaWebController extends Controller
         ];
 
         return $map[$status] ?? $status;
+    }
+
+    private function cancelledAppointmentStatuses(): array
+    {
+        return ['cancelado', 'cancelled'];
     }
 
     protected function mapBlockToEvent(

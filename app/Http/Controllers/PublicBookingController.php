@@ -232,6 +232,20 @@ class PublicBookingController extends Controller
         return $slotStart->greaterThan($this->bookingNow());
     }
 
+    private function bookingSlotIntervalMinutes(): int
+    {
+        return 15;
+    }
+
+    private function bookingDateTime($value): Carbon
+    {
+        if ($value instanceof Carbon) {
+            return Carbon::parse($value->toDateTimeString(), $this->bookingTimezone());
+        }
+
+        return Carbon::parse((string) $value, $this->bookingTimezone());
+    }
+
     private function newBookingUrlAfterSuccess(Request $request, PatientBookingLink $bookingLink, Appointment $appointment): string
     {
         if (! $bookingLink->patient_id) {
@@ -666,7 +680,7 @@ class PublicBookingController extends Controller
                             ];
                         }
 
-                        $cursor->addMinutes(30);
+                        $cursor->addMinutes($this->bookingSlotIntervalMinutes());
                     }
                 }
 
@@ -777,7 +791,7 @@ class PublicBookingController extends Controller
                 ];
             }
 
-            $cursor->addMinutes(30);
+            $cursor->addMinutes($this->bookingSlotIntervalMinutes());
         }
 
         return collect($slots)->values();
@@ -795,14 +809,14 @@ class PublicBookingController extends Controller
                         }
 
                         $start = $service->pivot->scheduled_at
-                            ? Carbon::parse($service->pivot->scheduled_at)
+                            ? $this->bookingDateTime($service->pivot->scheduled_at)
                             : null;
                         if (! $start) {
                             return false;
                         }
 
                         $end = $service->pivot->ends_at
-                            ? Carbon::parse($service->pivot->ends_at)
+                            ? $this->bookingDateTime($service->pivot->ends_at)
                             : $start->copy()->addMinutes((int) ($service->pivot->duration_minutes ?: 30));
 
                         return $start < $slotEnd && $end > $slotStart;
@@ -813,8 +827,10 @@ class PublicBookingController extends Controller
                     return false;
                 }
 
-                $start = $appointment->scheduled_at;
-                $end = $appointment->ends_at ?: $start->copy()->addMinutes((int) ($appointment->duration_minutes ?: 30));
+                $start = $this->bookingDateTime($appointment->scheduled_at);
+                $end = $appointment->ends_at
+                    ? $this->bookingDateTime($appointment->ends_at)
+                    : $start->copy()->addMinutes((int) ($appointment->duration_minutes ?: 30));
 
                 return $start < $slotEnd && $end > $slotStart;
             });
@@ -825,7 +841,7 @@ class PublicBookingController extends Controller
 
         return $blocks
             ->where('professional_id', $professionalId)
-            ->contains(fn (ScheduleBlock $block) => $block->starts_at < $slotEnd && $block->ends_at > $slotStart);
+            ->contains(fn (ScheduleBlock $block) => $this->bookingDateTime($block->starts_at) < $slotEnd && $this->bookingDateTime($block->ends_at) > $slotStart);
     }
 
     private function scheduleAllows(int $professionalId, int $unitId, Carbon $start, Carbon $end): bool
