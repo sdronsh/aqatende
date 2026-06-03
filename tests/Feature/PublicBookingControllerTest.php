@@ -119,6 +119,36 @@ class PublicBookingControllerTest extends TestCase
             ->assertSee('19:01');
     }
 
+    public function test_public_booking_selects_today_by_default_when_opening_link(): void
+    {
+        config(['aqamed.booking.timezone' => 'America/Sao_Paulo']);
+        Carbon::setTestNow(Carbon::parse('2026-05-29 10:00:00', 'America/Sao_Paulo'));
+        $context = $this->createPublicBookingContext();
+
+        PatientBookingLink::create([
+            'company_id' => $context['company']->id,
+            'patient_id' => $context['patient']->id,
+            'token' => $token = Str::random(48),
+            'expires_at' => now()->addDays(7),
+        ]);
+        Schedule::create([
+            'professional_id' => $context['professional']->id,
+            'unit_id' => $context['unit']->id,
+            'weekday' => 5,
+            'start_time' => '10:30',
+            'end_time' => '12:00',
+            'is_active' => true,
+        ]);
+
+        $this->get(route('public.booking.show', [
+            'token' => $token,
+            'service_id' => $context['secondService']->id,
+            'unit_id' => $context['unit']->id,
+        ]))->assertOk()
+            ->assertViewHas('date', fn (Carbon $date) => $date->toDateString() === '2026-05-29')
+            ->assertSee('10:30');
+    }
+
     public function test_public_booking_uses_15_minute_slots_and_hides_conflicts(): void
     {
         config(['aqamed.booking.timezone' => 'America/Sao_Paulo']);

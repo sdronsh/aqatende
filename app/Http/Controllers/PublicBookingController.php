@@ -61,10 +61,10 @@ class PublicBookingController extends Controller
             : null;
 
         $now = $this->bookingNow();
-        $dateValue = $nextStartAt?->toDateString() ?: $request->string('date', $now->copy()->addDay()->toDateString())->toString();
+        $dateValue = $nextStartAt?->toDateString() ?: $request->string('date', $now->copy()->toDateString())->toString();
         $date = Carbon::parse($dateValue, $this->bookingTimezone())->startOfDay();
         if ($date->isBefore($now->copy()->startOfDay())) {
-            $date = $now->copy()->addDay()->startOfDay();
+            $date = $now->copy()->startOfDay();
         }
         $availableDays = collect(range(0, 13))
             ->map(fn ($offset) => $now->copy()->startOfDay()->addDays($offset));
