@@ -168,6 +168,9 @@ class InitialSeeder extends Seeder
             'agendamento.agendamentos.view',
             'agendamento.agendamentos.create',
             'agendamento.agendamentos.update',
+            'agendamento.bloqueios.view',
+            'agendamento.bloqueios.create',
+            'agendamento.bloqueios.delete',
             'atendimento.agenda.view',
             'atendimento.atendimentos.view',
             'atendimento.atendimentos.create',
@@ -343,7 +346,7 @@ class InitialSeeder extends Seeder
     {
         $modules = [
             'cadastro' => ['clinicas', 'unidades', 'profissionais', 'servicos', 'pacientes', 'especialidades'],
-            'agendamento' => ['agenda', 'agendamentos'],
+            'agendamento' => ['agenda', 'agendamentos', 'bloqueios'],
             'atendimento' => ['agenda', 'atendimentos'],
             'financeiro' => ['financeiro', 'contas_pagar', 'contas_receber', 'fluxo_caixa', 'categorias', 'contas_bancarias', 'relatorios'],
             'configuracoes' => ['logo'],

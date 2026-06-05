@@ -9,6 +9,7 @@ use App\Models\Patient;
 use App\Models\PatientBookingLink;
 use App\Models\Professional;
 use App\Models\Schedule;
+use App\Models\ScheduleBlock;
 use App\Models\Service;
 use App\Models\Unit;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -207,6 +208,45 @@ class PublicBookingControllerTest extends TestCase
             ->assertDontSee('22:00')
             ->assertDontSee('22:15')
             ->assertDontSee('22:30');
+    }
+
+    public function test_public_booking_hides_slots_blocked_for_professional(): void
+    {
+        config(['aqamed.booking.timezone' => 'America/Sao_Paulo']);
+        Carbon::setTestNow(Carbon::parse('2026-06-02 09:00:00', 'America/Sao_Paulo'));
+        $context = $this->createPublicBookingContext();
+
+        PatientBookingLink::create([
+            'company_id' => $context['company']->id,
+            'patient_id' => $context['patient']->id,
+            'token' => $token = Str::random(48),
+            'expires_at' => now()->addDays(7),
+        ]);
+        Schedule::create([
+            'professional_id' => $context['professional']->id,
+            'unit_id' => $context['unit']->id,
+            'weekday' => 3,
+            'start_time' => '10:00',
+            'end_time' => '11:00',
+            'is_active' => true,
+        ]);
+        ScheduleBlock::create([
+            'professional_id' => $context['professional']->id,
+            'unit_id' => null,
+            'starts_at' => Carbon::parse('2026-06-03 10:00:00', 'America/Sao_Paulo'),
+            'ends_at' => Carbon::parse('2026-06-03 10:30:00', 'America/Sao_Paulo'),
+            'reason' => 'Compromisso externo',
+        ]);
+
+        $this->get(route('public.booking.show', [
+            'token' => $token,
+            'service_id' => $context['secondService']->id,
+            'unit_id' => $context['unit']->id,
+            'professional_id' => $context['professional']->id,
+            'date' => '2026-06-03',
+        ]))->assertOk()
+            ->assertDontSee('10:00')
+            ->assertSee('10:30');
     }
 
     protected function tearDown(): void

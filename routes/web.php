@@ -13,6 +13,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\ProfessionalWebController;
 use App\Http\Controllers\PublicBookingController;
 use App\Http\Controllers\QueueWebController;
+use App\Http\Controllers\ScheduleBlockWebController;
 use App\Http\Controllers\SearchController;
 use App\Http\Controllers\ServiceWebController;
 use App\Http\Controllers\SitemapController;
@@ -177,6 +178,15 @@ Route::middleware('auth')->group(function () {
     Route::get('/agendamento/agendamentos', [AppointmentWebController::class, 'index'])
         ->middleware(['permission:agendamento.agendamentos.view', 'terms-accepted'])
         ->name('appointments.index');
+    Route::get('/agendamento/bloqueios', [ScheduleBlockWebController::class, 'index'])
+        ->middleware(['permission:agendamento.bloqueios.view', 'terms-accepted'])
+        ->name('schedule-blocks.index');
+    Route::post('/agendamento/bloqueios', [ScheduleBlockWebController::class, 'store'])
+        ->middleware(['permission:agendamento.bloqueios.create', 'terms-accepted'])
+        ->name('schedule-blocks.store');
+    Route::delete('/agendamento/bloqueios/{scheduleBlock}', [ScheduleBlockWebController::class, 'destroy'])
+        ->middleware(['permission:agendamento.bloqueios.delete', 'terms-accepted'])
+        ->name('schedule-blocks.destroy');
     Route::get('/agendamento/agendamentos/novo', [AppointmentWebController::class, 'create'])
         ->middleware(['permission:agendamento.agendamentos.create', 'terms-accepted'])
         ->name('appointments.create');

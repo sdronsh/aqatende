@@ -20,6 +20,7 @@
         'agendamento' => [
             ['label' => 'Agenda', 'route' => 'agenda.index', 'permission' => 'agendamento.agenda.view', 'icon' => 'M7 3v3M17 3v3M4 8h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM8 12h3M13 12h3M8 16h3'],
             ['label' => 'Agendamentos', 'route' => 'appointments.index', 'permission' => 'agendamento.agendamentos.view', 'icon' => 'M9 11l2 2 4-5M7 3v3M17 3v3M4 8h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z'],
+            ['label' => 'Bloqueios de agenda', 'route' => 'schedule-blocks.index', 'permission' => 'agendamento.bloqueios.view', 'icon' => 'M7 3v3M17 3v3M4 8h16M6 5h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2zM8 13h8M9 17l6-6'],
             ['label' => 'Fila', 'route' => 'queue.index', 'permission' => 'atendimento.atendimentos.view', 'icon' => 'M4 7h10M4 12h16M4 17h12M18 6l3 3-3 3'],
         ],
         'financeiro' => [

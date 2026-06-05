@@ -11,6 +11,7 @@ use App\Models\Clinic;
 use App\Models\Patient;
 use App\Models\Professional;
 use App\Models\Schedule;
+use App\Models\ScheduleBlock;
 use App\Models\Service;
 use App\Models\Unit;
 use Illuminate\Http\RedirectResponse;
@@ -879,7 +880,11 @@ class AppointmentWebController extends Controller
 
             $duration = (int) ($service->duration_minutes ?: ($data['duration_minutes'] ?? 5));
             $duration = max(5, $duration);
-            if (! $this->scheduleAllows($professionalId, $unitId, $scheduledAt, $scheduledAt->copy()->addMinutes($duration))) {
+            $endsAt = $scheduledAt->copy()->addMinutes($duration);
+            if (! $this->scheduleAllows($professionalId, $unitId, $scheduledAt, $endsAt)) {
+                return false;
+            }
+            if ($this->hasScheduleBlockConflict($professionalId, $unitId, $scheduledAt, $endsAt)) {
                 return false;
             }
         }
@@ -897,6 +902,16 @@ class AppointmentWebController extends Controller
             ->groupBy('weekday');
 
         return $this->scheduleAllowsFromGrouped($schedulesByWeekday, $start, $end);
+    }
+
+    private function hasScheduleBlockConflict(int $professionalId, int $unitId, Carbon $start, Carbon $end): bool
+    {
+        return ScheduleBlock::query()
+            ->where('professional_id', $professionalId)
+            ->where(fn ($query) => $query->whereNull('unit_id')->orWhere('unit_id', $unitId))
+            ->where('starts_at', '<', $end)
+            ->where('ends_at', '>', $start)
+            ->exists();
     }
 
     private function scheduleAllowsFromGrouped($schedulesByWeekday, Carbon $start, Carbon $end): bool

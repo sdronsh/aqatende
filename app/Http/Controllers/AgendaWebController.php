@@ -95,20 +95,27 @@ class AgendaWebController extends Controller
         $appointments = $appointmentsQuery->orderBy('scheduled_at')->get();
 
         $blocksQuery = ScheduleBlock::with(['professional', 'unit'])
-            ->whereBetween('starts_at', [$start, $end]);
+            ->where('starts_at', '<', $end)
+            ->where('ends_at', '>', $start);
 
+        if ($companyId) {
+            $blocksQuery->whereHas('professional', function ($query) use ($companyId) {
+                $query->where('company_id', $companyId)
+                    ->orWhereHas('user.companies', fn ($companyQuery) => $companyQuery->where('companies.id', $companyId));
+            });
+        }
         if ($selectedProfessionalId) {
             $blocksQuery->where('professional_id', $selectedProfessionalId);
         }
         if ($selectedUnitId) {
-            $blocksQuery->where('unit_id', $selectedUnitId);
+            $blocksQuery->where(fn ($query) => $query->whereNull('unit_id')->orWhere('unit_id', $selectedUnitId));
         }
         if ($selectedClinicId) {
             $unitIds = Unit::where('clinic_id', $selectedClinicId)->pluck('id');
-            $blocksQuery->whereIn('unit_id', $unitIds);
+            $blocksQuery->where(fn ($query) => $query->whereNull('unit_id')->orWhereIn('unit_id', $unitIds));
         } elseif ($companyId) {
             $unitIds = Unit::whereIn('clinic_id', $clinicIds)->pluck('id');
-            $blocksQuery->whereIn('unit_id', $unitIds);
+            $blocksQuery->where(fn ($query) => $query->whereNull('unit_id')->orWhereIn('unit_id', $unitIds));
         }
 
         $blocks = $blocksQuery->get();
@@ -411,6 +418,12 @@ class AgendaWebController extends Controller
                     'scheduled_at' => 'Horario fora do atendimento do profissional em uma das recorrencias.',
                 ])->withInput();
             }
+
+            if ($this->hasScheduleBlockConflict((int) $data['professional_id'], (int) $data['unit_id'], $occurrenceDate, $occurrenceEndsAt)) {
+                return back()->withErrors([
+                    'scheduled_at' => 'Profissional bloqueado neste horario em uma das recorrencias.',
+                ])->withInput();
+            }
         }
 
         DB::transaction(function () use ($data, $occurrenceDates, $duration, $service, $priceCents) {
@@ -693,6 +706,16 @@ class AgendaWebController extends Controller
             ->groupBy('weekday');
 
         return $this->scheduleAllowsFromGrouped($schedulesByWeekday, $start, $end);
+    }
+
+    private function hasScheduleBlockConflict(int $professionalId, int $unitId, Carbon $start, Carbon $end): bool
+    {
+        return ScheduleBlock::query()
+            ->where('professional_id', $professionalId)
+            ->where(fn ($query) => $query->whereNull('unit_id')->orWhere('unit_id', $unitId))
+            ->where('starts_at', '<', $end)
+            ->where('ends_at', '>', $start)
+            ->exists();
     }
 
     private function scheduleAllowsFromGrouped($schedulesByWeekday, Carbon $start, Carbon $end): bool

@@ -6,6 +6,8 @@ use App\Models\Appointment;
 use App\Models\Clinic;
 use App\Models\Company;
 use App\Models\Patient;
+use App\Models\Professional;
+use App\Models\ScheduleBlock;
 use App\Models\Service;
 use App\Models\Unit;
 use App\Models\User;
@@ -88,5 +90,53 @@ class AgendaWebControllerTest extends TestCase
 
         $this->assertContains($activeAppointment->id, $appointmentIds);
         $this->assertNotContains($cancelledAppointment->id, $appointmentIds);
+    }
+
+    public function test_global_schedule_blocks_are_visible_when_unit_is_filtered(): void
+    {
+        $company = Company::create(['name' => 'Empresa Teste']);
+        $clinic = Clinic::create([
+            'company_id' => $company->id,
+            'name' => 'Unidade Principal',
+            'terms_version' => config('terms.usage.version'),
+            'terms_accepted_at' => now(),
+        ]);
+        $unit = Unit::create([
+            'clinic_id' => $clinic->id,
+            'name' => 'Unidade Central',
+            'address_line1' => 'Rua Teste',
+            'city' => 'Sao Paulo',
+            'state' => 'SP',
+            'zip' => '01000-000',
+            'active' => true,
+        ]);
+        $professional = Professional::create([
+            'company_id' => $company->id,
+            'display_name' => 'Profissional Teste',
+            'active' => true,
+        ]);
+        $admin = User::factory()->create(['is_platform_admin' => true]);
+        $block = ScheduleBlock::create([
+            'professional_id' => $professional->id,
+            'unit_id' => null,
+            'starts_at' => Carbon::parse('2026-06-02 09:00:00'),
+            'ends_at' => Carbon::parse('2026-06-02 18:00:00'),
+            'reason' => 'Folga',
+        ]);
+
+        $response = $this
+            ->actingAs($admin)
+            ->withSession(['active_company_id' => $company->id])
+            ->get(route('agenda.index', [
+                'view' => 'day',
+                'date' => '2026-06-02',
+                'unit_id' => $unit->id,
+            ]));
+
+        $response->assertOk();
+
+        $events = collect($response->viewData('eventsByProfessional')[$professional->id] ?? []);
+
+        $this->assertTrue($events->contains(fn (array $event) => $event['type'] === 'block' && $event['title'] === $block->reason));
     }
 }
