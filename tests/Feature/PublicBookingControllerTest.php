@@ -249,6 +249,105 @@ class PublicBookingControllerTest extends TestCase
             ->assertSee('10:30');
     }
 
+    public function test_public_booking_package_blocks_the_full_sequential_duration(): void
+    {
+        config(['aqamed.booking.timezone' => 'America/Sao_Paulo']);
+        Carbon::setTestNow(Carbon::parse('2026-06-02 09:00:00', 'America/Sao_Paulo'));
+        $context = $this->createPublicBookingContext();
+
+        $firstComponent = Service::create([
+            'clinic_id' => $context['clinic']->id,
+            'unit_id' => $context['unit']->id,
+            'name' => 'Lavagem',
+            'duration_minutes' => 30,
+            'modality' => 'presencial',
+            'price_cents' => 3000,
+            'active' => true,
+        ]);
+        $secondComponent = Service::create([
+            'clinic_id' => $context['clinic']->id,
+            'unit_id' => $context['unit']->id,
+            'name' => 'Finalizacao',
+            'duration_minutes' => 30,
+            'modality' => 'presencial',
+            'price_cents' => 3000,
+            'active' => true,
+        ]);
+        $package = Service::create([
+            'clinic_id' => $context['clinic']->id,
+            'unit_id' => $context['unit']->id,
+            'name' => 'Pacote completo',
+            'duration_minutes' => 60,
+            'modality' => 'presencial',
+            'price_cents' => 6000,
+            'active' => true,
+            'is_package' => true,
+        ]);
+        $package->packageItems()->attach($firstComponent->id, ['position' => 0]);
+        $package->packageItems()->attach($secondComponent->id, ['position' => 1]);
+        $context['professional']->services()->attach($firstComponent, ['active' => true]);
+        $context['professional']->services()->attach($secondComponent, ['active' => true]);
+
+        Schedule::create([
+            'professional_id' => $context['professional']->id,
+            'unit_id' => $context['unit']->id,
+            'weekday' => 3,
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+            'is_active' => true,
+        ]);
+
+        PatientBookingLink::create([
+            'company_id' => $context['company']->id,
+            'patient_id' => $context['patient']->id,
+            'token' => $packageToken = Str::random(48),
+            'expires_at' => now()->addDays(7),
+        ]);
+        $packageSlot = 'pkg:' . base64_encode(json_encode([
+            $firstComponent->id => $context['professional']->id,
+            $secondComponent->id => $context['professional']->id,
+        ])) . '|2026-06-03 09:00:00';
+
+        $this->post(route('public.booking.store', $packageToken), [
+            'service_id' => $package->id,
+            'unit_id' => $context['unit']->id,
+            'slot' => $packageSlot,
+            'booking_action' => 'finish',
+        ])->assertOk()
+            ->assertSee('Agendamento confirmado');
+
+        $appointment = Appointment::firstOrFail();
+        $this->assertSame('2026-06-03 10:00:00', $appointment->ends_at->format('Y-m-d H:i:s'));
+
+        PatientBookingLink::create([
+            'company_id' => $context['company']->id,
+            'patient_id' => $context['patient']->id,
+            'token' => $sameStartToken = Str::random(48),
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        $this->post(route('public.booking.store', $sameStartToken), [
+            'service_id' => $secondComponent->id,
+            'unit_id' => $context['unit']->id,
+            'slot' => $context['professional']->id . '|2026-06-03 09:00:00',
+            'booking_action' => 'finish',
+        ])->assertStatus(422);
+
+        PatientBookingLink::create([
+            'company_id' => $context['company']->id,
+            'patient_id' => $context['patient']->id,
+            'token' => $insidePackageToken = Str::random(48),
+            'expires_at' => now()->addDays(7),
+        ]);
+
+        $this->post(route('public.booking.store', $insidePackageToken), [
+            'service_id' => $secondComponent->id,
+            'unit_id' => $context['unit']->id,
+            'slot' => $context['professional']->id . '|2026-06-03 09:30:00',
+            'booking_action' => 'finish',
+        ])->assertStatus(422);
+    }
+
     protected function tearDown(): void
     {
         Carbon::setTestNow();

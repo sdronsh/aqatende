@@ -442,11 +442,15 @@ class PublicBookingController extends Controller
     {
         $duration = (int) ($service->duration_minutes ?: 30);
         $items = [];
+        $cursor = $scheduledAt->copy();
+        $isSequentialPackage = $service->is_package && $this->bookingServices($service)->count() > 1;
 
         foreach ($this->bookingServices($service)->values() as $position => $appointmentService) {
             $serviceDuration = (int) ($appointmentService->duration_minutes ?: $duration);
             $professionalId = (int) ($serviceProfessionalIds[$appointmentService->id] ?? collect($serviceProfessionalIds)->first());
             $professional = $professionals->firstWhere('id', $professionalId);
+            $startsAt = $isSequentialPackage ? $cursor->copy() : $scheduledAt->copy();
+            $endsAt = $startsAt->copy()->addMinutes($serviceDuration);
 
             $items[] = [
                 'service_id' => (int) $appointmentService->id,
@@ -456,12 +460,16 @@ class PublicBookingController extends Controller
                 'clinic_id' => (int) $unit->clinic_id,
                 'professional_id' => $professionalId,
                 'professional_name' => (string) ($professional?->display_name ?? 'Profissional'),
-                'scheduled_at' => $scheduledAt->copy(),
-                'ends_at' => $scheduledAt->copy()->addMinutes($serviceDuration),
+                'scheduled_at' => $startsAt,
+                'ends_at' => $endsAt,
                 'duration_minutes' => $serviceDuration,
                 'price_cents' => (int) ($appointmentService->price_cents ?? 0),
                 'position' => $position,
             ];
+
+            if ($isSequentialPackage) {
+                $cursor = $endsAt;
+            }
         }
 
         return $items;
@@ -693,7 +701,7 @@ class PublicBookingController extends Controller
     private function availablePackageSlots(Service $service, Unit $unit, Collection $professionals, Carbon $date, ?Carbon $forcedStart = null): Collection
     {
         $services = $this->bookingServices($service);
-        $duration = (int) ($service->duration_minutes ?: max(30, (int) $services->max('duration_minutes')));
+        $duration = $this->packageDurationMinutes($service);
         $professionalIds = $professionals->pluck('id')->values();
 
         if ($professionalIds->isEmpty()) {
@@ -723,9 +731,10 @@ class PublicBookingController extends Controller
 
         if ($forcedStart) {
             $assignments = [];
+            $componentStart = $forcedStart->copy();
             foreach ($services as $component) {
                 $componentDuration = (int) ($component->duration_minutes ?: $duration);
-                $slotStart = $forcedStart->copy();
+                $slotStart = $componentStart->copy();
                 $slotEnd = $slotStart->copy()->addMinutes($componentDuration);
                 $professional = $professionals->first(function (Professional $professional) use ($component, $unit, $slotStart, $slotEnd, $appointments, $blocks) {
                     return $professional->services->contains('id', $component->id)
@@ -738,6 +747,7 @@ class PublicBookingController extends Controller
                 }
 
                 $assignments[$component->id] = $professional->id;
+                $componentStart = $slotEnd;
             }
 
             $assignmentLabel = collect($assignments)
@@ -760,13 +770,15 @@ class PublicBookingController extends Controller
             $assignments = [];
 
             if ($this->slotIsAfterNow($slotStart)) {
+                $componentStart = $slotStart->copy();
                 foreach ($services as $component) {
                     $componentDuration = (int) ($component->duration_minutes ?: $duration);
-                    $slotEnd = $slotStart->copy()->addMinutes($componentDuration);
-                    $professional = $professionals->first(function (Professional $professional) use ($component, $unit, $slotStart, $slotEnd, $appointments, $blocks) {
+                    $componentSlotStart = $componentStart->copy();
+                    $slotEnd = $componentSlotStart->copy()->addMinutes($componentDuration);
+                    $professional = $professionals->first(function (Professional $professional) use ($component, $unit, $componentSlotStart, $slotEnd, $appointments, $blocks) {
                         return $professional->services->contains('id', $component->id)
-                            && $this->scheduleAllows($professional->id, $unit->id, $slotStart, $slotEnd)
-                            && ! $this->hasConflict($professional->id, $slotStart, $slotEnd, $appointments, $blocks);
+                            && $this->scheduleAllows($professional->id, $unit->id, $componentSlotStart, $slotEnd)
+                            && ! $this->hasConflict($professional->id, $componentSlotStart, $slotEnd, $appointments, $blocks);
                     });
 
                     if (! $professional) {
@@ -775,6 +787,7 @@ class PublicBookingController extends Controller
                     }
 
                     $assignments[$component->id] = $professional->id;
+                    $componentStart = $slotEnd;
                 }
             }
 
@@ -795,6 +808,18 @@ class PublicBookingController extends Controller
         }
 
         return collect($slots)->values();
+    }
+
+    private function packageDurationMinutes(Service $service): int
+    {
+        $services = $this->bookingServices($service);
+        if ($service->is_package && $services->count() > 1) {
+            $duration = (int) $services->sum(fn (Service $component) => (int) ($component->duration_minutes ?: 0));
+
+            return max(5, $duration ?: (int) ($service->duration_minutes ?: 30));
+        }
+
+        return max(5, (int) ($service->duration_minutes ?: 30));
     }
 
     private function hasConflict(int $professionalId, Carbon $slotStart, Carbon $slotEnd, Collection $appointments, Collection $blocks): bool
