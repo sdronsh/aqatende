@@ -12,8 +12,11 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
+use Throwable;
 
 class SubscriptionController extends Controller
 {
@@ -186,6 +189,8 @@ class SubscriptionController extends Controller
         $pending['subscription_created'] = true;
         $pending['payment_url'] = $paymentUrl;
         $request->session()->put(self::PENDING_SESSION_KEY, $pending);
+
+        $this->notifySubscriptionContracted($planData, $pending, (int) $data['due_day'], $paymentUrl);
 
         return redirect()
             ->route('subscriptions.admin', $planData['slug'])
@@ -367,6 +372,62 @@ class SubscriptionController extends Controller
         }
 
         return $pending;
+    }
+
+    private function notifySubscriptionContracted(array $planData, array $pending, int $dueDay, ?string $paymentUrl): void
+    {
+        $recipient = (string) config('aqamed.subscription.notification_email', 'suporte@aqatende.com.br');
+        if ($recipient === '') {
+            return;
+        }
+
+        $companyData = is_array($pending['company_data'] ?? null) ? $pending['company_data'] : [];
+        $companyName = (string) ($companyData['name'] ?? $pending['company_name'] ?? 'Empresa nao informada');
+        $contactEmail = (string) ($companyData['contact_email'] ?? $companyData['email'] ?? '');
+        $contactName = (string) ($companyData['contact_name'] ?? 'Responsavel nao informado');
+
+        try {
+            Mail::raw(
+                implode(PHP_EOL, [
+                    'Nova contratacao AQAtende',
+                    '',
+                    'Plano: '.$planData['name'],
+                    'Valor mensal: R$ '.number_format((float) $planData['amount'], 2, ',', '.'),
+                    'Dia de vencimento: '.$dueDay,
+                    'Licenca: '.($pending['license_code'] ?? $pending['license_id'] ?? '-'),
+                    '',
+                    'Empresa: '.$companyName,
+                    'Documento: '.($companyData['cnpj'] ?? $pending['cnpj'] ?? '-'),
+                    'Atividade: '.($companyData['business_activity'] ?? '-'),
+                    'E-mail da empresa: '.($companyData['email'] ?? '-'),
+                    'Telefone da empresa: '.($companyData['phone'] ?? '-'),
+                    '',
+                    'Responsavel: '.$contactName,
+                    'E-mail do responsavel: '.($contactEmail ?: '-'),
+                    'Telefone do responsavel: '.($companyData['contact_phone'] ?? '-'),
+                    '',
+                    'Cidade/UF: '.trim((string) ($companyData['address_city'] ?? '-')).'/'.strtoupper((string) ($companyData['address_state'] ?? '-')),
+                    'Link de pagamento: '.($paymentUrl ?: 'Nao retornado pela API'),
+                    'Data/hora: '.now()->format('d/m/Y H:i:s'),
+                ]),
+                function ($message) use ($recipient, $contactEmail, $contactName, $companyName): void {
+                    $message
+                        ->to($recipient)
+                        ->subject('Nova contratacao AQAtende - '.$companyName);
+
+                    if ($contactEmail !== '') {
+                        $message->replyTo($contactEmail, $contactName);
+                    }
+                }
+            );
+        } catch (Throwable $exception) {
+            Log::error('Falha ao enviar e-mail de nova contratacao.', [
+                'plan' => $planData['slug'] ?? null,
+                'license_id' => $pending['license_id'] ?? null,
+                'company_name' => $companyName,
+                'exception' => $exception,
+            ]);
+        }
     }
 
     private function licenseApiErrors(mixed $response, string $key, string $fallback): array

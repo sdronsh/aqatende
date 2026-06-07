@@ -33,4 +33,7 @@ return [
         'api_token' => env('COMMUNICATION_API_TOKEN'),
         'webhook_token' => env('COMMUNICATION_WEBHOOK_TOKEN'),
     ],
+    'subscription' => [
+        'notification_email' => env('SUBSCRIPTION_NOTIFICATION_EMAIL', 'suporte@aqatende.com.br'),
+    ],
 ];
