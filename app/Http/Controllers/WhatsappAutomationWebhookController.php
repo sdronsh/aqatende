@@ -14,6 +14,7 @@ use App\Models\Schedule;
 use App\Models\Service;
 use App\Models\Unit;
 use App\Services\Communication\CommunicationClient;
+use App\Services\Vehicles\VehicleListingAnalyzer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
@@ -22,7 +23,7 @@ use Illuminate\Support\Str;
 
 class WhatsappAutomationWebhookController extends Controller
 {
-    public function __invoke(Request $request, CommunicationClient $communication): JsonResponse
+    public function __invoke(Request $request, CommunicationClient $communication, VehicleListingAnalyzer $vehicleListingAnalyzer): JsonResponse
     {
         $token = (string) config('aqamed.communication.webhook_token', '');
         if ($token !== '' && $request->header('X-Webhook-Token') !== $token) {
@@ -41,6 +42,12 @@ class WhatsappAutomationWebhookController extends Controller
         $company = $this->resolveCompanyBySessionUuid($sessionUuid);
         if (! $company) {
             return response()->json(['ok' => true, 'ignored' => true]);
+        }
+
+        if ($vehicleListingAnalyzer->isOlxCommand($text)) {
+            $this->send($communication, $sessionUuid, $phone, $vehicleListingAnalyzer->analyzeOlxCommand($text));
+
+            return response()->json(['ok' => true, 'vehicle_lookup' => true]);
         }
 
         $automation = $this->getAutomation((int) $company['company_id']);

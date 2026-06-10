@@ -33,6 +33,11 @@ return [
         'api_token' => env('COMMUNICATION_API_TOKEN'),
         'webhook_token' => env('COMMUNICATION_WEBHOOK_TOKEN'),
     ],
+    'vehicle_lookup' => [
+        'enabled' => env('VEHICLE_LOOKUP_ENABLED', false),
+        'fipe_api_url' => env('VEHICLE_LOOKUP_FIPE_API_URL', 'https://parallelum.com.br/fipe/api/v1'),
+        'timeout' => env('VEHICLE_LOOKUP_TIMEOUT', 12),
+    ],
     'subscription' => [
         'notification_email' => env('SUBSCRIPTION_NOTIFICATION_EMAIL', 'suporte@aqatende.com.br'),
     ],
