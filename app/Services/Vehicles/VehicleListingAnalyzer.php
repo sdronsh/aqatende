@@ -24,7 +24,7 @@ class VehicleListingAnalyzer
             return 'Link OLX invalido. Envie no formato: olx:https://www.olx.com.br/...';
         }
 
-        $listing = $this->fetchListing($url);
+        $listing = $this->fetchListing($url) ?: $this->listingFromUrl($url);
         if (! $listing) {
             return 'Nao consegui ler esse anuncio da OLX agora. Confira se o link esta publico e tente novamente.';
         }
@@ -50,7 +50,10 @@ class VehicleListingAnalyzer
         $response = Http::timeout((int) config('aqamed.vehicle_lookup.timeout', 12))
             ->withHeaders([
                 'Accept' => 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-                'User-Agent' => 'Mozilla/5.0 AQAtende Vehicle Lookup',
+                'Accept-Language' => 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+                'Cache-Control' => 'no-cache',
+                'Pragma' => 'no-cache',
+                'User-Agent' => 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/137.0.0.0 Safari/537.36',
             ])
             ->get($url);
 
@@ -80,6 +83,39 @@ class VehicleListingAnalyzer
             'price_cents' => $price,
             'year' => $this->extractYear($searchable),
             'mileage' => $this->extractMileage($searchable),
+        ];
+    }
+
+    private function listingFromUrl(string $url): ?array
+    {
+        $path = trim((string) parse_url($url, PHP_URL_PATH), '/');
+        if ($path === '') {
+            return null;
+        }
+
+        $slug = basename($path);
+        if ($slug === '' || $slug === '/') {
+            return null;
+        }
+
+        $slug = preg_replace('/-\d+(?:\?.*)?$/', '', $slug) ?: $slug;
+        $title = trim(str_replace('-', ' ', $slug));
+        if ($title === '') {
+            return null;
+        }
+
+        $title = Str::of($title)
+            ->replace('  ', ' ')
+            ->title()
+            ->toString();
+
+        return [
+            'url' => $url,
+            'title' => $title,
+            'description' => '',
+            'price_cents' => null,
+            'year' => $this->extractYear($title),
+            'mileage' => null,
         ];
     }
 
@@ -161,6 +197,10 @@ class VehicleListingAnalyzer
 
         if ($listing['mileage']) {
             $lines[] = 'Km informada: '.$listing['mileage'];
+        }
+
+        if (empty($listing['price_cents'])) {
+            $lines[] = 'Valor anunciado: nao consegui ler automaticamente no anuncio.';
         }
 
         if (! $fipe || empty($fipe['price_cents'])) {

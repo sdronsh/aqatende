@@ -172,6 +172,48 @@ class WhatsappAutomationWebhookControllerTest extends TestCase
         ]);
     }
 
+    public function test_olx_command_falls_back_to_url_slug_when_olx_blocks_html_fetch(): void
+    {
+        config(['aqamed.vehicle_lookup.enabled' => true]);
+        $context = $this->createWhatsappBookingContext();
+
+        Http::fake([
+            'mg.olx.com.br/*' => Http::response('', 403),
+            'parallelum.com.br/fipe/api/v1/carros/marcas' => Http::response([
+                ['codigo' => '31', 'nome' => 'Kia'],
+            ]),
+            'parallelum.com.br/fipe/api/v1/carros/marcas/31/modelos' => Http::response([
+                'modelos' => [
+                    ['codigo' => '4321', 'nome' => 'Cerato'],
+                ],
+            ]),
+            'parallelum.com.br/fipe/api/v1/carros/marcas/31/modelos/4321/anos' => Http::response([
+                ['codigo' => '2014-1', 'nome' => '2014 Gasolina'],
+            ]),
+            'parallelum.com.br/fipe/api/v1/carros/marcas/31/modelos/4321/anos/2014-1' => Http::response([
+                'Valor' => 'R$ 52.000,00',
+                'Marca' => 'Kia',
+                'Modelo' => 'Cerato 1.6 16V Flex Aut.',
+                'AnoModelo' => 2014,
+                'Combustivel' => 'Gasolina',
+                'CodigoFipe' => '018097-5',
+                'MesReferencia' => 'junho de 2026',
+            ]),
+        ]);
+
+        $sentMessages = [];
+        $this->fakeCommunicationClient($sentMessages);
+
+        $this->postJson('/api/whatsapp/webhook', $this->webhookPayload($context, 'olx:https://mg.olx.com.br/regiao-de-governador-valadares-e-teofilo-otoni/autos-e-pecas/carros-vans-e-utilitarios/kia-motors-cerato-1-6-16v-flex-aut-2014-1507185272?lis=listing_2020'))
+            ->assertOk()
+            ->assertJson(['ok' => true, 'vehicle_lookup' => true]);
+
+        $this->assertStringContainsString('Anuncio: Kia Motors Cerato 1 6 16V Flex Aut 2014', $sentMessages[0] ?? '');
+        $this->assertStringContainsString('Valor anunciado: nao consegui ler automaticamente no anuncio.', $sentMessages[0] ?? '');
+        $this->assertStringContainsString('FIPE: R$ 52.000,00', $sentMessages[0] ?? '');
+        $this->assertStringContainsString('Modelo FIPE: Kia Cerato 1.6 16V Flex Aut.', $sentMessages[0] ?? '');
+    }
+
     public function test_confirmed_open_appointment_shows_cancel_menu_on_whatsapp(): void
     {
         Carbon::setTestNow(Carbon::parse('2026-05-20 10:00:00', 'America/Sao_Paulo'));
