@@ -30,11 +30,16 @@
         <form method="POST" action="{{ route('settings.logo.update') }}" enctype="multipart/form-data" class="mt-6 space-y-4">
             @csrf
             @method('PUT')
+            <input type="hidden" name="company_id" value="{{ $company->id }}" />
 
             <div>
                 <label class="mb-1 block text-sm font-medium text-gray-700" for="logo">Upload da logo</label>
                 <input class="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-700 shadow-theme-xs focus:border-brand-300 focus:outline-none focus:ring-3 focus:ring-brand-500/10" type="file" id="logo" name="logo" accept="image/png,image/jpeg,image/svg+xml" />
                 <p class="mt-1 text-xs text-gray-500">Formato PNG, JPG ou SVG. Tamanho maximo 3MB.</p>
+            </div>
+
+            <div class="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
+                A logo sera aplicada na empresa ativa desta sessao: <strong>{{ $company->name }}</strong>.
             </div>
 
             <label class="inline-flex items-center gap-2 text-sm text-gray-700">

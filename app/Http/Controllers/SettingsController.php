@@ -355,9 +355,15 @@ class SettingsController extends Controller
         $company = $this->getCompany($request);
 
         $data = $request->validate([
+            'company_id' => ['required', 'integer', 'exists:companies,id'],
             'logo' => ['nullable', 'file', 'mimes:png,jpg,jpeg,svg', 'max:3072'],
             'remove_logo' => ['nullable', 'boolean'],
         ]);
+
+        if ((int) $data['company_id'] !== (int) $company->id) {
+            return redirect()->route('settings.logo')
+                ->withErrors(['logo' => 'A empresa selecionada para a troca da logo nao corresponde a empresa ativa da sessao. Recarregue a pagina e tente novamente.']);
+        }
 
         if ($request->boolean('remove_logo')) {
             $this->storeSetting($company->id, 'logo_path', null);
