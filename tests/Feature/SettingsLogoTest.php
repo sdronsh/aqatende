@@ -73,4 +73,29 @@ class SettingsLogoTest extends TestCase
             'key' => 'logo_path',
         ]);
     }
+
+    public function test_logo_update_requires_file_when_not_removing_logo(): void
+    {
+        Storage::fake('public');
+
+        $user = User::factory()->create(['is_platform_admin' => true]);
+        $company = Company::create(['name' => 'Empresa A']);
+
+        $response = $this
+            ->actingAs($user)
+            ->from(route('settings.logo'))
+            ->withSession(['active_company_id' => $company->id])
+            ->put(route('settings.logo.update'), [
+                'company_id' => $company->id,
+            ]);
+
+        $response
+            ->assertSessionHasErrors('logo')
+            ->assertRedirect(route('settings.logo'));
+
+        $this->assertDatabaseMissing('company_settings', [
+            'company_id' => $company->id,
+            'key' => 'logo_path',
+        ]);
+    }
 }

@@ -373,9 +373,12 @@ class SettingsController extends Controller
         if ($request->hasFile('logo')) {
             $path = $request->file('logo')->store('company_logos', 'public');
             $this->storeSetting($company->id, 'logo_path', $path);
+
+            return redirect()->route('settings.logo')->with('status', 'Logo atualizada.');
         }
 
-        return redirect()->route('settings.logo')->with('status', 'Logo atualizada.');
+        return redirect()->route('settings.logo')
+            ->withErrors(['logo' => 'Selecione um arquivo de logo antes de salvar.']);
     }
 
     public function terms(Request $request): View
