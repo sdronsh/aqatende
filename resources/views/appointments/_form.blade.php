@@ -26,13 +26,30 @@
     </div>
     <div class="md:col-span-6">
         <label class="mb-1 block text-sm font-medium text-gray-700" for="patient_id">Cliente</label>
-        @php $patientId = old('patient_id', $appointment->patient_id ?? null); @endphp
-        <select class="{{ $input }}" id="patient_id" name="patient_id" required>
-            <option value="">Selecione</option>
-            @foreach ($patients as $patient)
-                <option value="{{ $patient->id }}" @selected((string) $patientId === (string) $patient->id)>{{ $patient->full_name }}</option>
-            @endforeach
-        </select>
+        @php
+            $patientId = old('patient_id', $appointment->patient_id ?? null);
+            $selectedPatient = $patients->firstWhere('id', (int) $patientId);
+        @endphp
+        <div class="relative" data-patient-picker>
+            <input type="hidden" id="patient_id" name="patient_id" value="{{ $patientId }}" required />
+            <input
+                class="{{ $input }}"
+                type="text"
+                id="patient_search"
+                value="{{ old('patient_search', $selectedPatient?->full_name ?? '') }}"
+                placeholder="Buscar cliente por nome"
+                autocomplete="off"
+                data-patient-search
+            />
+            <div class="mt-2 hidden max-h-56 overflow-y-auto rounded-lg border border-gray-200 bg-white shadow-theme-sm" data-patient-results></div>
+            <p class="mt-1 text-xs text-gray-500" data-patient-selected>
+                @if ($selectedPatient)
+                    Cliente selecionado: {{ $selectedPatient->full_name }}
+                @else
+                    Digite para buscar e selecionar um cliente.
+                @endif
+            </p>
+        </div>
         <x-input-error class="mt-1" :messages="$errors->get('patient_id')" />
     </div>
     <div class="md:col-span-6">
@@ -253,6 +270,61 @@
         const serviceOptions = Array.from(document.querySelectorAll('[data-service-option]'));
         const priceInput = document.getElementById('price');
         const durationInput = document.getElementById('duration_minutes');
+        const patientPicker = document.querySelector('[data-patient-picker]');
+        const patientInput = patientPicker?.querySelector('[data-patient-search]');
+        const patientIdInput = document.getElementById('patient_id');
+        const patientResults = patientPicker?.querySelector('[data-patient-results]');
+        const patientSelected = patientPicker?.querySelector('[data-patient-selected]');
+        const patients = @json($patients->map(fn ($patient) => ['id' => $patient->id, 'name' => $patient->full_name])->values());
+
+        const renderPatientResults = (query = '') => {
+            if (!patientResults || !patientInput || !patientIdInput || !patientSelected) return;
+
+            const normalizedQuery = query.trim().toLowerCase();
+            const matches = normalizedQuery === ''
+                ? patients.slice(0, 8)
+                : patients.filter((patient) => patient.name.toLowerCase().includes(normalizedQuery)).slice(0, 12);
+
+            patientResults.innerHTML = '';
+
+            if (!matches.length) {
+                patientResults.innerHTML = '<div class="px-3 py-2 text-sm text-gray-500">Nenhum cliente encontrado.</div>';
+                patientResults.classList.remove('hidden');
+                return;
+            }
+
+            matches.forEach((patient) => {
+                const button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'block w-full border-b border-gray-100 px-3 py-2 text-left text-sm text-gray-700 last:border-b-0 hover:bg-gray-50';
+                button.textContent = patient.name;
+                button.addEventListener('click', () => {
+                    patientInput.value = patient.name;
+                    patientIdInput.value = patient.id;
+                    patientSelected.textContent = `Cliente selecionado: ${patient.name}`;
+                    patientResults.classList.add('hidden');
+                });
+                patientResults.appendChild(button);
+            });
+
+            patientResults.classList.remove('hidden');
+        };
+
+        if (patientPicker && patientInput && patientIdInput && patientResults && patientSelected) {
+            patientInput.addEventListener('focus', () => renderPatientResults(patientInput.value));
+            patientInput.addEventListener('input', () => {
+                patientIdInput.value = '';
+                patientSelected.textContent = 'Selecione um cliente da lista abaixo.';
+                renderPatientResults(patientInput.value);
+            });
+
+            document.addEventListener('click', (event) => {
+                if (!patientPicker.contains(event.target)) {
+                    patientResults.classList.add('hidden');
+                }
+            });
+        }
+
         if (!serviceOptions.length || !priceInput) return;
 
         const paymentStatusSelect = document.getElementById('payment_status');
