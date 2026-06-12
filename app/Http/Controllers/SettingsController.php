@@ -372,6 +372,11 @@ class SettingsController extends Controller
 
         if ($request->hasFile('logo')) {
             $path = $request->file('logo')->store('company_logos', 'public');
+            if (! is_string($path) || $path === '') {
+                return redirect()->route('settings.logo')
+                    ->withErrors(['logo' => 'Nao foi possivel salvar a logo no armazenamento. Verifique as permissoes da pasta storage e o link public/storage.']);
+            }
+
             $this->storeSetting($company->id, 'logo_path', $path);
 
             return redirect()->route('settings.logo')->with('status', 'Logo atualizada.');
