@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="description" content="AQAtende: sistema para profissionais e negócios de atendimento com agenda, fila, clientes e financeiro.">
+    <meta name="description" content="AQAtende: sistema para profissionais e negócios de atendimento com agenda, fila, clientes, financeiro e WhatsApp incluso em todos os planos.">
     <title>AQAtende | Gestão para Profissionais e Negócios de Atendimento</title>
     <link rel="icon" type="image/png" href="{{ asset('logo.png') }}">
     @include('partials.pwa-meta', ['themeColor' => '#256d7f'])
@@ -74,7 +74,7 @@
                         Gestão simples para negócios de atendimento.
                     </h1>
                     <p class="mt-6 max-w-2xl text-lg leading-8 text-white/80">
-                        Organize agenda, fila, clientes, serviços, profissionais e financeiro em uma única plataforma.
+                        Organize agenda, fila, clientes, serviços, profissionais, financeiro e atendimento pelo WhatsApp em uma única plataforma.
                     </p>
                     <div class="mt-9 flex flex-wrap gap-3">
                         <a class="rounded-full bg-white px-7 py-3 text-sm font-bold shadow-theme-lg" style="color: #1d3d48;" href="#planos">
@@ -85,7 +85,7 @@
                         </a>
                     </div>
                     <div class="mt-10 grid max-w-2xl gap-4 sm:grid-cols-3">
-                        @foreach ([['Agenda', 'horários e encaixes'], ['Fila', 'ordem de chegada'], ['Financeiro', 'caixa e comissões']] as [$title, $text])
+                        @foreach ([['Agenda', 'horários e encaixes'], ['WhatsApp', 'incluído em todos os planos'], ['Financeiro', 'caixa e comissões']] as [$title, $text])
                             <div class="border-l border-white/25 pl-4">
                                 <div class="text-2xl font-semibold">{{ $title }}</div>
                                 <div class="mt-1 text-sm text-white/65">{{ $text }}</div>
@@ -175,6 +175,8 @@
                             ['Fila de atendimento', 'Controle de chegada, encaixes e execução por ordem.'],
                             ['Clientes e histórico', 'Cadastro centralizado para relacionamento e retorno.'],
                             ['Financeiro integrado', 'Contas a receber, contas a pagar, caixa e comissões.'],
+                            ['WhatsApp integrado', 'Atendimento automático, agendamentos, lembretes e campanhas incluídos no plano.'],
+                            ['Automação de atendimento', 'Respostas e fluxos automáticos para manter o relacionamento com seus clientes.'],
                         ] as [$title, $text])
                             <div class="rounded-2xl border border-gray-200 bg-white p-5 shadow-theme-xs">
                                 <h3 class="text-sm font-semibold text-gray-900">{{ $title }}</h3>
@@ -231,9 +233,9 @@
                 </div>
                 <div class="mt-14 grid gap-6 md:grid-cols-3">
                     @foreach ([
-                        ['essencial', 'Essencial', 'R$ 19,90', 'mensal para ate 5 profissionais', ['Cadastro de clientes', 'Agenda', 'Fila de atendimento', 'Comissões', 'Contas a pagar e receber', 'Até 5 profissionais.']],
-                        ['anual', 'Anual', 'R$ 199,90', 'anual para ate 10 profissionais', ['Todos os benefícios do Essencial', 'Melhor custo anual', 'Até 10 profissionais.']],
-                        ['plus', 'Plano Plus', 'R$ 59,90', 'mensal sem limite de profissionais', ['Todos os benefícios do Essencial', 'Sem limite de profissionais', 'Para operações maiores.']],
+                        ['essencial', 'Essencial', 'R$ 39,90', 'mensal para até 5 profissionais', ['Cadastro de clientes', 'Agenda e fila de atendimento', 'Comissões e financeiro', 'WhatsApp integrado', 'Até 5 profissionais.']],
+                        ['anual', 'Anual', 'R$ 399,90', 'anual para até 10 profissionais', ['Todos os benefícios do Essencial', 'WhatsApp integrado', 'Melhor custo anual', 'Até 10 profissionais.']],
+                        ['plus', 'Plano Plus', 'R$ 79,90', 'mensal sem limite de profissionais', ['Todos os benefícios do Essencial', 'WhatsApp integrado', 'Sem limite de profissionais', 'Para operações maiores.']],
                     ] as [$slug, $title, $price, $priceNote, $items])
                         <div class="rounded-2xl border border-gray-200 bg-white p-8 text-center shadow-theme-xs">
                             <h3 class="text-xl font-semibold text-[#1d3d48]">{{ $title }}</h3>
@@ -264,32 +266,20 @@
         </section>
 
         <section class="px-5 py-16 md:py-20">
-            <div class="mx-auto grid max-w-7xl items-center gap-8 rounded-2xl border border-gray-200 bg-white p-6 shadow-theme-xs md:p-8 lg:grid-cols-[1.2fr_.8fr]">
+            <div class="mx-auto grid max-w-7xl items-center gap-8 rounded-2xl border border-[#cfe7ed] bg-[#f5fbfc] p-6 shadow-theme-xs md:p-8 lg:grid-cols-[1.2fr_.8fr]">
                 <div>
-                    <p class="text-xs font-bold uppercase tracking-[0.3em] text-[#256d7f]">Integração WhatsApp</p>
+                    <p class="text-xs font-bold uppercase tracking-[0.3em] text-[#256d7f]">WhatsApp em todos os planos</p>
                     <h2 class="mt-4 text-2xl font-semibold leading-tight text-gray-900 md:text-3xl">
-                        Atendimento automático, agendamento por mensagem e IA para interagir com seus clientes.
+                        Atendimento automático e agendamento por mensagem já fazem parte do AQAtende.
                     </h2>
                     <p class="mt-4 max-w-3xl text-base leading-7 text-gray-600">
-                        Contrate a integração com WhatsApp para receber dúvidas, automatizar respostas e facilitar agendamentos dentro do fluxo do AQAtende.
+                        Conecte seu WhatsApp para receber dúvidas, automatizar respostas, enviar lembretes, criar campanhas e facilitar agendamentos dentro do fluxo do AQAtende.
                     </p>
                 </div>
-                <div class="rounded-2xl border border-[#cfe7ed] bg-[#f5fbfc] p-6 text-center">
-                    <div class="text-sm font-semibold uppercase tracking-[0.2em] text-[#256d7f]">Adicional ao plano</div>
-                    <div class="mt-4 text-4xl font-semibold text-[#1d3d48]">R$ 19,90</div>
-                    <div class="mt-1 text-sm font-medium text-[#256d7f]">por mês</div>
-                    <a
-                        class="mt-6 inline-flex rounded-full px-6 py-3 text-sm font-semibold"
-                        style="background-color: #256d7f; color: #ffffff;"
-                        href="https://wa.me/5531993723008"
-                        target="_blank"
-                        rel="noopener"
-                        data-ga-whatsapp-click
-                        data-contact-context="whatsapp_addon"
-                    >
-                        Entre em contato
-                    </a>
-                    <div class="mt-3 text-sm font-medium text-[#1d3d48]">(31) 99372-3008</div>
+                <div class="rounded-2xl border border-[#cfe7ed] bg-white p-6 text-center">
+                    <div class="text-sm font-semibold uppercase tracking-[0.2em] text-[#256d7f]">Benefício incluso</div>
+                    <div class="mt-4 text-3xl font-semibold text-[#1d3d48]">Sem contratação adicional</div>
+                    <div class="mt-3 text-sm leading-6 text-gray-600">Disponível no Essencial, Anual e Plus.</div>
                 </div>
             </div>
         </section>
@@ -309,6 +299,7 @@
                             ['Como crio um agendamento?', 'Acesse Agenda ou Agendamentos, escolha cliente, serviço, profissional, unidade, data e horário.'],
                             ['Quando uso fila e quando uso agenda?', 'Use agenda para horários marcados. Use fila para atendimento por ordem de chegada e encaixes.'],
                             ['Como o financeiro é gerado?', 'Ao criar ou finalizar atendimentos, o AQAtende cria contas a receber e movimentações relacionadas.'],
+                            ['O WhatsApp tem custo adicional?', 'Não. A integração com WhatsApp está incluída em todos os planos do AQAtende.'],
                             ['O visual muda por ramo?', 'Sim. Depois que o ramo é definido na empresa, o sistema aplica a paleta correspondente ao login daquela empresa.'],
                         ] as [$question, $answer])
                             <details class="group p-5 open:bg-white">
@@ -341,7 +332,7 @@
             <div class="flex items-center gap-3">
                 <img class="h-16 w-auto max-w-[260px] object-contain opacity-90" src="{{ asset('brand/logo-horizontal-footer.png') }}" alt="AQAtende">
             </div>
-            <div class="text-sm text-white/55">Agenda · Fila · Clientes · Financeiro</div>
+            <div class="text-sm text-white/55">Agenda · WhatsApp · Fila · Clientes · Financeiro</div>
         </div>
     </footer>
     @if (config('services.google_analytics.measurement_id'))
@@ -352,16 +343,6 @@
                     gtag('event', 'select_plan', {
                         plan_slug: link.dataset.planSlug,
                         plan_name: link.dataset.planName,
-                        link_url: link.href,
-                    });
-                });
-            });
-
-            document.querySelectorAll('[data-ga-whatsapp-click]').forEach((link) => {
-                link.addEventListener('click', () => {
-                    if (typeof gtag !== 'function') return;
-                    gtag('event', 'contact_whatsapp', {
-                        contact_context: link.dataset.contactContext,
                         link_url: link.href,
                     });
                 });

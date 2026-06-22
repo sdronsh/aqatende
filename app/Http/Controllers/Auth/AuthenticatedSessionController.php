@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
 use App\Models\Company;
+use App\Services\Communication\WhatsappConnectionChecker;
 use App\Services\Licenses\LicenseEnforcer;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -13,6 +14,10 @@ use Illuminate\View\View;
 
 class AuthenticatedSessionController extends Controller
 {
+    public function __construct(private readonly WhatsappConnectionChecker $whatsappConnectionChecker)
+    {
+    }
+
     /**
      * Display the login view.
      */
@@ -128,7 +133,12 @@ class AuthenticatedSessionController extends Controller
         $user->active_session_id = $request->session()->getId();
         $user->save();
 
-        return redirect()->intended(route('dashboard', absolute: false));
+        $redirect = redirect()->intended(route('dashboard', absolute: false));
+        $whatsappWarning = $this->whatsappConnectionChecker->warningForCompanyLogin($company->id);
+
+        return $whatsappWarning
+            ? $redirect->with('warning', $whatsappWarning)
+            : $redirect;
     }
 
     private function normalizeCnpj(string $value): string
