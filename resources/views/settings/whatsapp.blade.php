@@ -312,15 +312,6 @@
                             </div>
                         @endif
 
-                        @if (! empty($session['pairing_code']) && $status !== 'connected')
-                            <div class="mt-4 rounded-lg border border-brand-100 bg-brand-50 p-4">
-                                <div class="text-xs font-semibold uppercase text-brand-700">Codigo de pareamento</div>
-                                <div class="mt-2 inline-flex rounded-lg border border-brand-200 bg-white px-4 py-3 font-mono text-2xl font-bold tracking-widest text-brand-700">
-                                    {{ substr($session['pairing_code'], 0, 4).'-'.substr($session['pairing_code'], 4) }}
-                                </div>
-                            </div>
-                        @endif
-
                         @if ($qrCode && $status !== 'connected')
                             <div class="mt-4">
                                 <div class="mb-2 text-xs font-semibold uppercase text-gray-400">QR Code</div>
@@ -329,6 +320,13 @@
                                 @else
                                     <div class="break-all rounded-lg border border-gray-200 bg-white p-3 font-mono text-xs text-gray-700">{{ $qrCode }}</div>
                                 @endif
+                            </div>
+                        @elseif (! empty($session['pairing_code']) && $status !== 'connected')
+                            <div class="mt-4 rounded-lg border border-brand-100 bg-brand-50 p-4">
+                                <div class="text-xs font-semibold uppercase text-brand-700">Codigo de pareamento</div>
+                                <div class="mt-2 inline-flex rounded-lg border border-brand-200 bg-white px-4 py-3 font-mono text-2xl font-bold tracking-widest text-brand-700">
+                                    {{ substr($session['pairing_code'], 0, 4).'-'.substr($session['pairing_code'], 4) }}
+                                </div>
                             </div>
                         @elseif (! $session)
                             <div class="mt-4 text-sm text-gray-500">Nenhuma sessao vinculada nesta tela ainda.</div>

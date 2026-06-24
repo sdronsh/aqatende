@@ -220,7 +220,7 @@ class SettingsController extends Controller
                 $session = $this->createWhatsappSession($communication, $company);
             }
 
-            $this->storeWhatsappSessionSnapshot($company->id, $session);
+            $this->storeWhatsappSessionSnapshot($company->id, $this->preferQrCodeSessionSnapshot($session));
 
             return redirect()->route('settings.whatsapp', ['tab' => $tab])->with('status', 'QR Code atualizado.');
         } catch (Throwable $exception) {
@@ -464,7 +464,40 @@ class SettingsController extends Controller
 
     private function storeWhatsappSessionSnapshot(int $companyId, array $session): void
     {
+        $session = $this->normalizeWhatsappSessionSnapshot($session);
+
         $this->storeSetting($companyId, 'whatsapp_session', json_encode($session));
+    }
+
+    private function preferQrCodeSessionSnapshot(array $session): array
+    {
+        $session = $this->normalizeWhatsappSessionSnapshot($session);
+
+        if (! empty($session['qr_code'])) {
+            unset($session['pairing_code'], $session['pairing_phone']);
+
+            if (($session['status'] ?? null) !== 'connected') {
+                $session['status'] = 'qr_pending';
+            }
+        }
+
+        return $session;
+    }
+
+    private function normalizeWhatsappSessionSnapshot(array $session): array
+    {
+        $qrCode = $session['qr_code']
+            ?? $session['qr']
+            ?? $session['qrcode']
+            ?? null;
+
+        if (is_string($qrCode) && trim($qrCode) !== '') {
+            $session['qr_code'] = $qrCode;
+        }
+
+        unset($session['qr'], $session['qrcode']);
+
+        return $session;
     }
 
     private function getOrCreateCompanyBookingLink(int $companyId, ?int $userId): PatientBookingLink
