@@ -220,6 +220,11 @@ class SettingsController extends Controller
                 $session = $this->createWhatsappSession($communication, $company);
             }
 
+            if (! $this->whatsappSessionHasQrCode($session) && ! empty($session['uuid']) && ($session['status'] ?? null) !== 'connected') {
+                usleep(500000);
+                $session = $communication->getWhatsappSessionQr((string) $session['uuid']);
+            }
+
             $this->storeWhatsappSessionSnapshot($company->id, $this->preferQrCodeSessionSnapshot($session));
 
             return redirect()->route('settings.whatsapp', ['tab' => $tab])->with('status', 'QR Code atualizado.');
@@ -248,6 +253,12 @@ class SettingsController extends Controller
 
         try {
             $session = $communication->getWhatsappSessionStatus($uuid);
+            $session = $this->normalizeWhatsappSessionSnapshot($session);
+
+            if (! $this->whatsappSessionHasQrCode($session) && in_array($session['status'] ?? null, ['qr_pending', 'qrcode'], true)) {
+                $session = $communication->getWhatsappSessionQr($uuid);
+            }
+
             $this->storeWhatsappSessionSnapshot($company->id, $session);
 
             return redirect()->route('settings.whatsapp', ['tab' => $tab])->with('status', 'Status atualizado.');
@@ -492,12 +503,34 @@ class SettingsController extends Controller
             ?? null;
 
         if (is_string($qrCode) && trim($qrCode) !== '') {
-            $session['qr_code'] = $qrCode;
+            $session['qr_code'] = $this->normalizeWhatsappQrCodeValue($qrCode);
         }
 
         unset($session['qr'], $session['qrcode']);
 
         return $session;
+    }
+
+    private function whatsappSessionHasQrCode(array $session): bool
+    {
+        $session = $this->normalizeWhatsappSessionSnapshot($session);
+
+        return is_string($session['qr_code'] ?? null) && trim($session['qr_code']) !== '';
+    }
+
+    private function normalizeWhatsappQrCodeValue(string $qrCode): string
+    {
+        $qrCode = trim($qrCode);
+
+        if (str_starts_with($qrCode, 'data:image')) {
+            return $qrCode;
+        }
+
+        if (base64_decode($qrCode, true) !== false) {
+            return 'data:image/png;base64,'.$qrCode;
+        }
+
+        return $qrCode;
     }
 
     private function getOrCreateCompanyBookingLink(int $companyId, ?int $userId): PatientBookingLink
